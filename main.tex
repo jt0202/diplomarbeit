@@ -38,9 +38,15 @@
         A ground atom is in the proof theoretic semantics if there exists a valid proof tree, that has this ground atom as its head. We were provided with all the proof trees and checking the heads is rather easy, so what remains to be checked is the validness of a proof tree. Recall the defintion of validness we established earlier:
         
         \begin{lstlisting}
-        def isValid(P: program τ) (d: database τ) (t: proofTree τ): Prop :=
-        match t with
-        | proofTree.node a l => ( ∃(r: rule τ) (g:grounding τ), r ∈ P ∧ ruleGrounding r g = groundRuleFromAtoms a (List.map root l) ∧ l.attach.All₂ (fun ⟨x, _h⟩ => isValid P d x)) ∨ (l = [] ∧ d.contains a)
+            def isValid(P: program τ) (d: database τ) (t: proofTree τ): 
+            Prop :=
+            match t with
+            | proofTree.node a l => 
+            ( ∃(r: rule τ) (g:grounding τ), 
+                r ∈ P ∧ 
+                ruleGrounding r g = groundRuleFromAtoms a (List.map root l)
+                ∧ l.attach.All₂ (fun ⟨x, _h⟩ => isValid P d x)) 
+            ∨ (l = [] ∧ d.contains a)
         \end{lstlisting}
 
         The second part of this disjunction consists of a database check and an easy check of list emptyness. The first part is more interesting. Since we use there existential quantifiers, we have to implement something to check this. As the program is given as a list of rules, we can simply iterate over this list. For the grounding we however can something more sophisticated, but groundings are not our object of choice for that.
@@ -219,7 +225,7 @@
         If it is some other variable $v'$, then the value of extend $s$ $v$ $c$ is simply the value of $s$. Since $s^\ast$ maps $v$ to a different value compared $s$, $s$ would not be a subset of $s^\ast$ and we have reached another contradiction.
         \end{proof}
 
-        So we know that if matchTerm returns a substitution then it is a minimal solution. We additionally have to prove that if matchTerm does not return a substituion that then no solution exists.
+        So we know that if matchTerm returns a substitution then it is a minimal solution. We additionally have to prove that if matchTerm does not return a substitution that then no solution exists.
 
         \begin{lemma}
         Let $t$ be a term, $c$ a constant, $s$ a substitution and let matchTerm $t$ $c$ $s$ return none. Then there does not exists a substitution $s'$ with $s \subseteq s'$ and $s' t = c$.
@@ -229,6 +235,89 @@
 
         If $t$ is a variable $v$, then $s v$ must be defined and mapped to a different value compared to $c$. Then again no such $s'$ can exist. If $s$ would be a subset of $s'$, then $s'$ would not unify $t$ with $c$ and if $s'$ would unify $t$ with $c$ then $s$ would not be a subset of $s'$.
         \end{proof}
+
+        After proving the correctness for terms we now want to move up to atoms. Unfortunately, we cannot use recursion directly on the term list of an atom. An atom requires a proof that the length of the list is equal to the arity of the relation symbol, which fails when we do recursion on the list. Therefore we first establish a new procedure that matches a list of terms with a list of constants, if possible.
+        
+        \begin{lstlisting}
+            def matchTermList (s: substitution τ) (l1: List (term τ))
+             (l2: List (τ.constants)): Option (substitution τ) :=
+            match l1 with
+            | List.nil => some s
+            | List.cons hd tl =>
+                match l2 with
+                | List.nil => none
+                | List.cons hd' tl' =>
+                let s' := matchTerm hd hd' s
+                if p: Option.isSome s'
+                then matchTermList (Option.get s' p) tl tl'
+                else none
+        \end{lstlisting}
+
+        Here we are given as previously a substitution as an input with the two lists. For the correctness it is required that both lists have the same length, but this is the case for atoms. If the first list is empty we return the substitution. If instead it has a first element and the second list has as well a first element, we match these elements using matchTerm and if this results in a solution, we return the result of matchTermList with the remaining lists and the resulting substitution.
+
+        As previously, we have to prove the correctness of this algorithm. We again want to show that the algorithm returns the minimal solution iff it exists.
+
+        \begin{lemma}
+            Let $l_1$ be a list of terms, $l_2$ be a lists of constants with the same length as $l_1$ and let $s$ be a substitution. If matchTermList s l1 l2 returns a substitution $s'$, then $s \subseteq s'$ and applying $s'$ to every element in $l_1$ results in both lists being equal.
+        \end{lemma}
+        \begin{proof}
+            We prove this by induction on $l_1$ for arbitrary $s$ and $l_2$.
+            In the base case $l_1$ is the empty list. Since both lists have the same length $l_2$ must also be the empty list. matchTermList then returns $s$. Applying this to an empty list returns an empty list. Therefore the base case is complete.
+
+            In the induction step we have that $l_1$ is of the form $hd::tl$ and we can similarly assume that $l_2$ is of the form $hd'::tl'$ and that $tl$ and $tl'$ have the same length by our assumption. Since matchTermList returned a substitution, matchTerm $hd$ $hd'$ also must return a substitution $s^\ast$.
+            We then use this as an input to gain $s'$ from matchTermList $s^\ast$ $tl$ $tl'$. By the induction hypothesis $s^\ast \subseteq s'$ and applying $s'$ to $tl$ results in it being equal to $tl'$. To show that both lists are equal, we just have to show that after applying $s'$ the heads will be equal. We know that applying $s^\ast$ to $hd$ will result in it being equal to $hd'$. Since $s^\ast \subseteq s'$ and our previous result that if a substitution maps a term to a constant then extension of this substitution will also map the term to the same constant, we have this.
+            Lastly, we have to show that $s \subseteq s'$. From the correctness proof of matchTerm we know that $s \subseteq s^\ast$ and from the induction hypothesis we know that $s^\ast \subseteq s'$. Since $\subseteq$ is transitive, the result follows.
+        \end{proof}
+
+        After proving that it is a solution, we prove that the solution is minimal.
+
+        \begin{lemma}
+            Let $l_1$ be a list of terms, $l_2$ be a lists of constants with the same length as $l_1$ and let $s$ be a substitution. If matchTermList s l1 l2 returns a substitution $s'$, then for all substitutions $\hat{s}$ that satisfy $s \subseteq \hat{s}$ and that after the application of $\hat{s}$ $l1$ will be equal to $l2$, we have that $s' \subseteq \hat{s}$
+        \end{lemma}
+        \begin{proof}
+            We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is empty, we return $s$ and the claim is true by assumption.
+
+            In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ and that $tl$ and $tl'$ have the same length. Additionally, we know that matchTerm $hd$ $hd'$ s returns a substitution $s^\ast$. From the induction hypothesis we know that matchTermList $s^\ast$ tl tl' $\subseteq \hat{s}$ if 
+        \end{proof}
+
+        Finally the negative case.
+
+        \begin{lemma}
+            Let $l_1$ be a list of terms, $l_2$ be a lists of constants with the same length as $l_1$ and let $s$ be a substitution. If matchTermList s l1 l2 returns none, then there does not exist a substitution $s'$ with $s \subseteq s'$ and that has that property that applying $s'$ to $l_1$ will result in it being equal to $l_2$.
+        \end{lemma}
+        \begin{proof}
+            We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is the empty list, we cannot return none. As the prerequisite is not fulfilled, the statement is correct.
+
+            In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ and that $tl$ and $tl'$ have the same length. There are two cases where matchTermList can return none. The first case is when matchTerm $hd$ $hd'$ $s$ returns none. If that is the case there is no $s'$ with $s\subseteq s'$ and applying $s$ to $hd$ will make it equal to $hd'$. Therefore the two lists cannot be equal either and the proof is finished.
+
+            If matchTerm $hd$ $hd'$ $s$ returns a substitution $s^\ast$, then matchTermList $s^\ast$ $tl$ $tl'$ must return none. From the induction hypothesis we know that there is no substitution $s'$ with $s^\ast \subseteq s'$ and applying $s'$ to $tl$ bringing it equal to $tl'$. Since $s^\ast$ is already the minimal solution to match $hd$ with $hd'$ there cannot exist a solution here.
+        \end{proof}
+
+        This can be used to create a matchAtom procedure. We are given an atom and a ground atom and check if the symbols are equal. If they are, we also get that their term lists must be equal as the length of the term list is equal to the arity of the relation symbol. The same symbol implies the same length.
+        If the symbols are different, we will never unify them.
+
+        \begin{lstlisting}
+            def matchAtom (s: substitution τ) (a: atom τ) (ga: groundAtom τ):
+            Option (substitution τ) :=
+                if a.symbol = ga.symbol
+                then
+                    matchTermList s a.atom_terms ga.atom_terms
+                else none
+        \end{lstlisting}
+
+        The correctness proofs follow from the proofs of matchTermList since we already established the same length of both lists from the symbol.
+
+        Now we can again create a matchAtomList function and finally a matchRule function. The correctness proofs are of the same form as for matchAtom and are therefore omitted.
+
+        The final result is the following:
+        \begin{lstlisting}
+            theorem matchRuleIsSomeIffSolution (r: rule τ) (gr: groundRule τ) 
+            (len: r.body.length = gr.body.length): 
+            Option.isSome (matchRule r gr) ↔ 
+            ∃ (s: substitution τ), applySubstitutionRule s r = gr
+        \end{lstlisting}
+
+        We now have a method to replace this quantifier by a computable function and can finally devise the checked for tree validation.
 
         \subsection{Tree validation}
 
