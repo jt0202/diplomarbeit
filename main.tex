@@ -154,11 +154,190 @@
         Similarly, we can define ground rules and functions to convert them to rules.
 
 
+        We formalize two semantics here. Firstly, we need the proof-theoretic semantics. Proof trees are a good way to show why an element must be in the solution and output already by multiple datalog engines. There is however as our current knowledge no short certificate similar to proof trees to show the absence of elements. In order to show that a solution is complete we need another method. Both the fixed-point and the model-theoretic semantics offer help in this case. Both are the least element of some set (of fixed-point or of models respectively). Therefore it is enough to show that it is a member of this set for the other direction.
+
+        For the semantics we need the concept of the database. We do not want to deal with the implementation details of a database. We consider it as a black box that returns a ground atom whether it is in the database. It is a function to Bool, because we want computable databases.
+
+        \begin{lstlisting}
+            class database (τ: signature) 
+            [DecidableEq τ.vars] [DecidableEq τ.relationSymbols]
+            [DecidableEq τ.constants]:=
+            (contains: groundAtom τ → Bool)
+        \end{lstlisting}
+        
+
+        We start by defining the proof-theoretic semantics. For this we need to formalize trees. As the size of the body may be unbounded we represent the children using a list.
+
+        \begin{lstlisting}
+            inductive tree (A: Type)
+            | node: A → List (tree A) → tree A        
+        \end{lstlisting}
+
+        In contrast to binary trees, we will need to use functions for lists to define functions on trees. Most interesting function will however need a proof of termination due to this tree model. 
+        
+        \begin{lstlisting}
+            def root: tree A → A
+            | tree.node a _ => a
+
+            def children: tree A → List (A)
+            | tree.node _ l => List.map root l
+
+            def listMax {A: Type} (f: A → ℕ): List A → ℕ
+            | [] => 0
+            | (hd::tl) => 
+                if f hd > listMax f tl 
+                then f hd 
+                else listMax f tl
+
+            def height: tree A → ℕ
+            | tree.node a l => 
+                1 + listMax (fun ⟨x, _h⟩ => height x) l.attach
+            termination_by height t => sizeOf t
+            decreasing_by
+                simp_wf
+                apply Nat.lt_trans (m:= sizeOf l)
+                apply List.sizeOf_lt_of_mem _h
+                simp
+        \end{lstlisting}
+        
+        Height is recursively called on the elements of in the list via the listMax function. Lean can not identify that this terminates so we have to do this. We use the \texttt{sizeOf} function that is built in for any inductive type and maps an element to the sucessor of the sum of the \texttt{sizeOf} values of the elements used in the sucessor. If we show that this always decreases then the function will terminate as the natural numbers are well-founded.
+
+        In contrast to just using the list, we call listMax on \texttt{List.attach} instead. \texttt{List.attach} takes a list $l$ and creates a new list consisting of pairs of the original elements and a proof that the element is in $l$. This proof can be later used when proving termination.
+
+        We have to show a statement of the form $\mathtt{sizeOf} x < 1 + \mathtt{sizeOf} a + \mathtt{sizeOf} l$. We use the transitivity property of the linear order to show this via showing first that $\mathtt{sizeOf} x < \mathtt{sizeOf} l$ and secondly that $\mathtt{sizeOf} l < 1 + \mathtt{sizeOf} a + \mathtt{sizeOf} l$. This second statement is obviously true and can be found by \texttt{simp}. For the first statement we can use the fact that the size of a member of a list is smaller than the size of the list. Due to using \texttt{l.attach} we have a proof for this available and finish the proof.
+        This way of proving termination is the standard way we use in this model and will be omitted for further tree functions.
+
+        Proof trees are then trees that have \texttt{groundAtom} as it vertices and we can formulate the validness criteria. There are two cases. If we are at leaf, i.e. the list of children is empty, then we simply check the database. Else there must exist a rule $r$ from the program and a grounding $g$ so that applying $g$ to $r$ matches the rule created from the current node and its children. Additionally all child trees must be valid as well.
+
+        \begin{lstlisting}
+            abbrev proofTree' (τ: signature) := tree (groundAtom τ)
+
+            def isValid(P: program τ) (d: database τ) (t: proofTree τ): 
+            Prop :=
+            match t with
+            | proofTree.node a l => 
+            ( ∃(r: rule τ) (g:grounding τ), 
+                r ∈ P ∧ 
+                ruleGrounding r g = groundRuleFromAtoms a (List.map root l)
+                ∧ l.attach.All₂ (fun ⟨x, _h⟩ => isValid P d x)) 
+            ∨ (l = [] ∧ d.contains a)
+        \end{lstlisting}
+
+        The proof-theoretic semantics is then simply the set of ground atoms that are the root of a valid proof tree.
+
+        \begin{lstlisting}
+            def proofTheoreticSemantics (P: program τ) (d: database τ): 
+            interpretation τ:= 
+            {a: groundAtom τ | ∃(t: proofTree τ), root t = a ∧ isValid P d t}
+        \end{lstlisting}
+
+        After that we define the model-theoretic semantics. We choose the model-theoretic semantics over the fixed points semantics as we can directly construct the model and do not have to show that a fixed-point exists. Checking them in practice seems to be similar. 
+
+        An interpretation is a set of ground atoms, that may be a model. A model of a program over a database is an interpretation that contains every database element and fulfills every rule. Choosing the database to be a part of the model simiplifies grounding a bit later, as there is only one place to check for matches. Additionally, we want to show that both semantics are equal. From the definition above one can see that any database element has a valid proof tree and is therefore in the proof-theoretic semantics.
+
+        \begin{lstlisting}
+            abbrev interpretation (τ: signature) := Set (groundAtom τ)
+
+            def ruleTrue (r: groundRule τ) (i: interpretation τ): Prop := 
+            groundRuleBodySet r ⊆ i → r.head ∈ i
+
+            def model (P: program τ) (d: database τ) (i: interpretation τ):= 
+            (∀ (r: groundRule τ), r ∈ groundProgram P → ruleTrue r i) 
+            ∧ ∀ (a: groundAtom τ), d.contains a → a ∈ i
+        \end{lstlisting}
+
+        The usual way of defining the model-theoretic semantics is via the model intersection property. If we have two models for a datalog program, then their intersection is again a model. Intersecting all models yields therefore the minimal model. In order to use $\bigcap$ in lead we would need to transform the set of models firstly into an indexed set. We instead used the following more simple notion. We know that an element $a$ is a member of $X \cap Y$ iff $a$ is a member of $X$ and a member of $Y$. Consequently, $a$ is a member of $\bigcap_{M \in models(P,d)} M $, if it is a member in all models.
+
+        \begin{lstlisting}
+            def modelTheoreticSemantics (P: program τ) (d: database τ):= 
+            {a: groundAtom τ | ∀ (i: interpretation τ), model P d i → a ∈ i}
+        \end{lstlisting}
+
+        This describes the same set, but does not offer yet the minimal model property, which we still have to prove.
+
+        We start by showing that it is a subset of every model.
+        \begin{lstlisting}    
+            lemma leastModel (P: program τ) (d: database τ) 
+            (i: interpretation τ) (m: model P d i): 
+            modelTheoreticSemantics P d ⊆ i :=
+            by
+                unfold modelTheoreticSemantics
+                rw [Set.subset_def]
+                intro a
+                rw [Set.mem_setOf]
+                intro h
+                apply h
+                apply m
+        \end{lstlisting}
+
+        This follows quickly from the definition. We have to show that if some arbitrary ground atom $a$ is in the model-theoretic semantics then it is in $i$ from the subset definition. $a$ is in the model-theoretic semantics, if it is in every interpretation that is a model. Specifically, it must be a member of i, which is a model by assumption.
+
+        While the previous lemma is called leastModel, we still have to show that it is a model.
+
+        \begin{lstlisting}
+            lemma modelTheoreticSemanticsIsModel (P: program τ) 
+                (d: database τ): 
+            model P d (modelTheoreticSemantics P d)
+        \end{lstlisting}
+
+        \begin{lemma}
+            Let $P$ be a program and $d$ be a database. 
+            
+            Then the \texttt{modelTheoreticSemantics} of $P$ over $d$ is a model for $P$ over $d$.
+        \end{lemma}
+        \begin{proof}
+            We show that both conditions hold and start by showing that any rule must be rule. Let $r$ be a arbitrary rule the ground program of $P$. Assume that the body of $r$ is a subset of the \texttt{modelTheoreticSemantics}. If not, then the rule is already true since the body is not true.
+            We assume for a contradiction that the head of the rule is not in the \texttt{modelTheoreticSemantics}. From the definition we know that there must exists a model $i$, which does not contain the rule head. We do know however that the body is a subset of the \texttt{modelTheoreticSemantics} and therefore also a subset of $i$. Then the rule $r$ would not be true and $i$ would not be a model and we have reached a contradiction.
+        \end{proof}
+
+        After defining both semantics we finally want to show that they are equal, i.e. the following theorem.
+
+        \begin{lstlisting}
+            theorem SemanticsEquivalence (P: program τ) (d: database τ): 
+            proofTheoreticSemantics P d = modelTheoreticSemantics P d 
+        \end{lstlisting}
+
+        This is supposed to be done via the anti-symmetric property of the subset relation, i.e. $\forall X,Y. X \subseteq Y \land Y \subseteq X \rightarrow X = Y$.
+
+        First we want to show that the proof-theoretic semantics are a subset of the model-theoretic semantics. We show the bit stronger statement, that all element in the proof-theoretic semantics are in every model. As the model-theoretic semantics are a model, the first direction follows.
+
+        \begin{lemma}
+            Let $P$ be a program, $d$ be a database and $i$ a model of $P$ over $d$. 
+            Then \texttt{proofTheoreticSemantics P d} is a subset of $i$
+        \end{lemma}
+        \begin{proof}
+            We want to show that for every ground atom $a$ from the proof-theoretic semantics and valid tree $t$ with the root $a$ $a$ is a member of $i$ via strong induction on the height of $t$.
+
+            Due to using strong induction, we do not need a induction base and can directly prove the induction step.
+        \end{proof}
+
+        For the second direction, we need to show that the \texttt{modelTheoreticSemantics} is a subset of the \texttt{proofTheoreticSemantics}. As we know that the model-theoretic semantic is the least model it suffices to show that the proof-theoretic semantic is a model as well.
+
+        \begin{lemma}
+            Let $P$ be a program and $d$ a database.
+
+            Then \texttt{proofTheoreticSemantics P d} is a model.
+        \end{lemma}
+        \begin{proof}
+            We have to show that the conditions for a model hold.
+
+            Firstly, that the database is a subset of the proof-theoretic semantics. For every ground atom in the database we can construct a tree with no children that has only this element as the node. This is valid and has the database element as its head, so that the condition is fulfilled.
+
+            Secondly, we have to show that every rule is fulfilled. Let $r$ be a ground rule from $ground(P)$ and assume that the body of $r$ is a subset of proof-theoretic semantics of $P$ over $d$. Then we have to show that the head of $r$ is also in the proof-theoretic semantics of $P$ over $d$.
+
+            Since
+
+            
+        \end{proof}
+
+        
+
+
     \section{Soundness}
         After introducing the problem and modelling in Lean, we now describe the algorithm to verify a solution. In this chapter we deal with the soundness, which means here that every atom in the interpretation is actually in the semantics. For this we use the proof trees as the certificate and the proof theoretic semantics.
 
-        A ground atom is in the proof theoretic semantics if there exists a valid proof tree, that has this ground atom as its head. We were provided with all the proof trees and checking the heads is rather easy, so what remains to be checked is the validness of a proof tree. Recall the defintion of validness we established earlier:
-        
+        A ground atom is in the proof theoretic semantics if there exists a valid proof tree, that has this ground atom as its head. We were provided with all the proof trees and checking the heads is rather easy, so what remains to be checked is the validness of a proof tree, that was defined in the previous chapter.
+
         \begin{lstlisting}
             def isValid(P: program τ) (d: database τ) (t: proofTree τ): 
             Prop :=
@@ -172,6 +351,7 @@
         \end{lstlisting}
 
         The second part of this disjunction consists of a database check and an easy check of list emptyness. The first part is more interesting. Since we use there existential quantifiers, we have to implement something to check this. As the program is given as a list of rules, we can simply iterate over this list. For the grounding we however can something more sophisticated, but groundings are not our object of choice for that.
+
         
         \subsection{Substitutions}
             A grounding is function from variables to constants. This mean that we always need to specify for every variable a constant that it is mapped to. This was good in the definitions to ensure that we always get a ground atom, but raises in the unification case problems as the following example demonstrates.
