@@ -306,9 +306,12 @@
             Then \texttt{proofTheoreticSemantics P d} is a subset of $i$
         \end{lemma}
         \begin{proof}
-            We want to show that for every ground atom $a$ from the proof-theoretic semantics and valid tree $t$ with the root $a$ $a$ is a member of $i$ via strong induction on the height of $t$.
+            We want to show that every ground atom in \texttt{proofTheoreticSemantics P d} is also in $i$. A ground atom $a$ is in the proof-theoretic semantics if there exists a valid proof tree that has the root $a$, so that we can instead prove that the root of any valid proof tree $t$ is in $i$.
 
-            Due to using strong induction, we do not need a induction base and can directly prove the induction step.
+            We do this using strong induction on the height of $t$ for arbitrary valid proof trees $t$.
+            There are two possiblities for valid proof trees. The first is that it only contains the root, which is a database element. As any model must contain the database, the root of this tree must be in $i$.
+
+            The second possiblity is that the root of $t$ and the direct children of the root represent a ground rule $r$ of $P$. In this case all subtrees must be valid as well and have from the definition of the height of a tree a smaller height. Therefore we can apply the induction hypothesis and conclude that the root for all direct subtrees of $t$ is in $i$. This set is however exactly the body of $r$. Since $i$ is a model and $r$ is a rule from $ground(P)$ whose body is already in $i$, the head of of this rule must be in $i$ as well. The head of $r$ is exactly the root of $t$ which finishes the proof.
         \end{proof}
 
         For the second direction, we need to show that the \texttt{modelTheoreticSemantics} is a subset of the \texttt{proofTheoreticSemantics}. As we know that the model-theoretic semantic is the least model it suffices to show that the proof-theoretic semantic is a model as well.
@@ -323,11 +326,21 @@
 
             Firstly, that the database is a subset of the proof-theoretic semantics. For every ground atom in the database we can construct a tree with no children that has only this element as the node. This is valid and has the database element as its head, so that the condition is fulfilled.
 
-            Secondly, we have to show that every rule is fulfilled. Let $r$ be a ground rule from $ground(P)$ and assume that the body of $r$ is a subset of proof-theoretic semantics of $P$ over $d$. Then we have to show that the head of $r$ is also in the proof-theoretic semantics of $P$ over $d$.
+            Secondly, we have to show that every rule is fulfilled. Let $r$ be a ground rule from $ground(P)$ and assume that the body of $r$ is a subset of proof-theoretic semantics of $P$ over $d$. Then we have to show that $head(r)$ is also in the proof-theoretic semantics of $P$ over $d$. We do this by constructing a proof for $head(r)$. In order to do we require a list $l$ of valid proof trees such that mapping this list with root yields $body(r)$. Then we can create the new proof tree with the node $head(r)$ and the children $l$. This proof tree is valid as all trees in $l$ are valid and $head(r)$ and $l$ are the rule grounding of some rule $r' \in P$. Since $r$ is a ground rule from $ground(P)$ , such $r'$ and grounding $g$ must exists.
 
-            Since
+            Finally, we have to show that such a list $l$ really exists. We do this by proving the more general lemma.
 
-            
+            \begin{lemma}
+                Let $A$ and $B$ be two types. Let $l'$ be a list of type $B$ and $f$ be a function of $A \to B$ and $valid$ be a function from $B$ to $Prop$. Let $S$ be a finite set such that every member of $l'$ is a member of $S$. Additionally, for any $a$ in $S$ exists a valid $b$ with $f(b) = a$. Then exists a list $l$ with mapping $f$ on $l$ yields $l'$ and that all members of $l$ are valid.
+            \end{lemma}
+            \begin{proof}
+                We proof this by induction on $l'$.
+                If $l'$ is the empty list, then we use again the empty list. Any member of the empty list is valid and the mapping condition holds as well, because the empty list is mapped to the empty list.
+
+                Now we consider $l'$ to be of the form $hd::tl$. Since $hd$ is a member of $l'$, it is also a member of $S$ and therefore a valid element $hd_b$ exists with $f(hd_b) = hd$. For $tl$ we aquire such a list $tl_b$ from the induction hypothesis, since any member of $tl$ is a member of $l'$ and by that a member of $S$. Then $hd_b::tl_b$ is the required list.
+            \end{proof}
+
+            Letting $l'$ be the body of $r$ and $S$ be the finite set consisting of the members of $l$, we fulfill the first requirement. We set $f$ as the root function and $valid$ as $fun t => isValid P d t$. Then by assumption for any element $a$ of $S$ a valid proof tree with the root $a$ exists, since $body(r)$ is already in \texttt{proofTheoreticSemantics P d}. The lemma then presents us the required list of valid proof trees for the body.
         \end{proof}
 
         
