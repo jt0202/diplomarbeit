@@ -31,11 +31,11 @@
     \section{Introduction}
     \section{Preliminaries}
     \subsection{Datalog}
-        Syntactically datalog bears many similarities to first-order logic and may be viewed as a subset of it, but the semantics are more specialized. In order to define the syntax we will introduce some definitions from first-order logic.
+        Syntactically datalog bears many similarities to first-order logic and may be viewed as a fragment of it, but the semantics are more specialized. In order to define the syntax we will introduce some definitions from first-order logic.
 
-        Firstly, we consider in general three sets $R$, that consists of relation symbols, $C$, that consists of constants, and $V$, that consists of variables. In order to differentiate between constants and variables we require that $V \cap C  = \emptyset$. Each relation symbol has an associated arity $ar: R \to \mathbb{N}$.
+        Firstly, we consider in general three countably infinite sets $R$, that consists of relation symbols, $C$, that consists of constants, and $V$, that consists of variables. In order to differentiate between constants and variables we require that $V \cap C  = \emptyset$. Each relation symbol has an associated arity $ar: R \to \mathbb{N}$. As we will only consider finite programs and databases, there will always be at most finitely many relation symbols, constants or variables in usage, but by requiring these sets to be countably infinite we make sure that we always have a sufficient amount. 
         
-        A \textit{term} is either a constant or variable. In contrast to first-order logic or logic programming, we do not allow function symbols in datalog, but there are extensions that introduce some function symbols like addition or multiplication. Assuming that the set of constants is finite, the Herbrand universe will later be finite as well.
+        A \textit{term} is either a constant or variable. In contrast to first-order logic or logic programming, we do not allow function symbols in datalog, but there are extensions of datalog that allow using some function symbols like addition or multiplication as terms as well.
 
         An \textit{atom} is of the form $A(t_1, ..., t_{ar(A)})$ where $A$ is a relation symbol and $t_1,..., t_{ar(A)}$ are terms. The atom variables of $A(t_1, ..., t_{ar(A)})$ are the set of those $t_i$ which are variables. A \textit{ground atom} is an atom where the atom variables are the empty set, i.e. every term is a constant.
         
@@ -74,7 +74,7 @@
         
         We introduced Datalog in the previous chapter. Here we show our implementation in Lean that we will use later to show the correctness of our algorithms.
 
-        We started defining datalog using sets for constants, variables and relation symbols. In order to have a more compact representation we use the idea of a signature from logic, that stores all these informations.
+        We started defining datalog using sets for constants, variables and relation symbols. In order to have a more compact representation we use the idea of a signature, that stores all these informations.
 
         \begin{lstlisting}
             structure signature where
@@ -93,9 +93,9 @@
             deriving DecidableEq
         \end{lstlisting}
 
-        As we want to use these objects in practical algorithms we need a way to see if two terms are the same to e.g. replace a variable by a constant. We use Leans ability to automatically create a decidable function for equality for our inductive types and structure from the given functions for the equality of the types from the signature. 
+        As we want to use these objects in practical algorithms we need a way to see if two terms are the same to e.g. replace a variable by a constant. We use Leans ability to automatically create a decidable function for equality for our inductive types and structure from the given functions for the equality of the types from the signature. This allows us to use statements like \texttt{a = b} for atoms \texttt{a, b} in the program we describe in the later sections.
     
-        For atoms we have to make sure that the amount of terms matches the arity of the relation symbol. Therefore the structure has an additonal element that is a proof of this fact. Two atoms are equal if all fields in the structure are equal. Since propositions as this proof are always equal, it is enough to show that the terms and the symbols are equal.
+        For atoms we have to make sure that the amount of terms matches the arity of the relation symbol. Therefore the structure has an additonal element that is a proof of this property. Two atoms are equal if all fields in the structure are equal. Since propositions as this proof are always equal, it is enough to show that the terms and the symbols are equal.
 
         \begin{lstlisting}
             structure atom where
@@ -109,7 +109,7 @@
 
         \end{lstlisting}
 
-        Rules and programs can be expressed relatively straight forward. For programs we use \texttt{abbrev}, which introduces program as an alias for \texttt{Finset(rule $\tau$)},  instead of defining a new type as this allows us to use the common set operations without the need to redefine them.
+        Rules and programs can be expressed relatively straight forward. For programs we use \texttt{abbrev}, which introduces program as an alias for \texttt{Finset(rule $\tau$)} from \texttt{mathlib},  instead of defining a new type as this allows us to use the common set operations without the need to redefine them.
 
         \begin{lstlisting}
             structure rule where
@@ -120,7 +120,7 @@
             abbrev program := Finset (rule τ)
         \end{lstlisting}
 
-        We have previously introduced ground atoms as atoms whose terms are only constants. There are at least two options to represent them here. Firstly we could define a structure for ground atoms that extends atoms by a predicate that shows that there are only constants present. The second option is to define an entirely new structure similar to atoms but allow only constants instead of terms. The first options show directly that every ground atom is an atom which we would have to establish separatedly in the second option. The second option allows directly to define the functions on a list of constants instead of having to cast it directly to it and allows to use the complete induction schema when defining functions on ground atoms. The second option seemed to offer more advantegous and was therefore chosen.
+        We have previously introduced ground atoms as atoms whose terms are only constants. There are at least two options to represent them here. Firstly we could define a structure for ground atoms that extends atoms by a predicate that shows that there are only constants present. The second option is to define an entirely new structure similar to atoms but allow only constants instead of terms. The first options show directly that every ground atom is an atom which we would have to establish separatedly in the second option. The second option allows directly to define the functions on a list of constants instead of having to cast the list of terms of a ground atom directly to a list of constants and allows to use the complete induction schema when defining functions on ground atoms. The second option seemed to offer more advantegous and was therefore chosen.
 
         \begin{lstlisting}
             structure groundAtom  where
@@ -149,14 +149,14 @@
             }
         \end{lstlisting}
 
-        Additionally, we need later that two \texttt{groundAtom} are equal iff the result of \texttt{toAtom} is equal.
+        Additionally, we need later that two \texttt{groundAtom} are equal iff the result of \texttt{toAtom} is equal. Similarly, we can define ground rules and functions to convert them to rules.
 
-        Similarly, we can define ground rules and functions to convert them to rules.
+        For now we have only seen 
 
 
-        We formalize two semantics here. Firstly, we need the proof-theoretic semantics. Proof trees are a good way to show why an element must be in the solution and output already by multiple datalog engines. There is however as our current knowledge no short certificate similar to proof trees to show the absence of elements. In order to show that a solution is complete we need another method. Both the fixed-point and the model-theoretic semantics offer help in this case. Both are the least element of some set (of fixed-point or of models respectively). Therefore it is enough to show that it is a member of this set for the other direction.
+        We formalize two semantics here. Firstly, we need the proof-theoretic semantics. Proof trees are a good way to show why an element must be in the solution and output already by multiple datalog engines. There is however to the best of our current knowledge no short certificate similar to proof trees to show the absence of elements. In order to show that a solution is complete we need another method. Both the fixed-point and the model-theoretic semantics offer help in this case. Both are the least element of some set (of fixed-point or of models respectively). Therefore it is enough to show that it is a member of this set for the other direction.
 
-        For the semantics we need the concept of the database. We do not want to deal with the implementation details of a database. We consider it as a black box that returns a ground atom whether it is in the database. It is a function to Bool, because we want computable databases.
+        For the semantics we need the concept of the database. We do not want to deal with the implementation details of a database. We consider it as a black box that returns for a ground atom whether it is in the database. It is a function that returns \texttt{Bool}, because we want computable databases.
 
         \begin{lstlisting}
             class database (τ: signature) 
@@ -166,7 +166,7 @@
         \end{lstlisting}
         
 
-        We start by defining the proof-theoretic semantics. For this we need to formalize trees. As the size of the body may be unbounded we represent the children using a list.
+        We start by defining the proof-theoretic semantics. For this we need to formalize trees. The tree is supposed to start from the facts and then expand upwards by the application of rules. As the body of rules is in general unbounded, we also require trees with an unbounded number of children, which we realize via lists.
 
         \begin{lstlisting}
             inductive tree (A: Type)
@@ -200,7 +200,7 @@
                 simp
         \end{lstlisting}
         
-        Height is recursively called on the elements of in the list via the listMax function. Lean can not identify that this terminates so we have to do this. We use the \texttt{sizeOf} function that is built in for any inductive type and maps an element to the sucessor of the sum of the \texttt{sizeOf} values of the elements used in the sucessor. If we show that this always decreases then the function will terminate as the natural numbers are well-founded.
+        Height is recursively called on the elements of in the list via the listMax function. Lean can not identify that this terminates so we have to provide a proof of termination. This is done in Lean by providing a well-founded relation that takes part of the input and show that the recursive calls of the function are only on elements that are smaller in this relation. Due to the well-foundedness there are no infinite descending chains and the function must terminate.  We use the \texttt{sizeOf} function that is built in for any inductive type and maps an element to the sucessor of the sum of the \texttt{sizeOf} values of the elements used in the sucessor. If we show that this always decreases then the function will terminate as the natural numbers are well-founded.
 
         In contrast to just using the list, we call listMax on \texttt{List.attach} instead. \texttt{List.attach} takes a list $l$ and creates a new list consisting of pairs of the original elements and a proof that the element is in $l$. This proof can be later used when proving termination.
 
@@ -233,7 +233,7 @@
 
         After that we define the model-theoretic semantics. We choose the model-theoretic semantics over the fixed points semantics as we can directly construct the model and do not have to show that a fixed-point exists. Checking them in practice seems to be similar. 
 
-        An interpretation is a set of ground atoms, that may be a model. A model of a program over a database is an interpretation that contains every database element and fulfills every rule. Choosing the database to be a part of the model simiplifies grounding a bit later, as there is only one place to check for matches. Additionally, we want to show that both semantics are equal. From the definition above one can see that any database element has a valid proof tree and is therefore in the proof-theoretic semantics.
+        An interpretation is a set of ground atoms, that may be a model. A model of a program over a database is an interpretation that contains every database element and fulfills every rule. Choosing the database to be a part of the model simiplifies grounding later, as there is only one place to check for matches. Additionally, we want to show that both defined semantics are equal. From the definition above one can see that any database element has a valid proof tree and is therefore in the proof-theoretic semantics.
 
         \begin{lstlisting}
             abbrev interpretation (τ: signature) := Set (groundAtom τ)
@@ -481,7 +481,7 @@
         \end{algorithmic}
         \end{algorithm}
 
-        This algorithm offers a good starting point for our own algorithm, but we certain transformation can't occur in the limited syntactic form we operate in. Additionally, we want to output a substitution instead of just answering whether a substitution exists. It is sufficent to do it here, but will later be important. Instead of mapping all $x$ to $t$ as done there in step 5, we will add $x\mapsto t$ to a substitution that is presented as an input. If a variable occurs on the left side, we will check whether it is already in the domain of the substitution and if so check if its current value is consistent with the right side.
+        This algorithm offers a good starting point for our own algorithm, but we certain transformation can't occur in the limited syntactic form we operate in. Additionally, we want to output a substitution instead of just answering whether a substitution exists. It is sufficient to do it here, but will later be important. Instead of mapping all $x$ to $t$ as done there in step 5, we will add $x\mapsto t$ to a substitution that is presented as an input. If a variable occurs on the left side, we will check whether it is already in the domain of the substitution and if so check if its current value is consistent with the right side.
         As function symbols appart from constant symbols are not allowed, we can simplify steps 2 and 3, as we never add new equations and instead only check if the constant symbol matches. Finally, as the one side of the equation is always a ground object there will never be a variable on this side, so that we do not have to swap the equation as in step 4.
 
         We will start with matching a term to a constant with the following algorithm.
@@ -637,6 +637,113 @@
         \subsection{Tree validation}
 
     \section{Completeness}
+
+    In the previous chapter we described a method why an atom is in the datalog semantics. This criteria is however not sufficient to recognize a solution. The empty list passes this test for any program while not being the semantics in most cases. Proof trees were a method to recognize why a ground atom is part of the semantics, but we are not aware of any simple way to describe why a ground atom is not in the semantics. Instead we want to show that the set of elements in the proof trees, $S$ are complete in the sense that nothing else can derived from it any more. This is the case when the $T_P$ operator has a fixed-point for $S$ or alternatively when $S$ is a model. In this chapter we are going to create a certified model checker to show the completeness. If $S$ passed the tree validation algorithm and is a model the following statements hold:
+
+    \[ S \subseteq \mathtt{proofTheoreticSemantics\ P\ d} = \mathtt{modelTheoreticSemantics\ P\ d} \subseteq S \]
+
+    \subsection{Partial ground rules}
+    
+        We defined the model property on the ground program $ground(P)$. In order to check if a set of ground atoms is a model for a program we therefore have to ground the program. We want to avoid simply grounding all the rules at once and instead do it in a more intelligent way. For this we introduce a new data structure, the partial ground rule. This bears some similarities to the rules we defined in chapter 3. It has a head that is an atom. The body is split into two lists. The first list contains the ground atoms and represents the atoms in the rule we already grounded, whereas the second list consists of the so far ungrounded atoms in the rule body. We want to move the ungrounded atoms one by one into the grounded list by applying substitutions, which map all variables of this atom to constants, so that we can transform this atom into a ground atom.
+
+        \begin{lstlisting}
+            structure partialGroundRule (τ: signature)  where
+                head: atom τ
+                groundedBody: List (groundAtom τ)
+                ungroundedBody: List (atom τ)
+        \end{lstlisting}
+
+        \begin{example}
+            A rule $r := q(X) :- r(a, b), t(X, c), s(c, d), u(d, X) .$ may be viewed as the following partial ground rule
+            $pgr_1 = $
+            \begin{lstlisting}
+                {
+                    head:= q(X),
+                    groundedBody := [],
+                    ungroundedBody := [r(a, b), t(X, c), s(c, d), u(d, X)]
+                }
+            \end{lstlisting}
+            
+            This representation does not look any different to the rule itself as we do not use the grounded body at all. We can however move ground atoms from the ungrounded body into the grounded body. The order of the atoms in the body does not matter semantically as we use a set definition when defining the criteria for a rule being true, so that we can simply move all ground atoms in the grounded body.
+
+            \begin{lstlisting}
+                {
+                    head:= q(X),
+                    groundedBody := [r(a, b), s(c, d)],
+                    ungroundedBody := [t(X, c),  u(d, X)]
+                }
+            \end{lstlisting}
+
+        \end{example}
+
+        We can transform any rule into a partial ground rule by setting the head as the head, the body as the ungrounded body and setting the grounded body to be empty.
+
+        \begin{lstlisting}
+            def partialGroundRuleFromRule (r: rule τ): partialGroundRule τ :=
+            {
+                head := r.head, 
+                groundedBody := [],
+                ungroundedBody := r.body
+            }
+        \end{lstlisting}
+
+        \begin{example}
+            $pgr_1$ is exactly the result of \texttt{partialGroundRuleFromRule $r$}.
+        \end{example}
+
+        We choose this representation instead of the approach used for $pgr_2$ as this does not require iterating over the whole body to find ground atoms. As we will apply multiple substitutions in the grounding process, we will create anyways ground atoms in different place to the atom in the body we are currently trying to ground.
+
+        Any partial ground rule can also be transformed back into a rule by concatenating the grounded and ungrounded body and combining creating first a partial ground rule from a rule and then transforming the resulting partial ground rule yields the original rule. This does not hold if we swap the operations as we do not explicitly move atoms without variables from the start of the body into the grounded body.
+
+        \begin{lstlisting}
+            def partialGroundRule.toRule (pgr: partialGroundRule τ)
+            : rule τ :=
+    
+            {
+                head:= pgr.head, 
+                body := (List.map (groundAtom.toAtom) pgr.groundedBody)
+                ++ pgr.ungroundedBody
+            }
+
+            lemma partialGroundRuleToRuleInverseToFromRule (r: rule τ): 
+                r = partialGroundRule.toRule (partialGroundRuleFromRule r)
+        \end{lstlisting}
+
+        \begin{example}
+            The application of \texttt{partialGroundRule.toRule} on $pgr_1$ yields $r$ as predicted by the lemma.
+
+            If we swap both functions and first apply \texttt{partialGroundRule.toRule} to a partial ground rule and then convert the resulting rule back to a partial ground rule, we see that this is no longer equal. Applying {partialGroundRule.toRule} to $pgr_2$ results in the rule $ q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . $. Converting this back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
+
+            \begin{lstlisting}
+                {
+                    head:= q(X),
+                    groundedBody := [],
+                    ungroundedBody := [r(a, b), s(c, d), t(X, c),  u(d, X)]
+                }
+            \end{lstlisting}
+            which is different from $pgr_2$
+        \end{example}
+
+        Using the transformation to rules we can lift defintions like safety or being true to partial ground rules.
+
+        \begin{lstlisting}
+            def partialGroundRule.isSafe (pgr: partialGroundRule τ) :=
+                pgr.toRule.isSafe
+
+            def partialGroundRule.ruleTrue (pgr: partialGroundRule τ) 
+            (i: interpretation τ) :=
+                ruleTrue pgr.toRule i
+        \end{lstlisting}
+
+        So far we only split the body into two parts and have the goal of applying substitutions to move everything into the grounded body. This is not to different to just applying groundings directly. 
+        This process allows us to potentially stop early. If the substitutions we applied so far resulted in a ground atom that is not part of the interpretation $i$ we already know that the rule is true. No matter how the remaining variables are mapped, the body will never be a part of $i$ and therefore the antecedent is false and the rule is therefore true. We call a partial ground rule \textit{active in an interpretation} $i$ where all ground atoms in the \texttt{groundedBody} 
+
+        \begin{lstlisting}
+            def active (pgr: partialGroundRule τ) (i: interpretation τ):=
+            ∀ (ga: groundAtom τ), ga ∈ pgr.groundedBody → ga ∈ i 
+        \end{lstlisting}
+
+    \subsection{Explore grounding}
 
 
 \end{document}
