@@ -373,6 +373,9 @@
                 Consider the signature consisting of $C = \{a,b,c\}$, $V = \{x,y,z \}$ and $R = \{R\}$. Suppose we want to match a list of terms with a list of constant. The first term is $t_1 = x$ and the first constant is $a$. We might use the the grounding $g = x \mapsto a, y \mapsto a, z \mapsto a$.
 
                 Now we want to use this result and match another term $t_2 = y$ with the constant $b$. The variable $y$ is already mapped to a different constant, but we cannot say whether this is due to a previous matching process or simply because we needed to define a value for every input.
+                
+
+                
             \end{example}
 
             Instead, we want to use substitutions that were already introduced in \cite{datalogCoq}. A substitution is a partial mapping from variables to constants. We implement this by mapping to an Option of constant.
@@ -454,7 +457,7 @@
             ∀ (v: τ.vars), v ∈ substitution_domain s1 → s1 v = s2 v
             \end{lstlisting}
 
-            This can be proven to be a linear order.
+            This can be proven to be a partial order.
 
         \subsection{Unification}
 
@@ -515,11 +518,15 @@
             := fun x => if x = v then Option.some c else s x
         \end{lstlisting}
 
-        We know formally prove the correctness of this algorithm.
+        We know formally prove the correctness of this algorithm. The first result is that if \texttt{matchTerm} returns a substitution $s'$ that $s'$ is indeed a solution, i.e. that applying $s'$ to $t$ results in $c$ and that $s'$ is an extension of $s$
 
-        \begin{lemma}
-        Let $t$ be a term, $c$ a constant, $s$ a substitution and let matchTerm $t$ $c$ $s$ return a new substitution $s'$. Then $s' t$ = c and $s \subseteq s'$
-        \end{lemma}
+        \begin{lstlisting}
+            lemma matchTermFindsSolution (t: term τ) (c: τ.constants) 
+            (s: substitution τ) (h: Option.isSome (matchTerm t c s)): 
+
+            applySubstitutionTerm (Option.get (matchTerm t c s) h) t = c 
+            ∧ s ⊆ (Option.get (matchTerm t c s) h)
+        \end{lstlisting}
         \begin{proof}
         The proof is done via case distinction. Suppose firstly that $t$ is a constant $c'$. Since matchTerm returned a substitution we must have that $c$ and $c'$ are the same constant and therefore $s'$ is $s$. Applying a substitution to a constant does not change it, so $s' t = s' (c') = c' = c$. Additionally since $\subseteq$ is a linear order and $s' = s$, we have that $s \subseteq s'$
 
@@ -527,11 +534,27 @@
         If it is not defined, we use extend. After that $v$ is mapped to $c$, so that $s' t$ will be equal to $c$. Now we finally have to show that $s \subseteq$ extend $s$ $v$ $c$. We only change the value of $v$. Since $v$ was not defined earlier, for any variable in the domain of $s$, $s$ and extend $s$ $v$ $c$, so that it is fulfilled.
         \end{proof}
 
-        We have proven so far the matchTerm returns a solution, but it might not be a minimal solution. This is however later needed, when we want to match atoms to ground atoms as there we match a list of terms to a list of constants and pass the previous results on.
+        We have proven so far the matchTerm returns a solution, but it might not be a minimal solution. When we want to match atoms with ground atoms, we need to match a list of terms with a list of constants. There it is important that the returned substitution is indeed minimal to conclude whether a solution exists as the following example shows.
 
-        \begin{lemma}
-        Let $t$ be a term, $c$ a constant, $s$ a substitution and let matchTerm $t$ $c$ $s$ return a new substitution $s'$. Then $s'$ is a minimal solution, i.e. forall substitution $s^\ast$ with $s \subseteq s^\ast \land s^\ast t = c$ we have $s' \subseteq s^\ast$
-        \end{lemma}
+        \begin{example}
+            Consider the list of terms $l_1 = [x, y, x]$ with the variables $x$ and $y$ and the list of constants $l_2 = [a,b, c]$. We want to find a substitution that we can apply to $l_1$ to gain $l_2$ if possible. We start with the empty substitution and first want to match the first elements of $l_1$ and $l_2$. If we receive a solution $s$, then we continue with the next elements of $l_1$ and $l_2$, but this time the matching extends $s$ instead of the empty substitution.
+
+            Now suppose the procedure $P_1(t,c, s)$ that takes a term, a constant and a substitution does not always return a minimal solution. So it might return for $x$, $a$ and the empty substitution the substitution $s = x \mapsto a, y\mapsto a$.
+
+            Now we again call $P_1$ with $y$, $b$ and $s$. $P_1$ will not return anything, because $y$ is already mapped to something else. From this fact we cannot conlude that there exists no solution at all however. In fact, the non-minimality of the results of $P_1$ prevents this reasoning.
+
+            If we have a second procedure $P_2(t,c, s)$ that always returns the minimal solution we solve the matching process for the first two list elements of each list to return $s' = x \mapsto a, y \mapsto y$. Now we want to match $x$ with $c$ and $P_2$ will return none. We can conlude that no solution exists since any substitution from $P_2$ is minimal. If there exists a solution to the list then $l_2$, it necessarily must match the first to elements of both lists. Since $s'$ is the minimal solution of a process that started with the empty substitution and always returned minimal solution, any solution to the list must extend $s'$. Therefore it must agree on the domain of $s'$ and therefore it must map $x$ to $a$ and therefore no solution can exist.
+
+        \end{example}
+
+        \begin{lstlisting}
+            lemma matchTermFindsMinimalSolution' (t: term τ) 
+            (c: τ.constants) (s: substitution τ) 
+            (h: Option.isSome (matchTerm t c s)): 
+            
+            ∀ (s': substitution τ),(s ⊆ s' ∧ applySubstitutionTerm s' t = c)
+             → (Option.get (matchTerm t c s) h) ⊆ s' :=
+        \end{lstlisting}
         \begin{proof}
         This is again done via case distinction on the type of $t$. If $t$ is constant, then $s'$ must be equal to $s$. For any $s^\ast$ with $s \subseteq s^\ast \land s^\ast t = c$ we have b that $s' \subseteq s^\ast$ by the assumption of the property of $s^\ast$
 
@@ -542,9 +565,13 @@
 
         So we know that if matchTerm returns a substitution then it is a minimal solution. We additionally have to prove that if matchTerm does not return a substitution that then no solution exists.
 
-        \begin{lemma}
-        Let $t$ be a term, $c$ a constant, $s$ a substitution and let matchTerm $t$ $c$ $s$ return none. Then there does not exists a substitution $s'$ with $s \subseteq s'$ and $s' t = c$.
-        \end{lemma}
+        \begin{lstlisting}
+            lemma matchTermNoneImpNoSolution (t: term τ)
+             (c: τ.constants) (s: substitution τ)
+              (h: Option.isNone (matchTerm t c s)):
+            
+            ¬ (∃(s': substitution τ), s ⊆ s'∧applySubstitutionTerm s' t = c)
+        \end{lstlisting}
         \begin{proof}
         This is again done via case distinction on the type of $t$. If $t$ is a constant $c'$, then $c'$ must be different from $c$, so that matchTerm returns none. Then no substitution can map $t$ to c.
 
@@ -570,11 +597,17 @@
 
         Here we are given as previously a substitution as an input with the two lists. For the correctness it is required that both lists have the same length, but this is the case for atoms. If the first list is empty we return the substitution. If instead it has a first element and the second list has as well a first element, we match these elements using matchTerm and if this results in a solution, we return the result of matchTermList with the remaining lists and the resulting substitution.
 
-        As previously, we have to prove the correctness of this algorithm. We again want to show that the algorithm returns the minimal solution iff it exists.
+        As previously, we have to prove the correctness of this algorithm. We again want to show that the algorithm returns the minimal solution iff it exists. We require for these results that both lists are the same length. If the list of constants is longer than the list of terms, the \texttt{matchTermList} function may return a solution eventhough the lists will never be equal. As we only want to use this to match atoms, this is however not a problem. No subsititution can change the symbol, so that we will only try to match atoms with ground atoms that have the same symbol. The symbol determines the number of terms so that both lists will have the same length.
 
-        \begin{lemma}
-            Let $l_1$ be a list of terms, $l_2$ be a lists of constants with the same length as $l_1$ and let $s$ be a substitution. If matchTermList s l1 l2 returns a substitution $s'$, then $s \subseteq s'$ and applying $s'$ to every element in $l_1$ results in both lists being equal.
-        \end{lemma}
+        \begin{lstlisting}
+            lemma matchTermListFindsSolution (s: substitution τ)
+            (l1: List (term τ)) (l2: List (τ.constants))
+            (len: l1.length = l2.length)
+            (h:Option.isSome (matchTermList s l1 l2)):
+             List.map (applySubstitutionTerm (Option.get (matchTermList s l1 l2) h)) l1 
+                = List.map term.constant l2 
+             ∧ s ⊆ (Option.get (matchTermList s l1 l2) h ) :=
+        \end{lstlisting}
         \begin{proof}
             We prove this by induction on $l_1$ for arbitrary $s$ and $l_2$.
             In the base case $l_1$ is the empty list. Since both lists have the same length $l_2$ must also be the empty list. matchTermList then returns $s$. Applying this to an empty list returns an empty list. Therefore the base case is complete.
@@ -586,20 +619,31 @@
 
         After proving that it is a solution, we prove that the solution is minimal.
 
-        \begin{lemma}
-            Let $l_1$ be a list of terms, $l_2$ be a lists of constants with the same length as $l_1$ and let $s$ be a substitution. If matchTermList s l1 l2 returns a substitution $s'$, then for all substitutions $\hat{s}$ that satisfy $s \subseteq \hat{s}$ and that after the application of $\hat{s}$ $l1$ will be equal to $l2$, we have that $s' \subseteq \hat{s}$
-        \end{lemma}
+        \begin{lstlisting}
+            lemma matchTermListFindsMinimalSolution (s: substitution τ)
+            (l1: List (term τ)) (l2: List (τ.constants)) 
+            (len: l1.length = l2.length) 
+            (h: Option.isSome (matchTermList s l1 l2)):
+            ∀ (s': substitution τ), 
+             List.map (applySubstitutionTerm s') l1 = List.map term.constant l2
+              ∧ s ⊆ s' → (Option.get (matchTermList s l1 l2) h ) ⊆ s' :=
+        \end{lstlisting}
         \begin{proof}
             We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is empty, we return $s$ and the claim is true by assumption.
 
-            In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ and that $tl$ and $tl'$ have the same length. Additionally, we know that matchTerm $hd$ $hd'$ s returns a substitution $s^\ast$. From the induction hypothesis we know that matchTermList $s^\ast$ tl tl' $\subseteq \hat{s}$ if 
+            In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ and that $tl$ and $tl'$ have the same length. Additionally, we know that matchTerm $hd$ $hd'$ s returns a substitution $s^\ast$. From the induction hypothesis we know that matchTermList $s^\ast$ tl tl' $\subseteq \hat{s}$ for any substitution $\hat{s}$ that extends $a^\ast$ and maps $tl$ to $tl'$. Since $s^\ast$ is a minimal solution for $hd$ and $hd'$ and $s^\ast$ only extends it, we know that it is a solution for the whole list. We also know from the minimality of $s^\ast$ that $s \subseteq s^\ast$. From the induction hypothesis, we get that $s^\ast \subseteq \hat{s}$. Transitivity tells us that $s \subseteq \hat{s}$ as 
         \end{proof}
 
-        Finally the negative case.
+        Finally the negative case that confirms that the return value of none does indeed state that there is no solution.
 
-        \begin{lemma}
-            Let $l_1$ be a list of terms, $l_2$ be a lists of constants with the same length as $l_1$ and let $s$ be a substitution. If matchTermList s l1 l2 returns none, then there does not exist a substitution $s'$ with $s \subseteq s'$ and that has that property that applying $s'$ to $l_1$ will result in it being equal to $l_2$.
-        \end{lemma}
+        \begin{lstlisting}
+            lemma matchTermListNoneImplNoSolution (s: substitution τ)
+            (l1: List (term τ)) (l2: List (τ.constants))
+            (len: l1.length = l2.length) 
+            (h: Option.isNone (matchTermList s l1 l2)): 
+            ∀ (s': substitution τ), s ⊆ s' →
+            ¬  List.map (applySubstitutionTerm s') l1 = List.map term.constant l2 :=
+        \end{lstlisting}
         \begin{proof}
             We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is the empty list, we cannot return none. As the prerequisite is not fulfilled, the statement is correct.
 
@@ -622,9 +666,21 @@
 
         The correctness proofs follow from the proofs of matchTermList since we already established the same length of both lists from the symbol.
 
-        Now we can again create a matchAtomList function and finally a matchRule function. The correctness proofs are of the same form as for matchAtom and are therefore omitted.
+        Now we can create a \texttt{matchAtomList} function similarly to \texttt{matchTermList} and use this to define a \texttt{matchRule} function. We first try match the head of the rule with the head of the ground rule. If this returns a solution, we use this as the start for matching the bodies. If not, we will not find a solution and return none.
 
-        The final result is the following:
+        \begin{lstlisting}
+            def matchRule (r: rule τ) (gr: groundRule τ):
+             Option (substitution τ):=
+                let s := matchAtom emptySubstitution r.head gr.head
+                if p: Option.isSome s
+                then matchAtomList (Option.get s p) r.body gr.body
+                else none
+
+        \end{lstlisting}
+
+        We know prove again that if this returns a substitution then this is a solution and if none is return then there is no solution using our previous results. For both these results we assume that both bodies have the same length, but determining the length of a list can be done in the tree validation process.
+        We want a statement with the quantifier to combine it with the theorem about the equivalence between groundings and substitutions. We can prove this statement by using the result of \texttt{matchRule} as a witness for the quantifier. For the back direction, we see that this statement implies that a solution exists, which we always find with \texttt{matchRule}
+
         \begin{lstlisting}
             theorem matchRuleIsSomeIffSolution (r: rule τ) (gr: groundRule τ) 
             (len: r.body.length = gr.body.length): 
@@ -632,9 +688,38 @@
             ∃ (s: substitution τ), applySubstitutionRule s r = gr
         \end{lstlisting}
 
-        We now have a method to replace this quantifier by a computable function and can finally devise the checked for tree validation.
+        We now have a method to replace this quantifier by a computable function and can finally devise the check for tree validation.
 
         \subsection{Tree validation}
+
+        We have so far introduced introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or from the previous results a substitution $s$) and a rule $r$ from the program $P$, so that applying $g$ to $r$ yields $gr$. We want to use the \texttt{matchRule} function defined earlier for this. This function required that both bodies of the rules to have the same length in order to work properly. Instead of just computing the length we want to do a bit more. We previously noted that substitutions (or groundings) never change the symbol of an atom, so that we do not have to try to match rules whose symbols differ. The symbols of a rule are expressed in the symbol sequence.
+
+        \begin{lstlisting}
+            def symbolSequence (r: rule τ): List τ.relationSymbols := 
+             r.head.symbol::(List.map atom.symbol r.body)
+
+        \end{lstlisting}
+
+        We can now compare the symbol sequence of a rule and the symbol sequence of a ground rule. If they are equal, we see that the bodies have the same length, since we just map each body element and attached for both the head at the front. If they are however not equal, then no substitution can be applied to the rule so that it will yield the ground rule.
+
+        We can use this to check whether a ground rule $gr$ is in the ground program of $P$. We simply compare the symbol sequence of all rules in $P$ with $gr$ and try to match those whose symbol sequences are equal. As soon as we find a substitution using \texttt{matchRule} we return \texttt{ok}. If no rule matches we return an error displaying this.
+
+        \begin{lstlisting}
+            
+            def checkRuleMatch (P: List (rule τ)) (gr: groundRule τ) 
+            (ruleToString: rule τ → String): Except String Unit :=
+            match P with
+            | List.nil => Except.error 
+                ("No match for " ++ (ruleToString gr.toRule))
+            | List.cons hd tl =>
+            if symbolSequence hd = symbolSequence gr.toRule
+                then  if Option.isSome (matchRule hd gr)
+                    then Except.ok ()
+                    else checkRuleMatch tl gr ruleToString
+            else checkRuleMatch tl gr ruleToString
+        \end{lstlisting}
+
+
 
     \section{Completeness}
 

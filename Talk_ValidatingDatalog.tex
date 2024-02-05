@@ -1,0 +1,213 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage[utf8x]{inputenc}
+\usepackage{amssymb}
+\usepackage{appendixnumberbeamer}
+\usepackage{pgfplots}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, chains,fit,shapes}
+\usepackage{color}
+\definecolor{keywordcolor}{rgb}{0.7, 0.1, 0.1}   % red
+\definecolor{commentcolor}{rgb}{0.4, 0.4, 0.4}   % grey
+\definecolor{symbolcolor}{rgb}{0.0, 0.1, 0.6}    % blue
+\definecolor{sortcolor}{rgb}{0.1, 0.5, 0.1}      % green
+\usetheme{Dresden}
+\usepackage{listings}
+\def\lstlanguagefiles{lstlean.tex}
+\lstset{
+    language=lean,
+}
+\setbeamercolor{block body alerted}{bg=alerted text.fg!10}
+\setbeamercolor{block title alerted}{bg=alerted text.fg!20}
+\setbeamercolor{block body}{bg=structure!10}
+\setbeamercolor{block title}{bg=structure!20}
+\setbeamercolor{block body example}{bg=green!10}
+\setbeamercolor{block title example}{bg=green!20}
+
+\title[Datalog validation]{Validation of datalog reasoning results}
+\author[J. Tantow]{Johannes Tantow}
+\setbeamertemplate{navigation symbols}{%
+    \usebeamerfont{footline}%
+    \usebeamercolor[fg]{footline}%
+    \hspace{1em}%
+    \insertframenumber/\inserttotalframenumber
+}
+\setbeamercolor{footline}{fg=black}
+\setbeamerfont{footline}{series=\bfseries}
+% Custom command for the arrow
+
+% Define a custom color for the arrow
+\definecolor{arrowcolor}{RGB}{0, 102, 204}
+
+% Custom command for the arrow
+\newcommand{\arrowlong}[1]{%
+    \tikz[baseline=-0.5ex]\node[fill=arrowcolor, single arrow, shape border rotate=0, text=white, draw=arrowcolor, inner sep=2pt, minimum height=1cm] {#1};%
+}
+
+
+\begin{document}
+    \maketitle
+
+    \begin{frame}[fragile]{Datalog}
+        \begin{columns}[t]
+            \begin{column}{0.4\textwidth}
+                \begin{lstlisting}[basicstyle=\small]
+a(1,2).
+b(3,4).
+
+c(?x,?y) :- a(?x,?y).
+
+d(?x,?y) :- b(?x,?y).
+
+e(?x,?y) :- c(?x,?z), d(?a, ?y).
+                \end{lstlisting}
+            \end{column}
+            \begin{column}{0.25\textwidth}
+                \arrowlong{Datalog engine}
+
+            \end{column}
+            \begin{column}{0.25\textwidth}
+                
+                \begin{lstlisting}[basicstyle=\small]
+a(1,2).
+b(3,4).
+
+c(1,2) :- a(1,2).
+
+d(3,4) :- b(3,4).
+
+e(1,4) :- c(1,2), d(3, 4).
+
+----
+c(1,3) :- a(1,3).
+
+                                    \end{lstlisting}
+                
+                                
+            \end{column}
+        \end{columns}
+        
+    \end{frame}
+
+    \begin{frame}[fragile]{Proof trees}
+        \begin{columns}
+            \begin{column}{0.3\textwidth}
+
+       
+                \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
+                    \node {e(1,4)}
+                        child {node {c(1,2)}
+                            child {node {a(1,2)}}
+                        }
+                        child {node {d(3,4)}
+                            child {node {b(3,4)}}
+                        };
+                \end{tikzpicture}
+            \end{column}
+            \begin{column}{0.5\textwidth}
+                \begin{lstlisting}
+def isValid(P: program τ) (d: database τ) (t: proofTree τ): Prop :=
+  match t with
+  | proofTree.node a l => 
+  ( ∃(r: rule τ) (g:grounding τ),
+    r ∈ P ∧ ruleGrounding r g = groundRuleFromAtoms a (List.map root l) 
+    ∧ l.attach.All₂ (fun ⟨x, _h⟩ => isValid P d x)) 
+  ∨ (l = [] ∧ d.contains a)
+                \end{lstlisting}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Datalog modelling}
+        \begin{columns}
+            \begin{column}{0.4\textwidth}
+                Syntax:
+
+                \begin{lstlisting}
+structure rule where
+(head: atom τ)
+(body: List (atom τ))
+
+def grounding:= 
+    τ.vars → τ.constants
+
+                \end{lstlisting}
+                
+            \end{column}
+            \begin{column}{0.5\textwidth}
+                Semantics:
+
+                \begin{lstlisting}[basicstyle=\small\ttfamily]
+def proofTheoreticSemantics (P: program τ) (d: db):= 
+{a:| ∃ (t: proofTree τ), root t = a ∧ isValid P d t}
+
+theorem SemanticsEquivalence 
+ (P: program τ) (d: db τ): proofTheoreticSemantics P d = modelTheoreticSemantics P d :=
+
+
+                \end{lstlisting}
+                
+            \end{column}
+        \end{columns}
+
+    \end{frame}
+    \begin{frame}[fragile]{Tree validation}
+        \begin{columns}
+            \begin{column}{0.35\textwidth}
+                \begin{lstlisting}
+                    
+P:
+
+r(x,y) :- s(y,x).
+
+r(x,y) :- s(x,z),t(z,y).
+                \end{lstlisting}
+
+            \end{column}
+
+            \begin{column}{0.4\textwidth}
+                \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
+                    \node {r(a,b)}
+                        child {node {s(a,b)}
+                        }
+                        child {node {t(b,c)}
+                        };
+                \end{tikzpicture}
+
+                Formally implemented and proved unification:
+
+                Try:
+                
+                r(x,y) :- s(x,z),t(z,y).
+
+
+                with
+                
+                r(a,b) :- s(a,b), t(b,c)
+                
+            \end{column}
+        \end{columns}
+    \end{frame}
+    \begin{frame}[fragile]{Completeness}
+        Is our solution all we can derive ?
+        
+        i elements in valid trees
+
+        $i \subseteq \mathtt{proofTheoreticSemantics\ P\ d} = \mathtt{modelTheoreticSemantics\ P\ d} \subseteq i$
+
+        \begin{tikzpicture}[
+            every node/.style={circle, minimum size=8mm},
+            level/.style={sibling distance=20mm/#1, level distance=20mm},
+            grow'=right, % Set the tree growth direction to right
+            anchor=west % Anchor the tree at the west (left) side
+        ]
+            \node {r(x,y) :- s(y,x)}
+                child {node {r(a,y) :- s(y,a)}
+                }
+                child {node {r(1,y) :- s(y,1)}
+                    child {node {r(1,2) :- s(3,1)}}
+                    child {node {r(1,3) :- s(3,1)}}
+                };
+        \end{tikzpicture}
+    \end{frame}
+\end{document}
