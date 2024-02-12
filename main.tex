@@ -3,10 +3,13 @@
 \usepackage[utf8x]{inputenc}
 \usepackage{amssymb}
 \usepackage{amsthm}
+\usepackage{amsmath}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{color}
 \usepackage{multicol}
+\usepackage{tikz}
+\usetikzlibrary{automata, positioning, chains,fit,shapes}
 \definecolor{keywordcolor}{rgb}{0.7, 0.1, 0.1}   % red
 \definecolor{commentcolor}{rgb}{0.4, 0.4, 0.4}   % grey
 \definecolor{symbolcolor}{rgb}{0.0, 0.1, 0.6}    % blue
@@ -541,9 +544,9 @@
 
             Now suppose the procedure $P_1(t,c, s)$ that takes a term, a constant and a substitution does not always return a minimal solution. So it might return for $x$, $a$ and the empty substitution the substitution $s = x \mapsto a, y\mapsto a$.
 
-            Now we again call $P_1$ with $y$, $b$ and $s$. $P_1$ will not return anything, because $y$ is already mapped to something else. From this fact we cannot conlude that there exists no solution at all however. In fact, the non-minimality of the results of $P_1$ prevents this reasoning.
+            Now we again call $P_1$ with $y$, $b$ and $s$. $P_1$ will not return anything, because $y$ is already mapped to something else. From this fact we cannot conclude that there exists no solution at all however. In fact, the non-minimality of the results of $P_1$ prevents this reasoning.
 
-            If we have a second procedure $P_2(t,c, s)$ that always returns the minimal solution we solve the matching process for the first two list elements of each list to return $s' = x \mapsto a, y \mapsto y$. Now we want to match $x$ with $c$ and $P_2$ will return none. We can conlude that no solution exists since any substitution from $P_2$ is minimal. If there exists a solution to the list then $l_2$, it necessarily must match the first to elements of both lists. Since $s'$ is the minimal solution of a process that started with the empty substitution and always returned minimal solution, any solution to the list must extend $s'$. Therefore it must agree on the domain of $s'$ and therefore it must map $x$ to $a$ and therefore no solution can exist.
+            If we have a second procedure $P_2(t,c, s)$ that always returns the minimal solution we solve the matching process for the first two list elements of each list to return $s' = x \mapsto a, y \mapsto y$. Now we want to match $x$ with $c$ and $P_2$ will return none. We can conclude that no solution exists since any substitution from $P_2$ is minimal. If there exists a solution to the list then $l_2$, it necessarily must match the first to elements of both lists. Since $s'$ is the minimal solution of a process that started with the empty substitution and always returned minimal solution, any solution to the list must extend $s'$. Therefore it must agree on the domain of $s'$ and therefore it must map $x$ to $a$ and therefore no solution can exist.
 
         \end{example}
 
@@ -702,22 +705,198 @@
 
         We can now compare the symbol sequence of a rule and the symbol sequence of a ground rule. If they are equal, we see that the bodies have the same length, since we just map each body element and attached for both the head at the front. If they are however not equal, then no substitution can be applied to the rule so that it will yield the ground rule.
 
-        We can use this to check whether a ground rule $gr$ is in the ground program of $P$. We simply compare the symbol sequence of all rules in $P$ with $gr$ and try to match those whose symbol sequences are equal. As soon as we find a substitution using \texttt{matchRule} we return \texttt{ok}. If no rule matches we return an error displaying this.
+        We can use this to check whether a ground rule $gr$ is in the ground program of $P$ by computing the symbol sequence of $gr$ and comparing it with the symbol sequence of every rule in the program. For those rules where the symbol sequences are equal, we can apply the \texttt{matchRule} function until we find the first matching rule. While this work, we have to iterate in the worst case always over the whole program. Instead we can preprocess the program into a function that returns for a symbol sequence a list of rules with the same symbol sequence.
 
         \begin{lstlisting}
-            
-            def checkRuleMatch (P: List (rule τ)) (gr: groundRule τ) 
-            (ruleToString: rule τ → String): Except String Unit :=
+            def parseProgramToSymbolSequenceMap (P: List (rule τ)) 
+            (m: List τ.relationSymbols → List (rule τ)): 
+            List τ.relationSymbols → List (rule τ) :=
             match P with
-            | List.nil => Except.error 
-                ("No match for " ++ (ruleToString gr.toRule))
-            | List.cons hd tl =>
-            if symbolSequence hd = symbolSequence gr.toRule
-                then  if Option.isSome (matchRule hd gr)
-                    then Except.ok ()
-                    else checkRuleMatch tl gr ruleToString
-            else checkRuleMatch tl gr ruleToString
+            | [] => m
+            | hd::tl =>
+                let seq:= symbolSequence hd
+                parseProgramToSymbolSequenceMap tl 
+                    (fun x => if x = seq then hd::(m x) else m x)
         \end{lstlisting}
+
+        By induction we can prove that any symbol sequence $s$ the result of 
+        
+        \texttt{parseProgramToSymbolSequenceMap P m} returns a the list consisting of those rules in $P$ whose symbol sequence matches $s$ and those rules that in $m (s)$. If we therefore use a function that maps any symbol sequence to the empty list for m we get exactly the list of rules that match a particular symbol sequence. As only those rules can result into the ground rule $gr$ with the symbol sequence $s$ by applying a grounding $g$, its enough to iterate over those rules. The \texttt{List.any} function does this and returns true as soon \texttt{matchRule} returns a \texttt{some}. The preprocesssing of $P$ is given as a function $m$, so that it only will be done once.  
+        
+        \begin{lstlisting}
+            def checkRuleMatch (m: List τ.relationSymbols → List (rule τ)) 
+            (gr: groundRule τ) (ruleToString: rule τ → String)
+            : Except String Unit :=
+            if List.any (m (symbolSequence gr.toRule)) 
+                (fun x => Option.isSome (matchRule x gr)) = true
+            then Except.ok ()
+            else Except.error ("No match for " ++ ruleToString gr)
+        \end{lstlisting}
+
+        If $m$ is the result of \texttt{parseProgramToSymbolSequenceMap} of $P$ and a function that maps anything to the empty list, \texttt{checkRuleMatch} returns ok if and only if there is a rule $r$ in $P$ and a grounding $g$ such that applying $g$ to $r$ results in the ground rule $gr$.
+
+        \begin{lstlisting}
+            lemma checkRuleMatchOkIffExistsRuleForGroundRule 
+            (m: List τ.relationSymbols → List (rule τ)) (P: List (rule τ)) 
+            (gr: groundRule τ) (ruleToString: rule τ → String ) 
+            (ssm: m = parseProgramToSymbolSequenceMap P (fun _ => [])): 
+            checkRuleMatch m gr ruleToString = Except.ok () 
+            ↔ ∃ (r: rule τ) (g:grounding τ),r ∈ P ∧ ruleGrounding r g = gr
+        \end{lstlisting}
+
+        In order to start validating we need another helper function. The tree validation function will return an element of type \texttt{Except String Unit}, so that if the tree is invalid an Exception with an error message in a String is thrown. If it is valid, then nothing is return. In order to show that a tree with the root $a$ is valid, we have to show that all direct subtrees of $a$ are valid using the same function. We could use \texttt{List.all (Except.isOk)} and this would return true iff all subtrees are valid. We would however loose the error message. Instead we define the following function, that returns the first error message it finds.
+
+        \begin{lstlisting}
+            def List.map_except_unit {A B: Type} (l: List A) 
+            (f: A → Except B Unit): Except B Unit :=
+            match l with
+            | [] => Except.ok ()
+            | hd::tl =>
+                match f hd with
+                | Except.ok () => List.map_except_unit tl f
+                | Except.error b => Except.error b
+        \end{lstlisting}
+
+        By induction we prove that it returns \texttt{ok ()} iff for all elements in the list $f$ is evaluated to \texttt{ok ()}.
+
+        \begin{lstlisting}
+            lemma List.map_except_unitIsUnitIffAll {A B: Type} (l: List A) 
+            (f: A → Except B Unit): 
+            List.map_except_unit l f = Except.ok () 
+            ↔ ∀ (a:A), a ∈ l → f a = Except.ok ()
+        \end{lstlisting}
+
+        In order to validate a tree we have to consider two cases. If it has no children, then it is a fact. This fact may be part of the database or it may be a fact in the program. We can detect if the list of children is empty and ask the database whether it contains the root. If that is the case, the tree is valid and we return \texttt{ok ()}. If not, we use \texttt{checkRuleMatch} to find a fact for the root in $P$ and return the result. Since the tree has no children, all children are valid as well.
+        If it has children we try to find a rule using \texttt{checkRuleMatch} that matches the current node and its children and if that is the case we check that all children are valid using the \texttt{List.map\_except\_unit} function.
+
+        \begin{lstlisting}
+            def treeValidator (m: List τ.relationSymbols → List (rule τ)) 
+            (d: database τ)(t: proofTree τ) (ruleToString: rule τ → String):
+             Except String Unit :=
+            match t with
+            | tree.node a l =>
+                if l.isEmpty
+                then    if d.contains a
+                        then Except.ok ()
+                        else
+                            match checkRuleMatch m 
+                            {head:= a, body := []} ruleToString with
+                            | Except.ok _ => Except.ok ()
+                            | Except.error msg => Except.error msg
+                else
+                    match checkRuleMatch m 
+                    {head:= a, body := List.map root l} ruleToString with
+                    | Except.ok _ => 
+                        List.all l.attach (fun ⟨x, _h⟩ => Except.isOK 
+                        (treeValidator m d x ruleToString))
+                    | Except.error msg => Except.error msg
+        \end{lstlisting}
+
+        By induction on the height of the tree we can prove the correctness of this algorithm as the children have a smaller height than the tree.
+        
+        \begin{lstlisting}
+            lemma treeValidatorOkIffIsValid 
+            (m: List τ.relationSymbols → List (rule τ)) 
+            (P: List (rule τ)) (d: database τ) (t: proofTree τ) 
+            (ruleToString: rule τ → String) 
+            (ssm: m = parseProgramToSymbolSequenceMap P (fun _ => [])): 
+            
+            treeValidator m d t ruleToString = Except.ok () 
+            ↔ isValid (List.toFinset P) d t :=
+
+        \end{lstlisting}
+
+        As we want to validate the whole result of a datalog program, we will often need many proof trees and a function that can validate them. Additionally, we need to preprocess the program to gain the map from symbol sequences to rules. This is done in the following function.
+        
+        \begin{lstlisting}
+            def validateTreeList (P: List (rule τ)) (d: database τ) 
+            (l: List (proofTree τ)) 
+            (ruleToString: rule τ → String): Except String Unit :=
+            let m:= parseProgramToSymbolSequenceMap P (fun _ => [])
+            List.map_except_unit l 
+                (fun t => treeValidator m d t  ruleToString)
+
+        \end{lstlisting}
+
+        Using the properties of \texttt{treeValidator} and \texttt{List.map\_except\_unit}, we can show that this function returns \texttt{ok ()} iff all trees in \texttt{l} are valid. We know that a ground atom $ga$ is in the \texttt{proofTheoreticSemantics} if there exists a proof tree with the root $ga$, so that we can conclude the set of roots of the trees in $l$ is a subset of the semantics. In order to get an iff statement, we also have to include that all trees are valid, because a root preserving permutation of a proof tree will in general not be valid and therefore \texttt{validateTreeList} will report an error, but its root is still in the semantics.
+
+        \begin{lstlisting}
+            lemma validateTreeListUnitIffSubsetSemanticsAndAllElementsHaveValidTrees 
+            (P: List (rule τ)) (d: database τ) (l: List (proofTree τ)) 
+            (ruleToString: rule τ → String) : 
+            validateTreeList P d l  ruleToString = Except.ok () ↔ 
+             {ga: groundAtom τ| ∃ (t: proofTree τ), t ∈ l ∧ root t = ga } ⊆ proofTheoreticSemantics P.toFinset d 
+             ∧ ∀ (t: proofTree τ), t ∈ l → isValid P.toFinset d t
+        \end{lstlisting}
+
+        It turns out however that we can do a bit better and prove a stronger statement as the following example shows.
+        \begin{example}
+            Consider the program $P:$
+            \begin{align*}
+                & A(X, Z) \leftarrow B(U, X, Y, Z). \\
+                & B(U, X, Y, Z) \leftarrow C(U, X), D(Z, Y). \\
+                & C(a,b). \\
+                & D(c,d).
+                \end{align*}
+            where variables are capital letters. In order to validate the input according the previous lemma we would need the following proof trees.
+
+            \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
+                \node {D(c,d)};
+            \end{tikzpicture}
+
+            \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
+                \node {C(a,b)};
+            \end{tikzpicture}
+
+            \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
+                \node {B(a, b, c, d)}
+                    child {node {C(a,b)}}
+                    child {node {D(c,d)}};
+            \end{tikzpicture}
+
+            \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=25mm]
+                \node {A(b, d)}
+                    child {node {B(a, b, c, d)}
+                    child {node {C(a,b)}}
+                    child {node {D(c,d)}}};
+                    
+            \end{tikzpicture}
+
+            The proof tree for $A(b,d)$ already contains proofs for all the other elements of the program so that it would be enough to check this single tree.
+        \end{example}
+
+        We can define an element member function for trees in the usual way:
+
+        \begin{lstlisting}
+            def elementMember (a: A) (t: tree A): Bool  :=
+            match t with
+            | tree.node a' l => (a=a') ∨
+             List.any l.attach (fun ⟨x, _h⟩ => elementMember a x)
+        \end{lstlisting}
+        In order for a tree to be valid all subtrees must be valid. A ground atom $ga$ is exactly then a member of a tree $t$ if there is a subtree of $t$ of which $ga$ is the root, so that if a proof tree is valid all elements are a subset of the semantics.
+
+        \begin{lstlisting}
+            lemma allTreeElementsOfValidTreeInSemantics 
+            (t: proofTree τ)  (P: program τ) (d: database τ) 
+            (valid: isValid P d t)(ga:groundAtom τ)(mem: elementMember ga t):
+             ga ∈ proofTheoreticSemantics P d :=
+        \end{lstlisting}
+
+        This allows us to establish the alternative property of \texttt{validateTreeList}
+
+        \begin{lstlisting}
+            lemma validateTreeListUnitIffSubsetSemanticsAndAllElementsHaveValidTrees 
+            (P: List (rule τ)) (d: database τ) (l: List (proofTree τ)) 
+            (ruleToString: rule τ → String) : validateTreeList P d l  ruleToString = Except.ok () ↔
+            {ga: groundAtom τ| ∃ (t: proofTree τ), t ∈ l ∧ elementMember ga t } ⊆ proofTheoreticSemantics P.toFinset d 
+            ∧ ∀ (t: proofTree τ), t ∈ l → isValid P.toFinset d t
+        \end{lstlisting}
+
+        Now it is enough to pass just one proof tree from our example to validate the whole input and use in general less trees. 
+
+        \subsection{Graph validation}
+
+        We have finished the last section with a method to check whether a result is a subset of the semantics. For this we need a list of trees representing the result set. Finding such a list is however difficult. Viewing a tree as a set of its elements we see that it is an instance of the NP-hard set cover problem. Additionally, we found in practice that the datalog reasoner we used did only return a list of derivations. Constructing trees from this turned out to be computationally expensive, but the output can be interpreted as a directly acyclic graph. In the following section we describe how to validate such a graph.
 
 
 
