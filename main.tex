@@ -898,6 +898,98 @@
 
         We have finished the last section with a method to check whether a result is a subset of the semantics. For this we need a list of trees representing the result set. Finding such a list is however difficult. Viewing a tree as a set of its elements we see that it is an instance of the NP-hard set cover problem. Additionally, we found in practice that the datalog reasoner we used did only return a list of derivations. Constructing trees from this turned out to be computationally expensive, but the output can be interpreted as a directly acyclic graph. In the following section we describe how to validate such a graph.
 
+        A number of different results of graph theory are already proven in mathlib. Nonetheless, we defined our own graph model in Lean for this section due to two main reasons. Firstly, the graph defined in mathlib is a undirected graph, but we require a directed graph so that we can see for a vertex (which represents a ground atom) which neighbors were used to derive it and which neighbors were derived from it. Secondly, the graph represents the edge relation as a map to \texttt{Prop} which is in general not computable.
+
+
+        Our graph model consists of a list of vertices and a function that maps to each element the list of its predecessors. Representing the vertices as a list allows us to iterate over all vertices when validating the graph. We used a function to the predecessors instead of a adjancency matrix similar to the definition in mathlib in order to directly get the predecessors to a node instead of having the iterate over all vertices and check the adjancency matrix. This approach does have a small drawback. Suppose we want to determine whether a property holds for every vertex and do this by exploring the graph using depth-first search and we find a counterexample by following the predecessors. Nothing states that this vertex is actually in the graph, i.e. the list of vertices. This is an undesireable property so that we additionally ask for a proof that the predecessors of every vertex are again vertices in the graph.
+
+        \begin{lstlisting}
+            structure Graph (A: Type) where
+                (vertices: List A)
+                (predecessors: A → List A)
+                (complete: ∀ (a:A), a ∈ vertices →  
+                ∀ (a':A), a' ∈ predecessors a → a' ∈ vertices)
+        \end{lstlisting}
+        
+        A standard definition of graph theory are walks as a sequence of connected edges. As we do not have edges directly, we represent this as a list of elements with two properties. A list of elements is a walk in a graph, if all elements are a vertices of the graphs and neighboring vertices are connected via the the predeccessor relation of the graph. Due to the completeness property of the graph it would also be sufficient to express that the last element of the path is in the graph. 
+
+        \begin{lstlisting}
+            def isWalk (l: List A) (G: Graph A): Prop :=
+            ( ∀ (a:A), a ∈ l → a ∈ G.vertices ) 
+            ∧ ∀ (i: ℕ), i > 0 → ∀ (g: i < l.length), 
+            l.get (Fin.mk i.pred (pred_lt i l.length g)) ∈ 
+             G.predecessors (l.get (Fin.mk i g) )
+        \end{lstlisting}
+
+        We note that we do allow empty paths. This simplifies some proofs and algorithms even if there is no direct equivalent in graph theory. We specifically use lists as we are going to expand walks at the front when exploring the graph.  
+        
+        \begin{lemma}
+            Let $w$ be a walk in a graph $G$ of the form $a::tl$. Then also $b::a::tl$ is a walk in $G$ for every predecessor $b$ of $a$.
+        \end{lemma}
+
+        Using walks we can define cycles. Every cycle is a walk. Additionally we require that it the start and the end of the walk are equal. In order to have a start and end we have to exclude the empty walks. Additionally, we exclude walks of a single element. Allowing them as cycles would mean that there are no acyclic graphs.
+
+        \begin{lstlisting}
+            def isCycle (l: List A) (G: Graph A): Prop :=
+            if h: l.length < 2
+            then False
+            else
+                have l_not_zero: 0 < l.length :=
+                by
+                cases ll: l.length with
+                | zero =>
+                    rw [ll] at h
+                    simp at h
+                | succ n =>
+                    simp
+
+                isWalk l G ∧
+                 l.get (Fin.mk 0 l_not_zero) 
+                 = l.get (Fin.mk l.length.pred (Nat.pred_lt (Ne.symm (Nat.ne_of_lt l_not_zero))))
+        \end{lstlisting}
+
+        A graph is then acyclic if no list represents a cycle in it.
+
+        \begin{lstlisting}
+            def isAcyclic (G: Graph A) := ∀ (l: List A), ¬ isCycle l G
+        \end{lstlisting}
+
+        We need to check whether a given graph is acyclic as only those graphs represent valid derivations. A cycle would mean that we used an atom to derivate itself and we could not get a valid proof tree for this element. We are going to use depth-first search to check whether a graph is acyclic. For this we need an alternative characterization of acyclicity.
+        A first candidate for this would be the membership in a cycle.
+
+        \begin{lemma}
+            A graph is acyclic iff no vertice is a member in a cycle.
+        \end{lemma}
+
+        Ideally, we want this characterization to be an iff connection between a vertice and its predecessors. Unfortunately the statement does not hold for this characterization.
+
+        \begin{tikzpicture}
+            \node (A) at (0,0) {A};
+            \node (B) at (2,0) {B};
+            \node (C) at (1,1) {C};
+            \node (D) at (2,1) {D};
+        
+            \draw[->] (B) -- (A);
+            \draw[->] (C) -- (B);
+            \draw[->] (A) -- (C);
+            \draw[->] (C) -- (D);
+        \end{tikzpicture}
+
+        D is not a member in a cycle, but its predecessor C is, so that an iff does not hold. Instead we see that D can be reached from a cycle using some walk. If it can be reached from a cycle, then also one of its predecessors can be reached from a cycle. We are going to formalize this idea in the following lemmas.
+
+        Let $a$ and $b$ be two nodes. We say that $a$ can reach $b$ in $G$ if there exists a walk in $G$ that starts with $a$ and ends with $b$.
+
+        \begin{lstlisting}
+            def canReach (a b: A) (G: Graph A):= ∃ (w: List A) (neq: w ≠ []),
+            isWalk w G ∧
+            w.get (Fin.mk 0 (getFirstForNonequal_isLt w neq)) = a ∧
+            w.get (Fin.mk w.length.pred (getLastForNonequal_isLt w neq)) = b
+        \end{lstlisting}
+
+        
+
+
+
 
 
     \section{Completeness}
