@@ -26,6 +26,7 @@
 \newtheorem{lemma}{Lemma}
 
 
+
 \title{LEAN-aided verification of datalog reasoning results}
 \author{Johannes Tantow}
 
@@ -911,7 +912,7 @@
                 ∀ (a':A), a' ∈ predecessors a → a' ∈ vertices)
         \end{lstlisting}
         
-        A standard definition of graph theory are walks as a sequence of connected edges. As we do not have edges directly, we represent this as a list of elements with two properties. A list of elements is a walk in a graph, if all elements are a vertices of the graphs and neighboring vertices are connected via the the predeccessor relation of the graph. Due to the completeness property of the graph it would also be sufficient to express that the last element of the path is in the graph. 
+        A standard definition of graph theory are walks as a sequence of connected edges. As we do not have edges directly, we represent this as a list of elements with two properties. A list of elements is a walk in a graph, if all elements are a vertices of the graphs and neighboring vertices are connected via the the predecessor relation of the graph. Due to the completeness property of the graph it would also be sufficient to express that the last element of the path is in the graph. 
 
         \begin{lstlisting}
             def isWalk (l: List A) (G: Graph A): Prop :=
@@ -986,9 +987,65 @@
             w.get (Fin.mk w.length.pred (getLastForNonequal_isLt w neq)) = b
         \end{lstlisting}
 
-        
+        A singleton path allows us to show that any element can reach it self. Additionally, if $a$ can reach $b$ and $b$ is a predecessor of $c$ we can extend the path from $a$ to $b$ with $c$ in order to demonstrate that $a$ can reach $c$. Using the \texttt{canReach} predicate we can now express a different characterization for acyclicity, being reachable from a cycle. A node $a$ is reachable from a cycle $c$, if there exists a node $b$ in the cycle that reaches $a$. In the previous example $D$ is reached from a cycle as $C$ is in a cycle and $C$ reaches $D$. The same holds for $C$ as $C$ reaches itself.
 
+        \begin{lstlisting}
+            def reachedFromCycle (a:A) (G: Graph A):=
+             ∃ (c: List A), isCycle c G ∧ ∃ (b: A), b ∈ c ∧ canReach b a G
+        \end{lstlisting}
 
+        \begin{lemma}
+            A graph $G$ is acyclic iff all vertices of $G$ are not reached from a cycle.
+        \end{lemma}
+        \begin{proof}
+            If $G$ is acyclic, then showing that all vertices of $G$ are not reached from a cycle is equivalent to showing that any cycle in $G$ cannot reach any element. Due to the acyclicity we know that no cycles exist in G so that the first direction is shown.
+
+            The back direction is proved via contradiction. Assuming that the graph is not acyclic, we know that there must exist a cycle $c$ in $G$. Cycles in $G$ are nonempty lists of vertices that are all in $G$. As any vertex can reach itself, there are vertices that are reached from a cycle in contrast to our assumption, so that we have reached the contradiction.
+        \end{proof}
+
+        \begin{lemma}
+            A node $a$ is not reached from a cycle iff all predecessors $b$ are not reached from a cycle.
+        \end{lemma}
+        \begin{proof}
+            Both directions are proven via contradiction. For the first we have that there is a predecessor $b$ of $a$ that is reached from a cycle. Then we can simply extend the path by adding $a$ and then $a$ would be reached from a cycle.
+
+            For the backdirection we assume that $a$ is reached from a cycle and try to show then one of its predecessors must also be reached from a cycle. 
+            If $a$ is reached from a cycle $c$ with an element $b$ we consider two cases. 
+            If $b$ would be a predecessor, then we have reached a contradiction as $b$ is in the circle and reaches itself. Now we assume that $b$ is not a predecessor of $a$. Again we can consider two cases. If the path is of length one then $a$ and $b$ must be equal and $a$ is a member in a cycle. As long as $a$ is not the first element in the cycle, we can simply pick the preceeding element in the cycle due to the connectness property of the walk. This does not work if $a$ is the first element, but since it is a cycle $a$ must also be the last element and we can pick the predecessor of the last element, which is a predecessor of $a$ and in a cycle.
+
+            If $a$ is reached from a path longer than length 1, we simply pick the subpath without the last element. This is not empty and ends with a predecessor of $a$, which is therefore reached by a cycle. In every case we reached a contradiction so that the claim must be true.
+        \end{proof}
+
+        This completes a characterization of acyclicity that has an iff relation between a node and its predecessors. We still need a method to detect a cycle. We are going to explore the graph via walks and add the current element to the walk whenever we reach a new node. If we see a node again, we have reached a cycle.
+
+        \begin{lemma}
+            Let $w$ be a walk in a graph $G$ and $a$ be a node of $G$ so that $a::w$ is also a walk in $G$. If $a$ is a member of $w$, then there exists a cycle in $G$.
+        \end{lemma}
+
+        For this we need to extract the walk from $a$ to $a$ out of $a::w$. This is done by the \texttt{getSubListToMember} function. We are given an element $a$, a list $l$ and a proof of $a\in l$ and want to return the sub list until $a$. This is defined inductively. The empty case of $l$ is impossible as $a$ can be a member of the empty list. In the cons case we keep the head element of the list in the result. If this is already $a$, then we stop, else $a$ must be a member in the tail and we continue.
+
+        \begin{lstlisting}
+            def getSubListToMember (l: List A) (a: A) (mem: a ∈ l): List A :=
+            match l with
+            | [] =>
+                have h: False :=
+                by
+                simp at mem
+
+                False.elim h
+            | hd::tl =>
+                if p: a = hd
+                then [hd]
+                else
+                have mem': a ∈ tl :=
+                by
+                    simp[p] at mem
+                    apply mem
+                hd::getSubListToMember tl a mem'
+        \end{lstlisting}
+
+        In any case the list is never empty as we return at least the head of the list we called \texttt{getSubListToMember} on and in both cases the resulting list $l'$ starts with the same element as $l$ used to. By calling it on $w$ with the member $a$ the result $l'$ starts with the same element as $w$. Since $a::w$ was a walk, we therefore can also extend $l'$ with $a$ and preserve a walk assuming that $l'$ preserves a walk. This can be proven by induction. If we have reached the element we return a list with a single element that is a member of $G$, which is always a walk. If not we keep the element and add this to the result of \texttt{getSubListToMember} on the tail. This result is by the induction hypothesis a walk and by the previous result keeps the first element so that we can attach $hd$ again to the front and get a walk. Now we now that the result of \texttt{getSubListToMember a w mem} is a walk and that also \texttt{a::(getSubListToMember a w mem)} is walk. 
+        In order to show that this a cycle we need two more facts. Firstly, this list should have a length of at least two. This is the case as \texttt{getSubListToMember} never returns an empty list, so that it has at least length one and also attaching $a$ to the front increases the length by one. Secondly, we need the resulting list of \texttt{getSubListToMember a w mem} to end with $a$ so that \texttt{a::(getSubListToMember a w mem)} is cycle. This can again be proven by induction, since the list only ends when $a$ is encountered. 
 
 
 
@@ -1101,5 +1158,6 @@
 
     \subsection{Explore grounding}
 
-
+    \bibliography{main.bib}
+    \bibliographystyle{plain}
 \end{document}
