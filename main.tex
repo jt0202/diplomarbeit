@@ -124,7 +124,7 @@
             abbrev program := Finset (rule τ)
         \end{lstlisting}
 
-        We have previously introduced ground atoms as atoms whose terms are only constants. There are at least two options to represent them here. Firstly we could define a structure for ground atoms that extends atoms by a predicate that shows that there are only constants present. The second option is to define an entirely new structure similar to atoms but allow only constants instead of terms. The first options show directly that every ground atom is an atom which we would have to establish separatedly in the second option. The second option allows directly to define the functions on a list of constants instead of having to cast the list of terms of a ground atom directly to a list of constants and allows to use the complete induction schema when defining functions on ground atoms. The second option seemed to offer more advantegous and was therefore chosen.
+        We have previously introduced ground atoms as atoms whose terms are only constants. There are at least two options to represent them here. Firstly we could define a structure for ground atoms that extends atoms by a predicate that shows that there are only constants present. The second option is to define an entirely new structure similar to atoms but allow only constants instead of terms. The first options show directly that every ground atom is an atom which we would have to establish separately in the second option. The second option allows directly to define the functions on a list of constants instead of having to cast the list of terms of a ground atom directly to a list of constants and allows to use the complete induction schema when defining functions on ground atoms. The second option seemed to offer more advantegous and was therefore chosen.
 
         \begin{lstlisting}
             structure groundAtom  where
@@ -204,7 +204,7 @@
                 simp
         \end{lstlisting}
         
-        Height is recursively called on the elements of in the list via the listMax function. Lean can not identify that this terminates so we have to provide a proof of termination. This is done in Lean by providing a well-founded relation that takes part of the input and show that the recursive calls of the function are only on elements that are smaller in this relation. Due to the well-foundedness there are no infinite descending chains and the function must terminate.  We use the \texttt{sizeOf} function that is built in for any inductive type and maps an element to the sucessor of the sum of the \texttt{sizeOf} values of the elements used in the sucessor. If we show that this always decreases then the function will terminate as the natural numbers are well-founded.
+        Height is recursively called on the elements of in the list via the listMax function. Lean can not identify that this terminates so we have to provide a proof of termination. This is done in Lean by providing a well-founded relation that takes part of the input and show that the recursive calls of the function are only on elements that are smaller in this relation. Due to the well-foundedness there are no infinite descending chains and the function must terminate.  We use the \texttt{sizeOf} function that is built in for any inductive type and maps an element to the successor of the sum of the \texttt{sizeOf} values of the elements used in the sucessor. If we show that this always decreases then the function will terminate as the natural numbers are well-founded.
 
         In contrast to just using the list, we call listMax on \texttt{List.attach} instead. \texttt{List.attach} takes a list $l$ and creates a new list consisting of pairs of the original elements and a proof that the element is in $l$. This proof can be later used when proving termination.
 
@@ -1047,7 +1047,185 @@
         In any case the list is never empty as we return at least the head of the list we called \texttt{getSubListToMember} on and in both cases the resulting list $l'$ starts with the same element as $l$ used to. By calling it on $w$ with the member $a$ the result $l'$ starts with the same element as $w$. Since $a::w$ was a walk, we therefore can also extend $l'$ with $a$ and preserve a walk assuming that $l'$ preserves a walk. This can be proven by induction. If we have reached the element we return a list with a single element that is a member of $G$, which is always a walk. If not we keep the element and add this to the result of \texttt{getSubListToMember} on the tail. This result is by the induction hypothesis a walk and by the previous result keeps the first element so that we can attach $hd$ again to the front and get a walk. Now we now that the result of \texttt{getSubListToMember a w mem} is a walk and that also \texttt{a::(getSubListToMember a w mem)} is walk. 
         In order to show that this a cycle we need two more facts. Firstly, this list should have a length of at least two. This is the case as \texttt{getSubListToMember} never returns an empty list, so that it has at least length one and also attaching $a$ to the front increases the length by one. Secondly, we need the resulting list of \texttt{getSubListToMember a w mem} to end with $a$ so that \texttt{a::(getSubListToMember a w mem)} is cycle. This can again be proven by induction, since the list only ends when $a$ is encountered. 
 
+        These facts are enough to start implementing and proving depth-first search in order to check whether the given graph is acyclic. This is however not the only criteria necessary for a valid derivation graph. Additionally, we have to check all steps are valid according to the program as well. We could check this separately, but we will visit all vertices of the graph during the execution of depth first search anyway, so that combining these steps seems more efficient. 
 
+        We generalize this by defining depth-first search with a function that takes a vertex and a list of vertices representing the predecessors that is evaluated during the search. We need again a criteria that the depth-first search shall fulfill if it returns acceptance. As we explore the graph want depth-first search to return ok on a vertex $a$ if all vertices reachable from $a$ return ok on the function with their predecessors.
+
+        \begin{lemma}
+            Let $f:$ \texttt{A → List A → Except String Unit} be a function and $G$ a graph. Then $f$ returns ok for all vertices and their predecessors iff $f$ returns ok for all vertices that can reach a vertex in $G$. 
+        \end{lemma}
+        \begin{proof}
+            $\Rightarrow$: Any vertex that can reach $a$ in $G$ must also be in $G$. By the assumption therefore $f$ is evaluated to ok on this vertex and its predecessors.
+
+            $\Leftarrow$: As any vertex can reach itself all vertices must return ok when evaluating $f$ with their predecessors.
+        \end{proof}
+
+        Additionally, we see that for every node $a$ all nodes that reach $a$ either reach a predecessor of $a$ or are $a$ themselves.
+
+        Now we can define our depth-first search algorithm. In general we follow the definition in \cite{AlgorithmsBook}, but use some helper functions in order to simplify the proofs. Similar to the book we use two main function. A first function \texttt{dfs} calls on all vertices the \texttt{dfs\_step} function that explores graph that can reach this node. In order to not explore a vertex multiple times we return a set of nodes that were already explored. For this we originally used \texttt{Finset} but this turned out to be not fast enough in practice, so that we changed to \texttt{HashSets}.
+
+        The function \texttt{addElementIfOk} takes an exception of type \texttt{B} and \texttt{HashSet}. If this exception is ok, i.e. a \texttt{HashSet} it inserts the given element into the hash set. If the exception is an error, we simply return the exception.
+
+        \begin{lstlisting}
+            def addElementIfOk [Hashable A] (e: Except B (HashSet A)) (a:A):
+             Except B (HashSet A) :=
+            match e with
+            | Except.ok S => Except.ok (S.insert a)
+            | Except.error msg => Except.error msg
+        \end{lstlisting}
+
+        From the definition we see that \texttt{addElementIfOk} returns a hash set iff the original exception was already a hash set.
+
+        As we are going to call \texttt{dfs\_step} on all predecessors, we use \texttt{foldl} to not explore a vertex multiple times. Our version is a bit modified in order to work with the exceptions. If an error is detected, we stop.
+
+        \begin{lstlisting}
+            def foldl_except_set [Hashable B] 
+            (f: A → HashSet B → (Except String (HashSet B)))
+             (l: List A) (init: HashSet B):
+              Except String (HashSet B) :=
+            match l with
+            | [] => Except.ok init
+            | hd::tl =>
+                match f hd init with
+                | Except.error msg => Except.error msg
+                | Except.ok S => foldl_except_set f tl S
+
+        \end{lstlisting}
+
+        The \texttt{dfs\_step} function is called on a vertex $a$ in the graph $G$ together with a function $f$ that shall be evaluated on every vertex and its predecessors in $G$. Additionally, we receive a set \texttt{visited} that contains all explored vertices and the walk \texttt{currWalk} we used in the graph to arrive at the current vertex $a$. In order to prove termination it is important that also \texttt{a::currWalk} is a walk again and that $a$ is not a member of \texttt{currWalk}. As we recursively call \texttt{dfs\_step} we extend the walk by the current node and argue that the number of nodes that are not in the walk decreases. This only works if $a$ is not already present in the walk.
+
+        The procedure starts by checking whether the current node is already explored, i.e. \texttt{visited} contains it. If that is the case, we simply return \texttt{visited} and are done. If not we have to explore the graph. Firstly, we check if $f$ is evaluated on the current node and its predecessor to ok. If this is not the case, we have found a counterexample. If it is evaluated to ok, then we check if any predecessor of $a$ is equal to $a$ or in the current walk. This would imply the existance of a cycle and we would report this as an error. 
+        Finally we call \texttt{dfs\_step} on every predecessor and use \texttt{foldl\_except\_set} to not explore vertices twice. If this returns a hash set, then we add the current node to it. 
+
+
+        \begin{lstlisting}
+            def dfs_step [Hashable A] (a: A) (G: Graph A) 
+            (f: A → List A → Except String Unit) 
+            (currWalk: List A) (walk: isWalk (a::currWalk) G) 
+            (not_mem: ¬ (a ∈ currWalk))(visited: HashSet A) :
+             Except String (HashSet A) :=
+            if visited.contains a
+            then Except.ok visited
+            else
+                match f a (G.predecessors a) with
+                | Except.error msg => Except.error msg
+                | Except.ok _ =>
+                if pred_walk: (G.predecessors a) ∩ (a::currWalk) = []
+                then
+
+                addElementIfOk (foldl_except_set (fun ⟨x, _h⟩ S =>
+                    dfs_step x G f (a::currWalk) 
+                     (isWalk_extends_predecessors walk x _h) 
+                      (not_mem_of_empty_intersection pred_walk x _h) S) 
+                    (G.predecessors a).attach visited
+                ) a
+                else
+                    Except.error "Cycle detected"
+        \end{lstlisting}
+
+
+        The desired property of \texttt{dfs\_step} is the following lemma.
+
+        \begin{lemma}\label{lem:dfsstep}
+            Let $a$ be a vertex and $S$ be a set such that any member $a'$ of $S$ is not reached from a cycle and that any vertex $b$ that reaches $a'$ is evaluated to \texttt{ok} on $f$. Then \texttt{dfs\_step a G f walk currWalk walk not\_mem S} is evaluated to \texttt{ok} iff $a$ is not reached from a cycle and all vertices $b$ that reach $a$ are evaluated on $f$ with their predecessors to \texttt{ok}.
+        \end{lemma}
+
+        For this we need to determine whether \texttt{foldl\_except\_set} returns an exception or not, which seems dauting due to chaining of results. We get a result for the first predecessors and use this to evaluate the second predecessors and so on and it seemed difficult to determine when its wrong and why. We need this function however to not explore vertices multiple times. This set of previously explored nodes is semantically not so important. We could also work always with the empty set and get the same result with more effort. It only becomes problematic if the set contains elements that are reached from a cycle or an element for which $f$ is not evaluated to ok. We generalize this by considering a property $p$ of vertices and call a function $g$ independent from $p$, if for any node $a$ and sets $S, S'$ whose member both all satisfy $p$, $g( a, S)$ is ok iff $g( a S')$ is ok. This is pretty close to allowing us to consider it as separate calls instead of chaining the results. Additionally we need that $g$ also preserves $p$, i.e. when $S$ is a set whose members all satisfy $p$, then all members of the result $S' = g(a,S)$ also satisfy $p$. Then the initial set can be used instead of the result as both sets only have members that satisfy $p$ and are with respect towards the kind of exception equivalent. Therefore we gain the following lemma by induction to determine the kind of exception of \texttt{foldl\_except\_set}.
+
+        \begin{lemma}\label{lem:fes_ok}
+            Let $g: A \to HashSet B \to Except String (HashSet B)$ be a function that is independent from a property $p: A \to Prop$ and that preserves $p$. Then for any list $l$ and any hash set $init$ whose members all satisfy $p$, \texttt{foldl\_except\_set} $g$ $l$ $init$ is ok iff $g a init$ is ok for all elements $a$ from $l$.
+        \end{lemma}
+
+        The function $g$ shall represent \texttt{dfs\_step} on the predecessors of a vertex $a$ and $p$ be that a vertex is not reached from a cycle and all elements that reach this vertex are evaluated as ok under $f$. From the induction hypothesis of \ref{lem:dfsstep} we will get the independence from $p$ as the statement of the lemma does not depend on the HashSet at all. Seperatedly we need to prove that \texttt{dfs\_step} preserves the above defined property $p$. The previous lemmas combined the value of for our $p$ on a vertex $a$ with the value of $p$ on $a$'s predecessors. Therefore we want to prove that the resulting set of \texttt{foldl\_except\_set} on the predecessors contains all predecessors and all its members satisfy $p$ in order to conclude that the node $a$ we started from satisfies $p$.
+
+        For this we will prove that \texttt{dfs\_step} always returns a subset of the input when it returns ok and need the following lemma for \texttt{foldl\_except\_set}, which can be proven by induction
+        \begin{lemma}
+            Let $g: A \to HashSet B \to Except C (HashSet B)$ be a function so that for all $a$ and $S, S'$, if $g(a,S) = ok S'$, then $S \subseteq S'$. Then also for any list $l$ and sets $S, S'$ with \texttt{foldl\_except\_set} $l$ $S S'$ we have that $S \subseteq S'$.
+        \end{lemma}
+
+        Now we can prove the claim for \texttt{dfs\_step}. The induction for \texttt{dfs\_step} will follow the same structure with the unsatisfiable start and will later be omitted.
+
+        \begin{lemma}
+            If \texttt{dfs\_step a G f walk currWalk walk not\_mem S} returns a set $S'$, then we have $S \subseteq S'$.
+        \end{lemma}
+        \begin{proof}
+            We prove this by induction on the number of uncovered vertices by the current path. In the induction basis any vertex is already in the path yet \texttt{not\_mem} tells us that $a$ is not a member in the path, which is a contradiction.
+            In the step we do a case distinction whether $a$ is already contained in $S$. If that is the case, then $S$ is returned and due to the reflexivity the claim is proven.
+            If not we return the result of a insertion into the result of \texttt{foldl\_except\_set} so that it is sufficient to show that \texttt{foldl\_except\_set} returns a superset of $S$. This is done by the previous lemma together with the induction hypothesis as the path is longer so a smaller amount of vertices is not covered by the path.
+        \end{proof}
+
+        We know that \texttt{dfs\_step} returns a superset of the input set, but what elements are added to this set ? That are essentially all nodes that can reach the node we started our search step from assuming that the visited set already fulfills this property. This theorem is more complicated and for our goals it suffices to know that the starting node is added to the result set assuming it is returned.
+
+        \begin{lemma}
+            If \texttt{dfs\_step a G f walk currWalk walk not\_mem S} returns a set $S'$ then $S'$ contains $a$.
+        \end{lemma}
+        \begin{proof}
+            This is proven by case distinction. If $a$ is already contained in $S$, then $S$ is returned and by that the claim is proven.
+
+            If $a$ is not contained in $S$, then the resulting set $S'$ is obtained by inserting $a$ into the resulting set of \texttt{foldl\_except\_set}, so that due to properties of insert $a$ is a member of $S'$.
+        \end{proof}
+        
+
+        Using these two results we have a criteria to show when \texttt{foldl\_except\_set} contains the original list. Due to Lean internal features, the result must be a bit more technical. As we need to show termination in order to unfold our function, we call \texttt{foldl\_except\_set} not on the predecessors of $a$, but instead of the attached version of this list, which is a different type. Therefore we use a function mapping the list type to the set type and refer to the result of this function as the mapped form.
+
+        \begin{lemma}
+            Let \texttt{f: A → HashSet B → (Except String (HashSet B))} and {g: A → B} be functions such if $f(a,S) $ returns a hash set $S'$  then $S \subseteq S'$ and $g(a) \in S'$. Then for any list $l$ and hash set S,  if \texttt{foldl\_except\_set f l S} returns a hash set $S'$, then for all elements $a$ of $l$, $g(a) \in l$.
+        \end{lemma}
+        \begin{proof}
+            We prove this by induction on $l$.
+            If $l$ is empty all elements of $l$ are in their mapped form in the resulting set.
+
+            If $l$ has the shape $hd::tl$, then we first compute $f(hd,S)$ which must return a set $S'$ since the whole function returns a set. $S'$ must contain $g(hd)$ and is passed into \texttt{foldl\_except\_set} which by the induction hypothesis contains all elements of $tl$ in their mapped form. Due to the subset property all elements of $S'$ must also be contained, so that also $g(hd)$ is in the result. Therefore all elements of the list are contained in their mapped form in the resulting set, if it exists.
+        \end{proof}
+
+        This allows us to show that \texttt{dfs\_step} preserves our property $p$, that is that a vertex $a$ is not reached from a cycle and all vertices that reach $a$ are together with their predecessors evaluated to ok by $f$. For shortness we call this again the property $p$ in the following lemma.
+
+        \begin{lemma}
+            If \texttt{dfs\_step a G f walk currWalk walk not\_mem S} returns a set $S'$ and all elements in $S$ have the property $p$, then also all elements in $S'$ have the property $p$.
+        \end{lemma}
+        \begin{proof}
+            This is again proven by the number of vertices not covered by the current walk. 
+
+            In the step we must consider again two cases. If $a$ is already a member of $S$, then $S$ is returned and all elements of $S$ fulfill the property $p$ by assumption. If not then $f(a, G.predecessors(a))$ must be ok. Additionally, \texttt{foldl\_except\_set} must return a hash set $S'$ calling \texttt{dfs\_step} on the predecessors of $a$, which all don't occur in currWalk. Therefore the number of uncovered nodes is smaller, we from the induction hypothesis we know that all these function preserve $p$ and by a separate induction argument also \texttt{foldl\_except\_set} preserves then $p$. The returned hash set is then \texttt{S'.insert a}. As all elements of $S'$ satisfy $p$, we must show that also $a$ satisfies $p$. We know that all predecessors of $a$ are in $S'$.  Firstly, we see that all predecessors of $a$ are in $S'$ and therefore not reached from a cycle, so that also $a$ is not reached from a cycle. Secondly, all elements that reach a predecessor of $a$ fulfill $f$ with their predecessors and also $a$ fulfills $f$ with its predecessors so that $a$ also satisfies $p$.
+        \end{proof}
+
+        Now we have the required tools to finally prove the main lemma \ref{lem:dfsstep} if \texttt{dfs\_step} and do this again by induction.
+        
+        In the induction step we show both direction seperatedly. First we assume that \texttt{dfs\_step a G f walk currWalk walk not\_mem S} returns a set $S'$. We know that $S$ already had the property $p$ and therefore also $S'$ has the property $p$, which is directly the other direction. Therefore it is enough to show that $a$ is contained in $S'$, which we have already shown.
+
+        For the other direction we know that $a$ is not reached from a cycle and all elements that reach $a$ satisfy $f$ and want to show that \texttt{dfs\_step} returns ok. If $a$ is in $S$, then this is the case, so we consider the case of $a$ not contained in $S$. As $a$ can reach itself, $f(a, G.predecessors(a))$ must be ok. Also none of the predecessors of $a$ can occur in the current walk as the would imply a cycle that can reach $a$ in contrast to our assumption. The result is now the result of \texttt{addElementIfOk} which is ok iff the original exception was ok. The original exception is the result of \texttt{foldl\_except\_set}. For this we apply \ref{lem:fes_ok}. The preservation of $p$ was proven before and from the induction hypothesis we see that \texttt{dfs\_step} is independent from $p$, as it being ok does not depend on the set. Additionally, we have to show that all predecessors of $a$ are evaluated to ok on \texttt{dfs\_step}. Using the induction hypothesis this is equivalent to showing that all predecessors are not reached from a cycle and all elements that reach them are evaluated to ok which follows from the assumption. This ends the proof as we have shown both directions.
+
+        We have shown the correctness of \texttt{dfs\_step} where we explore all vertices that can reach the start vertices. In order to fully explore the graph, we call this function on every vertex. By using \texttt{foldl\_except\_set} we keep track of the visited vertices, so that we simply return when we already encountered a vertex. 
+
+        At the end we do not care anymore about the resulting set and only whether it was ok or if not the error message for which we use the following function for easier proofs. This functions returns ok iff the original returned some element with ok.
+
+        \begin{lstlisting}
+            def isOkOrMessage (e: Except String A): Except String Unit :=
+            match e with
+            | Except.error msg => Except.error msg
+            | Except.ok _ => Except.ok ()
+
+            def dfs [Hashable A] (G: Graph A) 
+            (f: A → List A → Except String Unit) :
+             Except String Unit :=
+  
+            isOkOrMessage (foldl_except_set 
+             (fun ⟨x,_h⟩ S => dfs_step x G f [] (isWalkSingleton G x _h) 
+               (List.not_mem_nil x) S)
+              G.vertices.attach HashSet.empty 
+            )
+        \end{lstlisting}
+
+        This shall return ok iff the graph is acyclic and all its vertices are evaluated to ok with respect to the input function and their predecessors.
+
+        \begin{lemma}
+            \texttt{dfs G f} returns ok iff $G$ is acyclic and for all vertices $a$ of $G$, $f(a, G.predecessors(a))$ is evaluated to ok.
+        \end{lemma}
+        \begin{proof}
+            Due to the property of \texttt{isOkOrMessage}, we can replace the left side simply by the \texttt{foldl\_except\_set} on \texttt{dfs\_step}.
+        \end{proof}
+
+        
 
     \section{Completeness}
 
