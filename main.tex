@@ -1222,8 +1222,105 @@
             \texttt{dfs G f} returns ok iff $G$ is acyclic and for all vertices $a$ of $G$, $f(a, G.predecessors(a))$ is evaluated to ok.
         \end{lemma}
         \begin{proof}
-            Due to the property of \texttt{isOkOrMessage}, we can replace the left side simply by the \texttt{foldl\_except\_set} on \texttt{dfs\_step}.
+            Due to the property of \texttt{isOkOrMessage}, we can replace the left side simply by the \texttt{foldl\_except\_set} on \texttt{dfs\_step}. We know that \texttt{foldl\_except\_set} is ok iff calling \texttt{dfs\_step} on every node with the empty set, which fulfills $p$, returns ok. The prerequisites are fulfilled, because we have proven that \texttt{dfs\_step} preserves $p$ and is independent from $p$ by the semantics lemma. Therefore this is ok, if all vertices of the graph are not reached from a cycle and any vertex reaching a vertex evaluates $f$ to ok with their predecessors. This is equivalent to being acyclic and evaluating $f$ returns ok for any vertex and its predecessors.
         \end{proof}
+
+        We have designed the depth-first search algorithm to evaluate a function during the search. This function shall inform us that the graph encodes a datalog derivation. This function shall check only a vertex and its predecessors encode a valid datalog derivation, so that we call the property locally valid. This is very similar to the definition of \texttt{isValid} for trees except for the missing \texttt{List.All₂}.
+
+        \begin{lstlisting}
+            def locallyValid (P: program τ) (d: database τ) (v: groundAtom τ) 
+            (G: Graph (groundAtom τ)): Prop :=
+            (∃(r: rule τ) (g:grounding τ), r ∈ P 
+            ∧ ruleGrounding r g = groundRuleFromAtoms v (G.predecessors v) ) 
+            ∨ ((G.predecessors v) = [] ∧ d.contains v)
+        \end{lstlisting}
+
+        The function checking this criteria is again very similar to the one we defined earlier for trees and by a similar argument we show that it is a checker for being locally valid.
+
+        \begin{lstlisting}
+            def locallyValidityChecker (m: List τ.relationSymbols → List (rule τ))
+            (d: database τ) (l: List (groundAtom τ))
+            (a: groundAtom τ): Except String Unit :=
+            if l.isEmpty
+            then
+                if d.contains a
+                then Except.ok ()
+                else checkRuleMatch m (groundRule.mk a l) 
+            else
+                checkRuleMatch m (groundRule.mk a l)
+        \end{lstlisting}
+
+        \begin{lemma}
+            Let $d$ be a database and $a$ a ground atom, that is a vertex in a graph $G$.
+            If we use as $m$ the result of \texttt{parseProgramToSymbolSequenceMap} for a program $P$, then \texttt{locallyValidityChecker m d (G.predecessors a) a} returns \texttt{ok} iff $a$ is locally valid in $G$ for $d$ and $P$.
+        \end{lemma}
+
+        Next, we need to use an acyclic graph where all vertices are locally valid to obtain virtual proof trees to show that the vertices are part of the proof-theoretic semantics of datalog. This is done by a function that is similar to depth-first search so that we could reuse its termination argument. The acyclicity of the graph offers us though a different termination argument that simplifies some proofs later.
+
+        We already introduced the \texttt{canReach} predicate. All vertices that can reach a vertex $a$ are in some sense a predecessor of $a$. We call all these elements the \textit{global predecessors of $a$}. As any graph is finite and any element that can reach an element in a graph must also be in the same graph, the global predecessors form a finite set. We would like to use the \texttt{Finset.filter} function to gain the predecessors from the finite set of the vertices of a graph. Unfortunately, \texttt{canReach} is not decidable itself (though we can use depth-first search to decide it), which is required to use \texttt{Finset.filter}. Therefore we define an own version of \texttt{Finset.filter} that accepts also by using the original \texttt{Finset.filter} function with the result that any predicate is classically decidable.
+
+        \begin{lstlisting}
+            noncomputable def Finset.filter_nc (p: A → Prop) (S: Finset A):= 
+            @Finset.filter A p (Classical.decPred p) S
+        \end{lstlisting}
+
+        Using classical logic we can also reproof a membership lemma for \texttt{Finset.filter} from mathlib.
+
+        \begin{lemma}
+            Let $S$ be a finite set and $p$ a predicate and $S'$ be the result of \texttt{Finset.filter\_nc p S}. Then any element is a member in $S'$ iff it is a member of $S$ and $p$.
+        \end{lemma}
+
+        Using this filter allows us to define the global predecessor formally.
+
+        \begin{lstlisting}
+            noncomputable def globalPredecessors (b:A)(G: Graph A):Finset A:=
+            Finset.filter_nc (fun a => canReach a b G) G.vertices.toFinset
+        \end{lstlisting}
+
+        In order to show termination we will need that the global predecessors of a predecessor of $a$ is a strict subset of the predecessors of $a$. Therefore the cardinality of the set of the global predecessors decreases and the algorithm will terminate.
+
+        \begin{lemma}
+            Let $a$ be a vertex in a graph $G$ and $b$ a predecessor of $a$. Then \texttt{globalPredecessors b G} $\subseteq$ \texttt{globalPredecessors a G}
+        \end{lemma}
+        \begin{proof}
+            Any element $c$ in \texttt{globalPredecessors b G} has a walk $w$ that ends with $b$. Since $b$ is a predecessor of $a$, $w++[a]$ is also a walk and therefore $c$ also reaches $a$ and is therefore in the global predecessors of $a$. 
+        \end{proof}
+
+        \begin{lemma}
+            Let $a$ be a vertex in an acyclic graph $G$ and $b$ a predecessor of $a$.
+            Then $a$ is not in the global predecessors of $b$.
+        \end{lemma}
+        \begin{proof}
+            Suppose that $a$ would be in the global predecessors of $b$. Then we would have a walk $w$ from $a$ to $b$ that has a length of at least one. Then we can again obtain the walk $w++[a]$ that has at least length two and starts and ends with $a$. This would be a cycle in $G$ in contrast to our assumption that $G$ is acyclic. Therefore $a$ can not be a member of the global predecessors of $b$.
+        \end{proof}
+
+        These results suffice the show the termination for the next function. We form a tree by simply taking the current vertex as the root and use the result of all predecessors for the sub trees.
+
+        \begin{lstlisting}
+            def extractTree (a:A) (G: Graph A) 
+            (mem: a ∈ G.vertices) (acyclic: isAcyclic G): tree A :=
+
+            tree.node a (List.map 
+            (fun ⟨x, _h⟩ => extractTree x G (G.complete a mem x _h) acyclic) 
+            (G.predecessors a).attach)
+        \end{lstlisting}
+
+        The root of the tree that results from \texttt{extractTree a G mem acyclic} is obviously $a$. If we extract for a ground atom $a$ in a graph where any vertex is locally valid, we gain a valid proof tree.
+
+        \begin{lemma}
+            Let $G$ be a graph of ground atoms, $P$ a program, $d$ a database and $a$ member of $G$. If all vertices of $G$ are locally valid and $G$ is acyclic, then $a$ has a valid proof tree for $P$ and $d$.
+        \end{lemma}
+        \begin{proof}
+            We proof this by strong induction on the cardinality of the global predecessors for arbitrary $a$. As $a$ is a vertex in $G$ it is locally valid. There are two cases for this.
+
+            We first consider the rule case, i.e. $a$ and its predecessors are an instance of a ground rule from $ground(P)$. We can reuse this rule as the roots of the subtrees are the same as the predecessors of $a$ by our previous assumption. Additionally, all direct subtrees are valid as well by our induction hypothesis. Due to the acyclicity of the graph, the global predecessors of any predecessor $b$ of $a$ form a strict subset of the global predecessors of $a$, so that their cardinality is lower.
+
+            The other option would be that $a$ has no predecessors and is in the database. Then \texttt{extractTree} will add no subtrees, so that the resulting tree is again valid.
+        \end{proof}
+
+        The previous lemma tells us that any vertex in a graph that is acyclic and has only locally valid vertices has a valid proof tree. Therefore the vertices of this graph form a subset of the proof-theoretic semantics and we use the graph validation as an alternative for the tree validation.
+
+
 
         
 
