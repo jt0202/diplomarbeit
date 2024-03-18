@@ -9,6 +9,8 @@
 \usepackage{color}
 \usepackage{multicol}
 \usepackage{tikz}
+\usepackage{cleveref}
+\usepackage{subcaption}
 \usetikzlibrary{automata, positioning, chains,fit,shapes}
 \definecolor{keywordcolor}{rgb}{0.7, 0.1, 0.1}   % red
 \definecolor{commentcolor}{rgb}{0.4, 0.4, 0.4}   % grey
@@ -24,6 +26,10 @@
 \newtheorem{example}{Example}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
+\newtheorem{fact}{Fact}
+\newenvironment{contexample}{
+   \addtocounter{example}{-1} \begin{example}[continued]}{
+   \end{example}}
 
 
 
@@ -33,52 +39,12 @@
 \begin{document}
     \maketitle
     \section{Introduction}
-    \section{Preliminaries}
-    \subsection{Datalog}
-        Syntactically datalog bears many similarities to first-order logic and may be viewed as a fragment of it, but the semantics are more specialized. In order to define the syntax we will introduce some definitions from first-order logic.
-
-        Firstly, we consider in general three countably infinite sets $R$, that consists of relation symbols, $C$, that consists of constants, and $V$, that consists of variables. In order to differentiate between constants and variables we require that $V \cap C  = \emptyset$. Each relation symbol has an associated arity $ar: R \to \mathbb{N}$. As we will only consider finite programs and databases, there will always be at most finitely many relation symbols, constants or variables in usage, but by requiring these sets to be countably infinite we make sure that we always have a sufficient amount. 
-        
-        A \textit{term} is either a constant or variable. In contrast to first-order logic or logic programming, we do not allow function symbols in datalog, but there are extensions of datalog that allow using some function symbols like addition or multiplication as terms as well.
-
-        An \textit{atom} is of the form $A(t_1, ..., t_{ar(A)})$ where $A$ is a relation symbol and $t_1,..., t_{ar(A)}$ are terms. The atom variables of $A(t_1, ..., t_{ar(A)})$ are the set of those $t_i$ which are variables. A \textit{ground atom} is an atom where the atom variables are the empty set, i.e. every term is a constant.
-        
-        A \textit{rule} is a expression of the form $H \leftarrow B_1 \land ... \land B_n$, where $H$ and all $B_i$ are atoms. $H$ is called the head of the rule and $\{B_1,.., B_n\}$ is the body of the rule. If $H$ and all $B_i$ are ground atoms, then we call this rule a \textit{ground rule}. If the body is empty, we call a rule a \textit{fact}. A rule is called \textit{safe}, if every variables in the atom variables of the head is also in the atom variables of some atom in the body. 
-
-        A \textit{program} is a finite set of rules. The program is safe, if all its rules are.
-
-        A datalog engine calculates the semantics of a datalog program, which we will define shortly. The non-fact rules of program are often general rules that can be used in many contexts, whereas the facts encode a specific context. In order to reuse programs, the facts are often outsourced in database, which we can imagine as a set of ground atoms. In the semantics we assume that these facts are then added back to the program for easier definitions.
-
-        Datalog has three major semantics: model-theoretic, proof theoretic and fixed-point based. These three semantics coincide. The semantics of a datalog program $P = \{r_1,...,r_k\}$ is a set of ground atoms.
-
-        For the model-theoretic semantics we describe the semantics as a specific model of the program. So far $P$ might however contain variables, which have to be mapped to something. Therefore we first transform $P$ into the \textit{ground program}, $ground(P)$. For this we consider \textit{groundings} or \textit{instantiations}, which are functions from $V$ to $C$. We can apply a grounding $g$ to an atom $a$ to aquire a ground atom by replacing a variable $v$ with $g(v)$. We may write this also as $g(a)$ and can apply grounding to a rule $r$ as well by applying it to every atom in the body and the head, which we denote as $g(r)$. The ground program is then defined as $ground(P) = \{r' \mid \exists r \in P. \exists g. g(r) = r' \}$
-
-        A set of ground atoms $I$ (\textit{interpretation}) is a \textit{model} of a ground rule $r$, if whenever the body of $r$ is a subset of $I$ also the head appears inside $I$. An interpretation is a model of a ground program $P$ if it is all model for all ground rules in $P$.
-
-        We would like to define the model-theoretic semantics of $P$ as the model of $ground(P)$. In general there are however multiple models of $ground(P)$, so that this would not be unambiguous. It might contain ground atoms without a ground rule having this atom as a head. It can however be proven that there always exists a minimal model of $ground(P)$. We define this as the model-theoretic semantics of $P$
-
-        A different view is to look why an atom $a$ is inside the minimal model. It might be because there was a ground rule in $ground(P)$ of which $a$ is the head and for which the body is already in the minimal model. Now we can again ask this for all elements in the body until we reach facts, which have to be true. This can be seen as a proof for $a$. This proof can be modelled as a rooted tree which nodes are ground atoms. A tree is a \textit{valid proof tree} for $a$ in $P$ if the following conditions hold.
-        \begin{enumerate}
-            \item The root is $a$
-            \item For each leaf exists a fact in $ground(P)$
-            \item For each node $n$ and its predecessors $m_1,..., m_k$ exists a rule in $ground(P)$ which the head $n$ and the body $\{ m_1,..., m_k\}$
-        \end{enumerate}
-        The proof-theoretic semantics is then the set of ground atoms for which a valid proof tree in $P$ exists.
-
-        The previous two semantics both provide clear definitions, but do not tell us how to arrive at this set. The fixed point semantics offers way to do this. For this we consider the following operator, that takes a set of ground atoms as an input.
-        
-        \[T_P(I) = \{a \mid \exists r \in ground(P), head(r) = a \land body(r) \subseteq I\}\]
-
-        This operator can be proven to be monotonic and therefore a least fixed-point exists by the Knaster-Tarski theorem exists. It can be computed by starting with $\emptyset$ for $I$ and repeatedly apply $T_P$ until we find the fixed-point. This semantics is the basis for the practical implementations of datalog engines.
-
-        All three semantics can be proven to be equivalent, which we will do later in Lean for the proof-theoretic and model-theoretic semantics.
-
-        Additionally, it turns out that every non-safe program can be transformed into a safe program by introducing new relation symbols, such that for all original relation symbols the semantics coincide.
+    \input{tex/Preliminaries.tex}
     \section{Datalog in Lean}
         
-        We introduced Datalog in the previous chapter. Here we show our implementation in Lean that we will use later to show the correctness of our algorithms.
+        We introduced Datalog in the previous chapter. Here we show our implementation in Lean which we will use later to show the correctness of our algorithms.
 
-        We started defining datalog using sets for constants, variables and relation symbols. In order to have a more compact representation we use the idea of a signature, that stores all these informations.
+        We started defining datalog using sets for constants, variables and relation symbols. In order to correctly interprete an 
 
         \begin{lstlisting}
             structure signature where
@@ -237,7 +203,7 @@
 
         After that we define the model-theoretic semantics. We choose the model-theoretic semantics over the fixed points semantics as we can directly construct the model and do not have to show that a fixed-point exists. Checking them in practice seems to be similar. 
 
-        An interpretation is a set of ground atoms, that may be a model. A model of a program over a database is an interpretation that contains every database element and fulfills every rule. Choosing the database to be a part of the model simiplifies grounding later, as there is only one place to check for matches. Additionally, we want to show that both defined semantics are equal. From the definition above one can see that any database element has a valid proof tree and is therefore in the proof-theoretic semantics.
+        An interpretation is a set of ground atoms, that may be a model. A model of a program over a database is an interpretation that contains every database element and fulfills every rule. Choosing the database to be a part of the model simplifies grounding later, as there is only one place to check for matches. Additionally, we want to show that both defined semantics are equal. From the definition above one can see that any database element has a valid proof tree and is therefore in the proof-theoretic semantics.
 
         \begin{lstlisting}
             abbrev interpretation (τ: signature) := Set (groundAtom τ)
