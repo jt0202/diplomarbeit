@@ -63,7 +63,7 @@ A \textit{program} $P$ is a finite set of rules. We only consider finite sets as
 
     \begin{equation}
     \begin{split}
-    E(1,2) &\leftarrow \\ E(1,3) &\leftarrow \\ E(3,5) &\leftarrow \\ E(4,7) &\leftarrow\\ Q() &\leftarrow \\ T(?x,?y) &\leftarrow E(?x,?y) \\ T(?x,?x) &\leftarrow \\ T(?x, ?z) &\leftarrow T(?x,?y) \and T(?y, ?z)
+    E(1,2) &\leftarrow \\ E(1,3) &\leftarrow \\ E(3,5) &\leftarrow \\ E(4,6) &\leftarrow \\E(4,7) &\leftarrow\\ Q() &\leftarrow \\ T(?x,?y) &\leftarrow E(?x,?y) \\ T(?x,?x) &\leftarrow \\ T(?x, ?z) &\leftarrow T(?x,?y) \and T(?y, ?z)
     \end{split}
     \end{equation}
     $\}$, which contains both facts and other rules.
@@ -118,6 +118,7 @@ The semantics of a first-order theory or sentence are its models. Unfortunately,
             \draw[->,blue] (1) -- (3);
             \draw[->,blue] (3) -- (5);
             \draw[->,blue] (4) -- (7);
+            \draw[->,blue] (4) -- (7);
             \draw[->,green] (1) -- (5);
         \end{tikzpicture}
         \caption{First model}
@@ -146,6 +147,7 @@ The semantics of a first-order theory or sentence are its models. Unfortunately,
             \draw[->,blue] (1) -- (2);
             \draw[->,blue] (1) -- (3);
             \draw[->,blue] (3) -- (5);
+            \draw[->,blue] (4) -- (6);
             \draw[->,blue] (4) -- (7);
             \draw[->,blue] (2) -- (3);
             \draw[->,green] (1) -- (5);
@@ -286,8 +288,148 @@ A tree $t$ of ground atoms is a proof tree for a ground atom $a$ in a program $P
 
 The proof-theoretic semantics of a program $P$ and database $d$ is the set of ground atoms that have a valid proof tree. Again this can be shown to be equal to the other semantic definitions. We will formally prove the equality of the proof-theoretic and the model-theoretic semantics of datalog in this work.
 
+In the rules of the program $P$ we note a special rule of the form $T(?x, ?x) \leftarrow$. It is a fact, but not a ground rule and the only rule where this is the case. 
+We call a rule $H \leftarrow B_1 \land ... \land B_n$ \textit{safe}, if every variable that occurs in the head also occurs in the body, i.e. \[Vars(H) \subseteq \bigcup_{i \in \{1,..,n\} } Vars(B_i) \]
+
+We call a program safe, if every rule in the program is safe. Safe programs are considered better, because there result does not depend on the set of constants $C$ which is in practice often either not given or infinite, but only on the specific database and/or the facts in the program.
+
+\begin{contexample}
+    We can transform $P$ into the safe program $P'$ by adding a new unary predicate $N$ to the predicate symbols. $P'$ is then the union of $P \setminus \{T(?x, ?x) \leftarrow \}$ and the following rules:
+    \begin{equation}
+        \begin{split}
+            N(?x) &\leftarrow E(?x, ?y) \\
+            N(?y) &\leftarrow E(?x, ?y) \\
+            T(?x,?x) &\leftarrow N(?x) \\
+        \end{split}
+    \end{equation}
+
+    The new predicate $N$ (for nodes) represents any elements that occur in the $E$ relation and is used in the body for the reflexive rule.
+
+    If some constants are desired that do not occur in any $E$ relation, one can also directly encode that into the database.
+\end{contexample}
+
+What are the semantics of this newly created safe program $P'$? It turns out, that it is equal to the semantics for $P$ for all original predicates, i.e. if we remove all ground atoms that use $N$ we gain the same result. Therefore we state that any program can be transformed in an equivalent safe program.
+
 \subsection{Certifying algorithms}
 
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[node distance=2.5cm and 20cm, auto]
+
+        \tikzstyle{block} = [rectangle, minimum width=2cm, minimum height=1cm, text centered]
+        
+        \node [block] (box1) {Input};
+        \node [block, right of=box1, draw] (box2) {Program};
+        \node [block, right of=box2] (box3) {Output: Result};
+        
+        \draw [->] (box1.east) -- (box2.west);
+        \draw [->] (box2.east) -- (box3.west);
+        
+    \end{tikzpicture}
+    \caption{A convential algorithm}
+    \label{fig:programNormal}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[node distance=3cm and 3cm, auto]
+
+        \tikzstyle{block} = [rectangle, minimum width=2cm, minimum height=1cm, text centered]
+        
+        \node [block] (box1) {Input};
+        \node [block, right of=box1, draw] (box2) {algorithm};
+        \node [block, below of=box3] (box4) {Certificate};
+        \node [block, right of=box2] (box3) {Result};
+        \node [block, right of=box3, draw ] (box5) {Checker};
+        \node [block, right of=box5 ] (box6) {Accept/Not accept};
+        \node [block, above of= box6] (box7) {Output};
+
+        \draw [->] (box1.east) -- (box2.west);
+        \draw [->] (box2.south) |- (box4.west);
+        \draw [->] (box2.east) -- (box3.west);
+        \draw [->] (box3.east) -- (box5.west);
+        \draw [->] (box4.east) -| (box5.south);
+        \draw [->] (box5.east) -- (box6.west); 
+        \draw [->] (box3.north) |- (box7.west); 
+    \end{tikzpicture}
+    \caption{A certifying algorithm algorithm}
+    \label{fig:certifyingAlgorithm}
+\end{figure}
+
+Most algorithms one encounters either in books like \cite{AlgorithmsBook} or in real programs are comparable to \cref{fig:programNormal}. We have an input, give this into an algorithm which is a black box for us and then we receive an result as an output. What guarantees do we have that the algorithm does what we expect it to do ?
+
+In general, we only have very few guarantees. While formal verification of programs exists, it is rarely done in practice due to the complexity of modern programs, time constraints or unfamilarity of this. It is often only done in very important aspect such as the verified C compiler CompCert \cite{CCertComp}.
+
+In practice, one often resolves to testing. There the developer specifies an input and the desired property and a user can run the tests and convince themselves that the program is correct in this case. This shows however only correctness in this case and not in general. Additionally, it is difficult to design good tests, that capture all later uses, so that we cannot conclude the absence of bugs.
+
+An alternative to this are \textit{Certifying algorithms} depicted in \cref{fig:certifyingAlgorithm}. An overview on this topic can be found in \cite{CertAlg}. 
+
+Recall a definition of the class NP from complexity theory:
+
+\begin{definition}[\cite{complexityBook}]
+    A language $L \subseteq \{0,1\}^\star$ is in NP if there exists a polynomial $p: \mathbb{N} \to \mathbb{N}$ and a polynomial-time Turing machine $M$ such that forall $x \in \{0,1\}^\star$:
+
+    \[ x \in L  \Leftrightarrow \exists u \in \{0,1\}^{p(|x|)}\text{ s.t. } M(x,u) = 1\]
+
+    If $x \in L$ and $u \in \{0,1\}^{p(|x|)}$ satisfy $M(x,u) = 1$, then we call $u$ a certificate for $x$
+\end{definition}
+
+We can generalize this and require an algorithm not only to give us an output $x$, but also a certificate $u$ as a reason why $x$ is the correct output. Then we can either check by ourselves that $x$ is a correct solution according to $u$ or use another program that checks this. As verifying a solution is never harder than computing it, the checker is usually simpler so that we either see directly that the checker is correct or we can formally verify it.
+
+The formal framework of \cite{CertAlg} define certifying algorithms in the following way. We consider the set $X$ of input values and the set $Y$ of output values of a function $f$. A predicate $\phi: X \to \{true,false\}$ states a precondition for the inputs and another predicate the postcondition $\psi: X \times Y \to \{true,false\}$, $\phi$ allows us the algorithm to only accept part of the input space and $\psi(x,y)$ typically expresses that $y$ is a valid output for the input $x$. In cases where $x$ is not a valid input, we use the new symbol $\bot$ to denote that the algorithm does not return anything and denote by $Y^\bot = Y \cup \{\bot\}$.
+The certificate or \textit{witness} from a set $W$ and its correctness is expressed by the predicate $\mathcal{W}: X \times Y^\bot \times W$ with the following properties:
+
+\begin{enumerate}
+    \item \textbf{Strong witness property}: Consider a triple $(x,y,w)$ that satisfies the witness predicate $\mathcal{W}$. If $y=\bot$, i.e. the input is not valid, we want $w$ to be a proof of this fact. Else we have that $y\in Y$ and we want $w$ to be a proof that the postcondition is satisfied, i.e.
+    \[ \forall x,y,w (y = \bot \land \mathcal{W}(x,y,z) \rightarrow \neg \phi(x)) \land (y \in Y \land \mathcal{W}(x,y,z) \rightarrow \psi(x,y)) \]
+    \item \textbf{Simplicity}: This statement above has a simple proof
+    \item \textbf{Checkability}: It is possible to check efficiently if $\mathcal{W}(x,y,z)$ holds for a triple $(x,y,z)$
+\end{enumerate}
+
+A \textit{(strongly) certifying algorithm} is an algorithm that holds on all inputs $x \in X$ and returns a tuple $\langle y, w\rangle$ such that $\mathcal{W}(x,y,w)$ holds.
+
+This is explained in the following examples. We start with an example from graph theory.
+
+\begin{example}[\cite{CertAlg}]
+    Consider the problem of deciding whether a graph $G=(V;E)$ is bipartite, i.e. there exists a partition of $V$ into $V_1, V_2$ with $V = V_1 \cup V_2$ and $V_1 \cap V_2 = \emptyset$, such that for all edges $e \in E$ we have that $e \cap V_1 \neq \emptyset$ and $e \cap V_2 \neq \emptyset$, so that all edges are only between vertices that are in the different partitions.
+
+    The set of inputs $X$ is the set of strings over $\{0,1\}$ and $\phi(x)$ holds whenever $x$ encodes a graph. 
+    The postcondition is the following: If $y = \bot$, then $x$ does not encode a graph. If $y= true$, then $x$ encodes a bipartite graph. If $y = false$, then $x$ does not encode a bipartite graph.
+
+    Adopting the well-known algorithm for checking whether a bipartite graph, we can construct the following certifying algorithm.
+
+    \begin{enumerate}
+        \item Check if $x$ encodes a binary graph. If not return $\bot$ and a witness that describes the problem in the encoding.
+        \item Explore the graph in depth-first search and color vertices along the path by alternating colors. If we want to color a vertex by a color $c$ and it already has the color $c'$, we continue exploring another path if $c=c'$, or stop if $c \neq c'$ and return $false$. If that is the case, we have a cycle of odd length in our current path and return this cycle as a witness.
+        \item If we reach this step, then all vertices are colored in way that no neighbouring vertices have the same color. Then we return $true$ and the two sets of colored vertices as the witness. 
+    \end{enumerate}
+
+    We know from graph theory that a graph is bipartite iff it has no cycle of odd length.
+
+    For any value of $y$ a checker can effienctly check if the returned reason does indeed hold for $x$.
+\end{example}
+
+The above example illustrates the example well for a decision problem, but we want to decide whether a set of ground atoms is the semantics of a datalog program and database, i.e. a function problem. The next example illustrates a certifying algorithm for a function problem in number theory.
+
+\begin{example}[\cite{CertAlg}]
+    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not-equal to zero, i.e. the largest $g \in \mathbf{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and $psi(\langle a, b\rangle, g)$ shall me to true, if $g$ is $gcd(a,b)$
+
+    The normal way of computing this involves Euclid's algorithm, but this is not certifying. The extended euclidean algorithm however returns in addition to the greatest common divisor $g$ two numbers $s$ and $t$ such that $g = gcd(a,b) = a \dot s + b \dot t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$, then $g$ is also the greatest common divisor of $a$ and $b$.
+
+    Therefore a certifying algorithm in order to compute the $gcd$ is the extended euclidean algorithm, that returns as $y$ $gcd(a,b)$ and as the certificate the pair $\langle s, t\rangle$
+
+    A checker than only has to check that $g=a s + b t$ hold and that $g$ divides both $a$ and $b$. 
+\end{example}
+
+For decision problems, we require an explanation when the input is in a language as well as an explanation when the input is not in the language. A common misconception is that therefore certifying algorithms are only possible for problems that are known to be in $NP \cap coNP$, which is presumed to not include the interesting $NP$-complete problems. This is not the case as we do not require the certificate to be polynomial in the size of the input. Indeed, SAT-solvers that decide the NP-complete satisfiability problem of propositional logic offer certificates in the DRAT proof format as a model or a proof of unsatisfiability\cite{DRAT}.
+
+In the datalog case, many modern reasoners such as Nemo or Soufflé already offer certificates for atoms in the form of the previously introduced proof trees. We therefore focus on implementing a checker for datalog.
+
+In \cite{CertCheckerWorkflow} an approach to develop checkers for certifying algorithms is outlined. There the checker is implemented in C, because already the certifying algorithm itself is written in C++, so that both versions are similar. In order to verify the correctness of the checker they employ the proof assistant Isabelle. The C-code is exported by a tool into Isabelle so that the verification can take place. In Isabelle then the problem defined and it is proven that the export does fulfill the desired properties. 
+
+In this workflow we have to trust the correctness of the hardware, the C compiler, the tool that exports C code to Isabelle and of Isabelle itself. Additionally, we have to trust that we have correctly defined and specified the problem in Isabelle.
+
+In this work we modify this workflow a bit. We use a different proof assistant, Lean, instead of Isabelle. Lean not only a proof assistant, but also a functional programming language. Therefore we can implement the checker directly in Lean and do not have to export a model of our code into the proof assistant. Our trust base is therefore smaller, as we no longer need an additional compiler for the language the checker is written in nor a tool to export this into the proof assistant. 
 
 
 \subsection{Lean}
