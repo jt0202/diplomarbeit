@@ -358,7 +358,7 @@ What are the semantics of this newly created safe program $P'$? It turns out, th
 
 Most algorithms one encounters either in books like \cite{AlgorithmsBook} or in real programs are comparable to \cref{fig:programNormal}. We have an input, give this into an algorithm which is a black box for us and then we receive an result as an output. What guarantees do we have that the algorithm does what we expect it to do ?
 
-In general, we only have very few guarantees. While formal verification of programs exists, it is rarely done in practice due to the complexity of modern programs, time constraints or unfamilarity of this. It is often only done in very important aspect such as the verified C compiler CompCert \cite{CCertComp}.
+In general, we have only very few guarantees. While formal verification of programs exists, it is rarely done in practice due to the complexity of modern programs, time constraints or unfamilarity with the methods. It is often only done in very important aspect such as the verified C compiler CompCert \cite{CCertComp}.
 
 In practice, one often resolves to testing. There the developer specifies an input and the desired property and a user can run the tests and convince themselves that the program is correct in this case. This shows however only correctness in this case and not in general. Additionally, it is difficult to design good tests, that capture all later uses, so that we cannot conclude the absence of bugs.
 
@@ -433,4 +433,46 @@ In this work we modify this workflow a bit. We use a different proof assistant, 
 
 
 \subsection{Lean}
+We introduce in this section Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. More in-depth information can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
 
+Lean's core is a small trusted kernel\cite{LeanSysDescr}, that captures the most important functionalities and can be extended by the user. Since version 4 Lean is implemented in Lean itself\cite{Lean4}. The most important libraries for Lean which we will use are the standard library Std4\cite{stdLean} that contains important data structures and tactics and mathlib4\cite{mathlib}, that contains definitions, tactics and theorem from diverse areas of mathematics and computer science.
+
+As we have just heard, Lean is able to encode many mathematical results. The foundations of mathematics are often build on top of set theory (e.g. \cite{logic}) but most proof assistants instead use \textit{type theory}. Type theory was introduced by Bertrand Russel as an alternative foundation during the foundational crisis of mathematics.
+
+Any \textit{term}, here a constant, variable or function application, has a type in the context of type theory. This is denoted as \textit{term:type}
+
+\begin{example}
+    Different terms in their types are displayed below:
+        \begin{lstlisting}
+            42:nat
+            true:bool
+            sort([1,2,3]): List (nat)
+            nat: Type
+        \end{lstlisting}
+
+        \lstinline|nat| is a natural number, \lstinline|true| is a boolean, the result of the application of \lstinline|sort| to \lstinline|[1,2,3]| has the type \lstinline|List nat|. All previous types have a type as well, \lstinline|Type|.
+\end{example}
+
+If every element has a type and types such as \lstinline|nat| or \lstinline|bool| have the type \lstinline|Type|, it is only natural to ask what type \lstinline|Type| has. The answer to this question is  \lstinline|Type 1| and \lstinline|Type 1| has the type \lstinline|Type 2| and so on. This leads to an infinite sequence of \textit{type universes} that are non-cumulative, i.e. no term has both the type \lstinline|Type| and \lstinline|Type 1|.
+
+In contrast to set theory, functions are a direct element of type theory and do not need a complicated encoding. For any types \lstinline|A| and \lstinline|B|, there exists the type of functions from A to B, \lstinline| A $\to$ B|.
+
+We can define functions in Lean by the keyword \lstinline|def| similar to other functional programming languages, such as
+
+
+
+\begin{lstlisting}
+            def add_mul (x y z: $\mathbf{N}$): $\mathbf{N}$: mul (add x y) z
+\end{lstlisting}
+
+In the brackets are the arguments to this function are denoted, so that \lstinline|add_mul| has the type \lstinline|$\mathbf{N} \to \mathbf{N} \to \mathbf{N} \to \mathbf{N}$ |.
+
+
+TODO: Explain Prop, logical statements
+    Explain def, abbrev
+    Inductive types, recursive definitions
+    structures
+    Proofs tactics vs other style
+    Termination
+    dependent types
+    classes instances
