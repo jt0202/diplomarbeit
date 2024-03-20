@@ -412,9 +412,9 @@ This is explained in the following examples. We start with an example from graph
 The above example illustrates the example well for a decision problem, but we want to decide whether a set of ground atoms is the semantics of a datalog program and database, i.e. a function problem. The next example illustrates a certifying algorithm for a function problem in number theory.
 
 \begin{example}[\cite{CertAlg}]
-    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not-equal to zero, i.e. the largest $g \in \mathbf{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and $psi(\langle a, b\rangle, g)$ shall me to true, if $g$ is $gcd(a,b)$
+    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not-equal to zero, i.e. the largest $g \in \mathbb{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and $psi(\langle a, b\rangle, g)$ shall me to true, if $g$ is $gcd(a,b)$
 
-    The normal way of computing this involves Euclid's algorithm, but this is not certifying. The extended euclidean algorithm however returns in addition to the greatest common divisor $g$ two numbers $s$ and $t$ such that $g = gcd(a,b) = a \dot s + b \dot t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$, then $g$ is also the greatest common divisor of $a$ and $b$.
+    The normal way of computing this involves the euclidean algorithm, but this is not certifying. The extended euclidean algorithm however returns in addition to the greatest common divisor $g$ two numbers $s$ and $t$ such that $g = gcd(a,b) = a \dot s + b \dot t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$, then $g$ is also the greatest common divisor of $a$ and $b$.
 
     Therefore a certifying algorithm in order to compute the $gcd$ is the extended euclidean algorithm, that returns as $y$ $gcd(a,b)$ and as the certificate the pair $\langle s, t\rangle$
 
@@ -433,13 +433,13 @@ In this work we modify this workflow a bit. We use a different proof assistant, 
 
 
 \subsection{Lean}
-We introduce in this section Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. More in-depth information can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
+We introduce in this section Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. A more in-depth introduction can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
 
 Lean's core is a small trusted kernel\cite{LeanSysDescr}, that captures the most important functionalities and can be extended by the user. Since version 4 Lean is implemented in Lean itself\cite{Lean4}. The most important libraries for Lean which we will use are the standard library Std4\cite{stdLean} that contains important data structures and tactics and mathlib4\cite{mathlib}, that contains definitions, tactics and theorem from diverse areas of mathematics and computer science.
 
 As we have just heard, Lean is able to encode many mathematical results. The foundations of mathematics are often build on top of set theory (e.g. \cite{logic}) but most proof assistants instead use \textit{type theory}. Type theory was introduced by Bertrand Russel as an alternative foundation during the foundational crisis of mathematics.
 
-Any \textit{term}, here a constant, variable or function application, has a type in the context of type theory. This is denoted as \textit{term:type}
+Any element, a \textit{term}, has a \textit{type} in type theory. This is denoted by \lstinline|term:type|. 
 
 \begin{example}
     Different terms in their types are displayed below:
@@ -448,31 +448,264 @@ Any \textit{term}, here a constant, variable or function application, has a type
             true:bool
             sort([1,2,3]): List (nat)
             nat: Type
+            Type: Type₁
         \end{lstlisting}
 
-        \lstinline|nat| is a natural number, \lstinline|true| is a boolean, the result of the application of \lstinline|sort| to \lstinline|[1,2,3]| has the type \lstinline|List nat|. All previous types have a type as well, \lstinline|Type|.
+        \lstinline|nat| is a natural number, \lstinline|true| is a boolean, the result of the application of \lstinline|sort| to \lstinline|[1,2,3]| has the type \lstinline|List nat|. All previous types have a type as well, \lstinline|Type|. \lstinline|Type| itself also has a type \lstinline|Type₁|. This forms an infinite sequence of \textit{type universes}, that are non-cumulative, i.e. no term has multiple types.
 \end{example}
 
-If every element has a type and types such as \lstinline|nat| or \lstinline|bool| have the type \lstinline|Type|, it is only natural to ask what type \lstinline|Type| has. The answer to this question is  \lstinline|Type 1| and \lstinline|Type 1| has the type \lstinline|Type 2| and so on. This leads to an infinite sequence of \textit{type universes} that are non-cumulative, i.e. no term has both the type \lstinline|Type| and \lstinline|Type 1|.
 
 In contrast to set theory, functions are a direct element of type theory and do not need a complicated encoding. For any types \lstinline|A| and \lstinline|B|, there exists the type of functions from A to B, \lstinline| A $\to$ B|.
 
-We can define functions in Lean by the keyword \lstinline|def| similar to other functional programming languages, such as
-
-
-
+We can define functions in Lean by the keyword \lstinline|def| similar to other functional programming languages, such as the id function for natural numbers. In the parentheses, we denote an argument \lstinline|x| with its type. Due to currying a function can have multiple arguments. After the colon we denote the returned type of the function, which is here again a natural number. Therefore we have the following type \lstinline|$\mathbb{N} \to \mathbb{N}$|, as the function takes a natural number as an input and returns a natural number as well. After the \lstinline|:=| we denote the natural number this function actually returns. 
 \begin{lstlisting}
-            def add_mul (x y z: $\mathbf{N}$): $\mathbf{N}$: mul (add x y) z
+            def id (x: $\mathbb{N}$): $\mathbb{N}$:= x
 \end{lstlisting}
 
-In the brackets are the arguments to this function are denoted, so that \lstinline|add_mul| has the type \lstinline|$\mathbf{N} \to \mathbf{N} \to \mathbf{N} \to \mathbf{N}$ |.
+Everything we have seen so far holds in general in type theory. Lean itself is based however on a specific type theory, the Calculus of Inductive Constructions (CIC),a dependent type theory\cite{Lean4, CoC}.
+
+Our id function we defined above is correct, but only works for natural numbers. We would have to implement another id function for booleans, string or any other type. This is rather cumbersome because we never actually use any properties of the specific type. We can generalize this function to help us with this problem.
+
+\begin{lstlisting}
+            def id (A: Type)(a: A): A:= a
+\end{lstlisting}
+
+This id function has now two arguments. First the type we want to use it on, secondly the element of this type. \lstinline| id $\mathbb{N}$| works as previously and has the type \lstinline|$\mathbb{N} \to \mathbb{N}$|. It seems less clear which type id itself has, because this depends on the first argument.
+Such types are called dependent types and we would denote this as \lstinline|$\Pi$ (A:Type) A $\to$ A|. Intuitively, this is a function that returns a type for any input value.
+
+In practice, we often do not want to write down to much. We can write the function instead also as:
+\begin{lstlisting}
+            def id {A: Type}(a: A): A:= a
+\end{lstlisting}
+
+Now the type $A$ is an implicit argument, which is denoted by the braces, and Lean can fill it in for the user based on the input $a$. Therefore the user can write just \lstinline|id 42| instead of \lstinline|id $\mathbb{N}$ 42|.
+
+So far we have discussed what types are and how we can define functions which are important for the programming aspect of lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence proofs of statement can be equivalently seen als functions, that have the type of the statement. This type of statements in known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:$\mathbb{N}), 0 $\le$ x | or \lstinline| x = y $\lor$ $\neg$ x = y|.
+
+Every statement defines its own type, whose elements are the proofs for it. In contrast to other types, all elements of these types are equivalent known as \textit{proof irrelevance}, so that elements of these types only serve as a witness for their truth.
+
+Proofs can be constructed in Lean by two ways.  We start by writing theorem (or lemma, proposition etc. in mathlib) and write it similar as we did for a function. The main difference is that the type is what we want to prove and that the function can not be executed.
+
+\begin{lstlisting}
+theorem testTheorem {A: Type}: ∀ (x y z: A), x = y → id y = z → z = x := by
+  intro x y z h1 h2
+  unfold id at h2
+  rw [h1]
+  apply Eq.symm
+  exact h2
+\end{lstlisting}
+
+The proof is done in tactic mode. We open the tactic mode with the keyword \lstinline|by|. At the start our context only contains that $A$ is a type and the goal is $∀ (x y z: A), x = y → id y = z → z = x$, which is compactly written as
+
+\[ \{A:Type\} \vdash ∀ (x y z: A), x = y → id y = z → z = x\]
+
+We apply tactics to the goal or our context. These may introduce new goals or fulfill old goals. A proof is finished, when all goals are proven. We explain the proof now in more detail.
+
+\begin{enumerate}
+    \item We start with the \lstinline|intro| tactic. This moves elements that are universally quantified or the start of an implication from the goal into the context. Alternatively, one can use \lstinline|revert| to move a hypothesis from the context back to the goal to prove a stronger statement.
+    
+    At the end the state is: 
+
+    \[ \{A:Type\} (x y z: A) (h1: x = y) (h2: id y = z)\vdash z = x\]
+
+    \item After that we use the \lstinline|unfold| tactic at the hypothesis h2. This replace \lstinline with its definition in h2, which now looks like this: (h2: y = z)
+    
+    \item We use now the tactic \lstinline|rw|, i.e. rewrite, that replaces in the goal $x$ by $y$ so that the goal is now $z = y$
+    \item The goal is now almost the same as $h2$, but the order is wrong. Therefore we use the apply tactic with
+    
+    \lstinline|Eq.symm := $\forall \{A:Type\} (a b:A), a = b \rightarrow b = a$ |. 
+
+    Apply tries to match the statements consequent with our goal and opens new goals for the antecedents of this statement.
+
+    Our current proof state is this:
+
+    \[ \{A:Type\} (x y z: A) (h1: x = y) (h2: y = z)\vdash y = z\]
+
+    \item Our goal is now exactly the same as the hypothesis $h2$. The \lstinline|exact| tactic uses $h2$ to complete the goal.
+\end{enumerate}
+
+Other important tacitcs not seen here are \lstinline|by_contra| that allows a proof by contradiction, \lstinline|by_cases| that allows a case distinction or \lstinline|rcases| that splits an and statement in an hypothesis. Lean offers also methods that try to prove goals themselves like \lstinline|simp| that uses lemmas marked with \lstinline|@simp| or \lstinline|tauto|, that can recognize some tautologies. The set of tactics is however not fixed and the user can introduce new tactics to simplify the reasoning process.
+
+The majority of formal proofs in this work are done in tactics mode, but we see above that describing them in natural language is quite verbose. Therefore we will only describe the idea we followed outside of this section.
+
+These proofs are done backwards, i.e. starting from the goal towards the assumptions. There are also forwards proofs that start from the assumptions by building hypotheses until we reach the goal or by composing theorems like functions. While this is possible, it was rarely done in this work because. A good source for this is either \cite{theoremProvingLean} or \cite{HitchhikerLogicVer}.
 
 
-TODO: Explain Prop, logical statements
-    Explain def, abbrev
-    Inductive types, recursive definitions
-    structures
-    Proofs tactics vs other style
-    Termination
-    dependent types
-    classes instances
+We can also use \lstinline|def| to define new types. Sets of type \lstinline|A| are in Lean implemented as functions from \lstinline|A| to \lstinline|Prop|. Functions to \lstinline|Prop| are in general not computable so that the membership in set is also not computable in contrast to for example lists.
+
+\begin{lstlisting}
+    def Set (α : Type u) := α → Prop
+\end{lstlisting}
+
+This introduces a totally new type. If we want to just use functions that have contain elements of type \lstinline|$\mathbb{N}$|, using \lstinline|def| would create a new type for which we would have to define again the set operations $\cup$ or $\cap$. In this case, one can use the \lstinline|abbrev| command, that provides a simple alias.
+
+\begin{lstlisting}
+    abbrev NatSet := Set $\mathbb{N}$
+\end{lstlisting}
+
+The CIC and Lean allow the creation of types by induction. We can create our own implementation of the natural numbers by the \lstinline|inductive| keyword. After that we list the constructors. These can be constant constructors such as \lstinline|zero| or function creators like \lstinline|succ|
+An inductive type may have many constructors of both types or even none as the empty type.
+
+\begin{lstlisting}
+    inductive myNat: Type
+    | zero: myNat
+    | succ: myNat → myNat
+\end{lstlisting}
+
+Our definition states that an element of \lstinline|myNat| is either \lstinline|zero| or the result of \lstinline|succ| to some other element of \lstinline|myNat|. Any element of \lstinline|myNat| is only the result of one of these constructors and all elements of \lstinline|myNat| are different.
+
+An typical mathematical definition for this would be: myNat is the smallest set $S$ of elements such that it contains $zero$ and whenever an element $a$ is in $S$, then also $succ(a)$ is in $S$.
+
+We can define for inductive types functions recursively like the add function.
+
+\begin{lstlisting}
+    def myNat.add (n m: myNat): myNat :=
+    match m with
+    | zero => n
+    | succ m' => succ (add n m')
+\end{lstlisting}
+
+If we want to prove a statement about elements on an inductive type, we can use the \lstinline|induction| tactic to create proofs similar to those by (structural) induction in natural language proofs.
+
+\begin{lstlisting}
+            theorem myNat.add_zero (n: myNat): myNat.add zero n = n := by
+                induction n with
+                | zero =>
+                    unfold add
+                    rfl
+                | succ n' ih =>
+                    unfold add
+                    rw [ih]
+\end{lstlisting}
+
+We start by the induction tactic to perform an induction over n. Each constructor is listed separatedly and after the arrow we start the proof for this constructor. In the zero case it is enough to unfold the definition of add to get \lstinline|zero=zero| and use \lstinline|rfl| which proves these equalities.
+
+In the succ case we have in addition to the myNat element $n'$ we use in the constructor of succ also the induction hypothesis\lstinline|ih: add zero n' = n'|. We can unfold the definition of add again and use \lstinline|rw| to replace \lstinline| add zero n'| by \lstinline|n'| in the goal \lstinline|succ (add zero n') = succ n'|. The \lstinline|rw| tactic applies \lstinline|rfl| at the end automatically to finish the proof.
+
+After defining the natural numbers inductively, we can also define the even numbers by induction. We again have the zero constructor and a succ constructor that now shall now represent the next natural number.
+
+\begin{lstlisting}
+    inductive evenNat: Type
+    | zero: evenNat
+    | evenSucc: evenNat → evenNat
+\end{lstlisting}
+
+While this works, we see no relation between the elements of myNat and evenNat. We can of course define a function that maps elements of evenNat to myNat and use this to transform any even number to a natural number.
+
+\begin{lstlisting}
+    def evenNatToMyNat (e: evenNat) := 
+        match e with
+        | zero => myNat.zero
+        | succ e' => myNat.succ (myNat.succ (evennatToMyNat e'))
+\end{lstlisting}
+
+This approach works, but is a bit cumbersome. We always need to type this ourselves and if we forget Lean will complain. There exists however the \lstinline|class Coe|. A class describes an abstract property e.g. of a type and can be implemented by a specific type via \lstinline|instance|.
+
+The \lstinline|Coe| looks (in a simplified version) like this. It takes two types and a function that maps from one type to the other. We can show that this property holds for \lstinline|evenNat| and \lstinline|myNat| by using \lstinline|evenNatToMyNat| to define an instance of this class. Then we can use elements of \lstinline|evenNat| in functions defined for \lstinline|myNat| and Lean will automatically convert them using \lstinline|evenNat|.
+
+\begin{lstlisting}
+class Coe (α : Type) (β : Type) where
+    coe : α → β
+
+instance coeEvenNatMyNat: Coe evenNat myNat := ⟨evenNatToMyNat⟩
+\end{lstlisting}
+
+An alternative way of defining types are structures that are comparable to classes in object-oriented languages. Structures have fields that have a type and we start listing them one by one after the \lstinline|where| statement. Structures are like inductive types with a single constructor. Therefore they are not allowed to be recursive, i.e. no structure $A$ may have an element of type $A$.
+We can build an element of the type of the structure via passing the elements in braces and can use the name of the field to access an element.
+
+\begin{lstlisting}
+    structure player where
+    (name:String)
+    (numGoals: $\mathbb{N}$)
+    (active: Bool)
+
+    def player1: player := {
+        name := "Test",
+        numGoals := 10,
+        active := true
+    }
+
+    def player1Goals: $\mathbb{N}$ := player1.numGoals
+\end{lstlisting}
+
+Returning back to our example of myNat, we can define some more functions. In the previous section we talked about the euclidean algorithm. We can try to implment it ourselves in Lean. Firstly, we would require the modulo function for that. We will only define it for now to not loose focus and use the keyword \lstinline|sorry| in the value. This closes in proofs any goal or can be used for incomplete functions, but will throw an error if executed.
+
+\begin{lstlisting}
+    def myNat.mod (n m: myNat): myNat := sorry
+\end{lstlisting}
+
+The euclidean algorithm can be implemented in the following way:
+
+\begin{lstlisting}
+    def myNat.Euclid (a b: myNat): myNat :=
+    if b = zero
+    then a
+    else Euclid b (myNat.mod a b)
+\end{lstlisting}
+
+Lean will not except this function and instead complain in the line of the if that it failed to synthesize an instance of \lstinline|DecidableEq| for myNat. DecidableEq allows us to use $=$ for a type in a function. This is not a trivial requirement as the equality of real numbers is already undecidable. We need to provide a function to Lean that can be used to decide whether two elements of myNat are equal. During the defintion of inductive types we already noted, that all elements of an inductive type are different, which allows us to do this. Luckily, Lean can even do this alone if we tell Lean to do this using the \lstinline|deriving| keyword. It can even derive multiple instances such as the Inhabited instance that states that there exist some default element of this type.
+
+\begin{lstlisting}
+    inductive myNat: Type
+    | zero: myNat
+    | succ: myNat → myNat
+    deriving DecidableEq, Inhabited
+
+\end{lstlisting}
+
+Now the error will disappear, but a new one will be introduced. Lean does not recognize the termination of \lstinline|myNat.Euclid|. We have already defined recursive functions before where we did not encounter this problem. In \lstinline|myNat.add| we however used the inductive schema and only did the recursion on $n$ in the case of $succ n$. This allowed Lean to conclude that we only call the function on smaller elements so that the function will determinate.
+
+To show termination, one is required to define some \textit{well-founded relation}, i.e. a relation that does not have any infinite descending chains. Such a relation would be the less-than relation of the natural numbers, so that it is often convenient to define some size measure that measures the size of our elements in the natural numbers and use this. Such a function exists automatically for any inductive type and is called \lstinline|sizeOf|. We can provide this and are only left to prove that \lstinline|sizeOf (mod a b) < sizeOf b|, which we will leave open here.
+
+\begin{lstlisting}
+def myNat.Euclid (a b: myNat): myNat :=
+  if b = zero
+  then a
+  else Euclid b (myNat.mod a b)
+termination_by sizeOf b
+decreasing_by
+  simp_wf
+  sorry
+\end{lstlisting}
+
+An alternative to this termination proof would be to mark this function using the \lstinline|partial| keyword, that denotes that this function does not always terminate. This is however often not beneficial as we no longer can no longer use the \lstinline|unfold| tactic to gain the defintion of this function in a proof.
+
+
+
+We want to take a look at another example of an inductive type, that we will often use namely lists. A list (here List' as List is already a standard definition) is either the empty list or the result of combining a list with a new element and we can define an is empty function
+
+\begin{lstlisting}
+    inductive List' (A: Type): Type
+    | nil : List' A
+    | cons : A → List' A → List' A
+    deriving DecidableEq
+
+    def getElement (A: Type) [Inhabited A] (l: List' A): A :=
+    match l with
+    | nil => Inhabited.default
+    | cons hd _ => hd
+\end{lstlisting}
+
+We see in this definition a new type of argument. We want to return an element of the list. If the list is empty, this proves to be difficult. In that case we return the default element that exists because $A$ is an instance of \lstinline|Inhabited|. Such typeclass parameter are given in brackets and Lean will look for the instance themselves when using this function.
+
+This may not always be the desired behaviour and maybe we want to return nothing if the list is empty. In this case, we can use the \lstinline|Option| Type. It has two constructors, one that contains the element and the other symbolizes that there is nothing. Here $\alpha$ has the type \lstinline|Type u| that symbolizes it works for any type universe.
+
+\begin{lstlisting}
+    inductive Option (α : Type u) where
+    | none : Option α
+    | some (val : α) : Option α
+\end{lstlisting}
+
+We will also often use the Exception type. This is uses two types and returns one in the error case and the other in the normal case.
+
+\begin{lstlisting}
+    inductive Except (ε : Type u) (α : Type v) where
+  | error : ε → Except ε α
+  | ok    : α → Except ε α
+\end{lstlisting}
+
+\begin{figure}
+    \centering
+    \includegraphics[scale=0.4]{Lean_example.png}
+    \caption{An example of Lean in practice. On the left side is the code seen and on the right side the context in a proof with the current goal}
+\end{figure}

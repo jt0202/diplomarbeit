@@ -17,11 +17,11 @@
 \definecolor{commentcolor}{rgb}{0.4, 0.4, 0.4}   % grey
 \definecolor{symbolcolor}{rgb}{0.0, 0.1, 0.6}    % blue
 \definecolor{sortcolor}{rgb}{0.1, 0.5, 0.1}      % green
-\usepackage{listings}
+\usepackage{listings, lstautogobble}
 \def\lstlanguagefiles{lstlean.tex}
 \lstset{
     language=lean,
-    xleftmargin=-6em
+    autogobble=true,
 }
 \newtheorem{definition}{Definition}
 \newtheorem{example}{Example}
