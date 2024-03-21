@@ -9,6 +9,7 @@
 \usepackage{color}
 \usepackage{multicol}
 \usepackage{tikz}
+\usepackage{hyperref}
 \usepackage{cleveref}
 \usepackage{subcaption}
 \usepackage{url}
@@ -32,6 +33,24 @@
    \addtocounter{example}{-1} \begin{example}[continued]}{
    \end{example}}
 
+\usepackage{xspace}
+\usepackage{xcolor,colortbl}
+\definecolor{redhighlights}{HTML}{FFAA66}
+\definecolor{lightblue}{HTML}{55AAFF}
+\definecolor{lightred}{HTML}{FF5522}
+\definecolor{lightpurple}{HTML}{DD77BB}
+\definecolor{lightgreen}{HTML}{55FF55}
+\definecolor{darkred}{HTML}{CC4411}
+\definecolor{darkblue}{HTML}{176FC0}%{1133AA}
+\definecolor{nightblue}{HTML}{2010A0}%{1133AA}
+\definecolor{alert}{HTML}{176FC0}
+\definecolor{darkgreen}{HTML}{36AB14}
+\definecolor{strongyellow}{HTML}{FFE219}
+\definecolor{devilscss}{HTML}{666666}
+
+\definecolor{leansymbolcolor}{HTML}{2010A0} % mainly debugging; use black to hide
+\input{codeCommands.tex}
+
 
 
 \title{LEAN-aided verification of datalog reasoning results}
@@ -42,6 +61,8 @@
     \section{Introduction}
     \input{tex/Preliminaries.tex}
     \section{Datalog in Lean}
+
+        \parsingSignature
         
         We introduced Datalog in the previous chapter. Here we show our implementation in Lean which we will use later to show the correctness of our algorithms.
 
