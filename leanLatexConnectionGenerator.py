@@ -11,7 +11,7 @@ def process_file(root, file):
         lines = f.readlines()
 
         for i,line in enumerate(lines):
-            if line.startswith("def") or line.startswith("lemma") or line.startswith ("theorem"): 
+            if line.startswith("def") or line.startswith("lemma") or line.startswith ("theorem") or line.startswith("structure") or line.startswith("inductive") or line.startswith("abbrev") or line.startswith("class"): 
                 result = re.split(splitSymbols, line)
                 # allow string to be valid latex
                 resultName = result[1].replace("_", "").replace(".", "").replace("'", "2")
@@ -19,10 +19,12 @@ def process_file(root, file):
                 if "'" in result[1]:
                     continue
 
-                if resultName != "root":
-                    commands.append(f"\\newcommand{{\\{resultName}}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
-                else:
+                if resultName == "root":
                     commands.append(f"\\newcommand{{\\treeRoot}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
+                elif resultName == "rule":
+                    commands.append(f"\\newcommand{{\\datalogrule}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
+                else:
+                    commands.append(f"\\newcommand{{\\{resultName}}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
 
     return commands
 

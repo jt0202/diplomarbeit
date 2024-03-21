@@ -1,0 +1,172 @@
+\section{Formalization of Datalog}
+In the previous section we introduced datalog. Our goal is to check whether ground atoms are the result of correct datalog deriviations. In the pursuit of a correctness proof for our algorithms we need to know what correct deriviations are which we solve by formalizing the syntax and semantics of datalog in Lean. As of writing there is to the best of our knowledge no formalization of datalog in Lean yet. 
+
+There does exist a formalization of datalog in Coq\cite{datalogCoq}. The formalization includes the syntax of datalog and the fixed point semantics of datalog with a certified datalog engine. Similarly, we will also formalize the syntax of datalog. After that the paths will diverge as we are interested in the proof-theoretic semantics of datalog to check proof trees. Additionally, we will also formalize the model-theoretic semantics of datalog for completeness arguments and to have extra security that our formalization holds by proving that both semantics are equivalent.
+
+We recall from the preliminaries that an atom is of the form $A(t_1 \dots t_n)$ for sets of predicate symbols, variables and constants $P,V$ and $C$ and an arity function $ar: P \to \mathbb{N}$. If we were to directly formalize this an atom would be defined in the following way, where we use types instead of sets.
+
+\begin{lstlisting}
+    def atom (C: Type) (P: Type) (V: Type) (ar: P $\to$ $\mathbb{N}$): Type := sorry
+\end{lstlisting}
+
+Such a definition is rather verbose with already four arguments. Anything like the semantics that use atoms will require even more inputs. To have a more compact representation we reuse the definition of a signature that shrinks the number of arguments to just one.  We use types instead of sets as this more natural in type theory. We can consider the type as a set. If we were to use sets we would have to decide already which type these sets should have which seems unclear for now. This allows us to instead define later the types we want to use. 
+
+The formalization showed us that the requirements of countability of the sets $P$, $C$ and $V$ were not required. Any result we wanted to prove holds already in this general case. Therefore we forego of modelling this assumption.
+
+A \signature is then a structure that has a type for constants, variables\footnote{We use vars instead because variable(s) is a keyword in Lean} and predicate symbols and an arity function.
+
+\begin{lstlisting}
+structure (.\signature.) where
+  (constants: Type)
+  (vars: Type)
+  (predicateSymbols: Type)
+  (predicateArity: predicateSymbols → ℕ)
+\end{lstlisting}
+
+In the future unless denoted otherwise we will always use a fixed signature $\tau$ and assume that all types have the \lstinline|DecidableEq| and \lstinline|Hashable| properties to use Lean automatic derivation for later uses in the program. 
+
+Another requirement was that the sets of constants and variables are distinct. This proved again to be unnecessary in our formalization because we define terms as an inductive type with a constructor for each the constant and the variable case. Therefore constants and variables in an atom will always be distinct.
+
+\begin{lstlisting}
+    inductive (.\term.) (τ: signature): Type
+    | constant : τ.constants → term τ
+    | variableDL : τ.vars → term τ
+    deriving DecidableEq, Hashable
+\end{lstlisting}
+
+For an atom we have fields for the symbol, the list of terms and a proof that the length of the list matches the arity of the symbol.
+
+\begin{lstlisting}
+structure (.\atom.) where
+  (symbol: τ.predicateSymbols)
+  (atom_terms: List (term τ ))
+  (term_length: atom_terms.length = τ.predicateArity symbol)
+deriving DecidableEq, Hashable
+\end{lstlisting}
+
+Two structures of the same type are equal if all their fields are equal. Due to proof irrelevance we gain the following expected criteria for the equality of atoms.
+
+\begin{lemma}[\atomEquality]\label{lem:atomEquality}
+    For all $\tau$-atoms $a_1, a_2$, we have $a_1 = a_2$ iff their \lstinline|symbol|s and \lstinline|atom_term|s are equal.
+\end{lemma}
+
+Rules and programs can be transformed in straight-forward way. Here we use lists 
+
+\begin{lstlisting}
+structure (.\datalogrule.) where
+  (head: atom τ)
+  (body: List (atom τ))
+deriving DecidableEq
+
+abbrev (.\program.) := Finset (rule τ)
+\end{lstlisting}
+
+Next, we want to define the ground versions of our previous definitions. Groundings are simply the functions from variables to constants.
+
+\begin{lstlisting}
+    def (.\grounding.) (τ: signature):= τ.vars → τ.constants
+\end{lstlisting}
+
+We see multiple ways to define ground atoms. Firstly, we can define them like we defined atoms but use constants instead of terms. 
+
+\begin{lstlisting}
+structure (.\groundAtom.) (τ: signature) where
+  symbol: τ.predicateSymbols
+  atom_terms: List (τ.constants)
+  term_length: atom_terms.length = τ.predicateArity symbol
+deriving DecidableEq, Hashable
+\end{lstlisting}
+
+Secondly, we can define ground atoms as a special type atom by constructing a new structure consisting of an atom and a proof that for all terms exists some constant that is equal to it.
+
+\begin{lstlisting}
+structure groundAtom (τ: signature) where
+    atom: atom τ
+    ground: $\forall$ (t: term τ), t $\in$ atom.atom_terms $\rightarrow$ $\exists$ (c: τ.constants), t = term.constant c
+\end{lstlisting}
+
+The second variant allows us an easy convertion from ground atoms to atoms by simply returning the atom element. Also we can convert atoms easily to ground atoms as soon as we have the proof. These conversion have to be written by hand in the first variant.
+
+The first variant on the other hand allows us to define functions that create ground atoms more directly. We can take a grounding and just map the term list using this function without having to provide a proof. In the second variant we have to first define the function on the atom level and then have to prove that this operation does not create any variables. This may sound like extra security in case we mess things up, but when defining the terms as a list of constants the type checker of the kernel does the check for us.
+
+The number of conversions is rather limited whereas an easier way to define functions may be useful more often. Therefore we chose the first variant. 
+
+We start by defining these conversions that we now have to do manually. We can convert a ground atom to an atom by mapping every constant to term via \lstinline|term.constant|. The map operation does not change the length of a list of atoms, so that the term length property stays true(\listMapPreservesTermLength).
+
+\begin{lstlisting}
+    def (.\groundAtomtoAtom.) (ga: groundAtom τ): atom τ:= {
+        symbol:=ga.symbol, 
+        atom_terms:= List.map term.constant ga.atom_terms,term_length:= listMapPreservesTermLength ga
+    }
+\end{lstlisting}
+
+For later proofs it is interesting to know that this is an embedding of the ground atoms into the atoms, i.e. that if two ground atoms are different then the result of their toAtom functions is also different.
+
+For this we need the following result. If two lists are equal than mapping both list by the same function $f$ results in the same list. If the function is injective also the back direction holds, which we prove by induction(\listMapInjectiveEquality).
+
+\begin{lemma}[\groundAtomToAtomEquality]
+    Let $a_1, a_2$ be two ground atoms. Then $a_1$ is equal to $a_2$ iff the result of \lstinline|groundAtom.toAtom| of both is equal.
+\end{lemma}
+\begin{proof}
+    If $a_1$ = $a_2$, then also their result is the same.
+
+    For the back direction we know that the results of \lstinline|groundAtom.toAtom| are equal and want to show that they are equal. We use a similar lemma as \cref{lem:atomEquality} for ground atoms(\groundAtomEquality). Therefore we have to show that their symbols and terms are equal. As \lstinline|toAtom| does not change the symbol, the first claim follows. For the second claim we employ the fact the constructors of an inductive type like term.constant are injective functions\footnote{This can be shown with the injection(s) tactic.} and \listMapInjectiveEquality to conclude that the terms are equal.
+\end{proof}
+
+We can therefore employ \lstinline|groundAtom.toAtom| safely as the type coercion from ground atom to atom.
+
+For the back direction it would be enough to use a proposition that says that all elements are constants. In later uses such as the definition of safety for rules, it will be beneficial to have a function that computes all variables that occur in an atom. 
+
+
+
+After defining the conversions we define ground rules similar to rules.
+
+\begin{lstlisting}
+structure (.\groundRule.) (τ: signature) where
+  head: groundAtom τ
+  body: List (groundAtom τ)
+deriving DecidableEq
+\end{lstlisting}
+
+We can apply a grounding to a term by replacing a variable by its grounding result and keeping the constant.
+\begin{lstlisting}
+def (.\applyGroundingTerm.) (g: grounding τ) (t: term τ): term τ :=
+  match t with
+  | term.constant c => term.constant c
+  | term.variableDL v => term.constant (g v)
+\end{lstlisting}
+
+Using this function we apply groundings also to atoms and rules. 
+
+\begin{lstlisting}
+    def (.\atomGrounding.) (g: grounding τ) (a: atom τ): groundAtom τ := {
+    symbol := a.symbol, 
+    atom_terms := List.map (applyGroundingTerm'  g) a.atom_terms, 
+    term_length := applyGroundingTerm'PreservesLength  g a
+    }
+
+    def (.\ruleGrounding.) (r: rule τ) (g:grounding τ): groundRule τ := {
+        head:=atomGrounding g r.head, 
+        body:= List.map (atomGrounding g) r.body 
+    }
+
+\end{lstlisting}
+
+The ground program of a program $P$ is the set of all ground rules that are the result of the application of a grounding to a rule from $P$.
+
+\begin{lstlisting}
+    def (.\groundProgram.) (P: program τ) := 
+    {r: groundRule τ | ∃ (r': rule τ) (g: grounding τ), r' ∈ P ∧ r = ruleGrounding r' g}
+\end{lstlisting}
+
+After finishing the defintion of the syntax, we start formalizing the semantics. We discussed in the preliminaries two ways for the semantics. We decided to formalize the semantics with the database as this is more general. It is simpler to pass an empty database into the checker than writing every fact from the database into the rule file.
+
+In this section we do not want to deviate to much from the path by implementing databases in a complicated way. For now a database is simply something that has a contains function that returns true if an element is in the database. This class can be implemented multiple ways in the algorithm later.
+
+\begin{lstlisting}
+class (.\database.) (τ: signature) where
+  (contains: groundAtom τ → Bool)
+\end{lstlisting}
+
+
+
