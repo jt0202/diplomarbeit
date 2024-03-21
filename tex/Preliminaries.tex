@@ -291,7 +291,7 @@ The proof-theoretic semantics of a program $P$ and database $d$ is the set of gr
 In the rules of the program $P$ we note a special rule of the form $T(?x, ?x) \leftarrow$. It is a fact, but not a ground rule and the only rule where this is the case. 
 We call a rule $H \leftarrow B_1 \land ... \land B_n$ \textit{safe}, if every variable that occurs in the head also occurs in the body, i.e. \[Vars(H) \subseteq \bigcup_{i \in \{1,..,n\} } Vars(B_i) \]
 
-We call a program safe, if every rule in the program is safe. Safe programs are considered better, because there result does not depend on the set of constants $C$ which is in practice often either not given or infinite, but only on the specific database and/or the facts in the program.
+We call a program safe if every rule in the program is safe. Safe programs are considered better because their result does not depend on the set of constants $C$ which is in practice often either not given or infinite, but only on the specific database and/or the facts in the program.
 
 \begin{contexample}
     We can transform $P$ into the safe program $P'$ by adding a new unary predicate $N$ to the predicate symbols. $P'$ is then the union of $P \setminus \{T(?x, ?x) \leftarrow \}$ and the following rules:
@@ -308,7 +308,7 @@ We call a program safe, if every rule in the program is safe. Safe programs are 
     If some constants are desired that do not occur in any $E$ relation, one can also directly encode that into the database.
 \end{contexample}
 
-What are the semantics of this newly created safe program $P'$? It turns out, that it is equal to the semantics for $P$ for all original predicates, i.e. if we remove all ground atoms that use $N$ we gain the same result. Therefore we state that any program can be transformed in an equivalent safe program.
+What are the semantics of this newly created safe program $P'$? It turns out, that it is equal to the semantics for $P$ for all original predicates, i.e. if we remove all ground atoms that use $N$ we gain the same result. Therefore we state that any program can be transformed into an equivalent safe program.
 
 \subsection{Certifying algorithms}
 
@@ -356,13 +356,13 @@ What are the semantics of this newly created safe program $P'$? It turns out, th
     \label{fig:certifyingAlgorithm}
 \end{figure}
 
-Most algorithms one encounters either in books like \cite{AlgorithmsBook} or in real programs are comparable to \cref{fig:programNormal}. We have an input, give this into an algorithm which is a black box for us and then we receive an result as an output. What guarantees do we have that the algorithm does what we expect it to do ?
+Most algorithms one encounters either in books like \cite{AlgorithmsBook} or in real programs are comparable to \cref{fig:programNormal}. We have an input, give this into an algorithm which is a black box for us and then we receive a result as an output. What guarantees do we have that the algorithm does what we expect it to do?
 
-In general, we have only very few guarantees. While formal verification of programs exists, it is rarely done in practice due to the complexity of modern programs, time constraints or unfamilarity with the methods. It is often only done in very important aspect such as the verified C compiler CompCert \cite{CCertComp}.
+In general, we have only very few guarantees. While formal verification of programs exists, it is rarely done in practice due to the complexity of modern programs, time constraints or unfamiliarity with the methods. It is often only done in very important use cases such as the verified C compiler CompCert \cite{CCertComp}.
 
-In practice, one often resolves to testing. There the developer specifies an input and the desired property and a user can run the tests and convince themselves that the program is correct in this case. This shows however only correctness in this case and not in general. Additionally, it is difficult to design good tests, that capture all later uses, so that we cannot conclude the absence of bugs.
+In practice, one often resolves to testing. There the developer specifies an input and the desired property and a user can run the tests and convince themselves that the program is correct in this case. This shows however only correctness in this case and not in general. Additionally, it is difficult to design good tests, that capture all later use cases, so we cannot conclude the absence of bugs.
 
-An alternative to this are \textit{Certifying algorithms} depicted in \cref{fig:certifyingAlgorithm}. An overview on this topic can be found in \cite{CertAlg}. 
+An alternative to this are \textit{Certifying algorithms} depicted in \cref{fig:certifyingAlgorithm}. An overview about this topic can be found in \cite{CertAlg}. 
 
 Recall a definition of the class NP from complexity theory:
 
@@ -374,9 +374,9 @@ Recall a definition of the class NP from complexity theory:
     If $x \in L$ and $u \in \{0,1\}^{p(|x|)}$ satisfy $M(x,u) = 1$, then we call $u$ a certificate for $x$
 \end{definition}
 
-We can generalize this and require an algorithm not only to give us an output $x$, but also a certificate $u$ as a reason why $x$ is the correct output. Then we can either check by ourselves that $x$ is a correct solution according to $u$ or use another program that checks this. As verifying a solution is never harder than computing it, the checker is usually simpler so that we either see directly that the checker is correct or we can formally verify it.
+We can generalize this and require an algorithm not only to give us an output $x$ but also a certificate $u$ as a reason why $x$ is the correct output. Then we can either check by ourselves that $x$ is a correct solution according to $u$ or use another program that checks this. As verifying a solution is never harder than computing it, the checker is usually simpler so that we either see directly that the checker is correct or we can formally verify it.
 
-The formal framework of \cite{CertAlg} define certifying algorithms in the following way. We consider the set $X$ of input values and the set $Y$ of output values of a function $f$. A predicate $\phi: X \to \{true,false\}$ states a precondition for the inputs and another predicate the postcondition $\psi: X \times Y \to \{true,false\}$, $\phi$ allows us the algorithm to only accept part of the input space and $\psi(x,y)$ typically expresses that $y$ is a valid output for the input $x$. In cases where $x$ is not a valid input, we use the new symbol $\bot$ to denote that the algorithm does not return anything and denote by $Y^\bot = Y \cup \{\bot\}$.
+The formal framework of \cite{CertAlg} defines certifying algorithms in the following way. We consider the set $X$ of input values and the set $Y$ of output values of a function $f$. A predicate $\phi: X \to \{true, false\}$ states a precondition for the inputs and another predicate the postcondition $\psi: X \times Y \to \{true, false\}$, $\phi$ allows us the algorithm to only accept part of the input space and $\psi(x,y)$ typically expresses that $y$ is a valid output for the input $x$. In cases where $x$ is not a valid input, we use the new symbol $\bot$ to denote that the algorithm does not return anything and denote by $Y^\bot = Y \cup \{\bot\}$.
 The certificate or \textit{witness} from a set $W$ and its correctness is expressed by the predicate $\mathcal{W}: X \times Y^\bot \times W$ with the following properties:
 
 \begin{enumerate}
@@ -386,7 +386,7 @@ The certificate or \textit{witness} from a set $W$ and its correctness is expres
     \item \textbf{Checkability}: It is possible to check efficiently if $\mathcal{W}(x,y,z)$ holds for a triple $(x,y,z)$
 \end{enumerate}
 
-A \textit{(strongly) certifying algorithm} is an algorithm that holds on all inputs $x \in X$ and returns a tuple $\langle y, w\rangle$ such that $\mathcal{W}(x,y,w)$ holds.
+A \textit{(strongly) certifying algorithm} is an algorithm that stops on all inputs $x \in X$ and returns a tuple $\langle y, w\rangle$ such that $\mathcal{W}(x,y,w)$ holds.
 
 This is explained in the following examples. We start with an example from graph theory.
 
@@ -394,50 +394,50 @@ This is explained in the following examples. We start with an example from graph
     Consider the problem of deciding whether a graph $G=(V;E)$ is bipartite, i.e. there exists a partition of $V$ into $V_1, V_2$ with $V = V_1 \cup V_2$ and $V_1 \cap V_2 = \emptyset$, such that for all edges $e \in E$ we have that $e \cap V_1 \neq \emptyset$ and $e \cap V_2 \neq \emptyset$, so that all edges are only between vertices that are in the different partitions.
 
     The set of inputs $X$ is the set of strings over $\{0,1\}$ and $\phi(x)$ holds whenever $x$ encodes a graph. 
-    The postcondition is the following: If $y = \bot$, then $x$ does not encode a graph. If $y= true$, then $x$ encodes a bipartite graph. If $y = false$, then $x$ does not encode a bipartite graph.
+    The postcondition is the following: If $y= true$, then $x$ encodes a bipartite graph. If $y = false$, then $x$ does not encode a bipartite graph.
 
     Adopting the well-known algorithm for checking whether a bipartite graph, we can construct the following certifying algorithm.
 
     \begin{enumerate}
         \item Check if $x$ encodes a binary graph. If not return $\bot$ and a witness that describes the problem in the encoding.
         \item Explore the graph in depth-first search and color vertices along the path by alternating colors. If we want to color a vertex by a color $c$ and it already has the color $c'$, we continue exploring another path if $c=c'$, or stop if $c \neq c'$ and return $false$. If that is the case, we have a cycle of odd length in our current path and return this cycle as a witness.
-        \item If we reach this step, then all vertices are colored in way that no neighbouring vertices have the same color. Then we return $true$ and the two sets of colored vertices as the witness. 
+        \item If we reach this step, then all vertices are colored in a way that no neighboring vertices have the same color. Then we return $true$ and the two sets of colored vertices as the witness. 
     \end{enumerate}
 
     We know from graph theory that a graph is bipartite iff it has no cycle of odd length.
 
-    For any value of $y$ a checker can effienctly check if the returned reason does indeed hold for $x$.
+    For any value of $y$ a checker can efficiently check if the returned reason does indeed hold for $x$.
 \end{example}
 
 The above example illustrates the example well for a decision problem, but we want to decide whether a set of ground atoms is the semantics of a datalog program and database, i.e. a function problem. The next example illustrates a certifying algorithm for a function problem in number theory.
 
 \begin{example}[\cite{CertAlg}]
-    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not-equal to zero, i.e. the largest $g \in \mathbb{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and $psi(\langle a, b\rangle, g)$ shall me to true, if $g$ is $gcd(a,b)$
+    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not equal to zero, i.e. the largest $g \in \mathbb{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and $psi(\langle a, b\rangle, g)$ shall me to true, if $g$ is $gcd(a,b)$
 
-    The normal way of computing this involves the euclidean algorithm, but this is not certifying. The extended euclidean algorithm however returns in addition to the greatest common divisor $g$ two numbers $s$ and $t$ such that $g = gcd(a,b) = a \dot s + b \dot t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$, then $g$ is also the greatest common divisor of $a$ and $b$.
+    The normal way of computing this involves the Euclidean algorithm, but this is not certifying. The extended Euclidean algorithm however returns in addition to the greatest common divisor $g$ two numbers $s$ and $t$ such that $g = gcd(a,b) = a \dot s + b \dot t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$, then $g$ is also the greatest common divisor of $a$ and $b$.
 
     Therefore a certifying algorithm in order to compute the $gcd$ is the extended euclidean algorithm, that returns as $y$ $gcd(a,b)$ and as the certificate the pair $\langle s, t\rangle$
 
-    A checker than only has to check that $g=a s + b t$ hold and that $g$ divides both $a$ and $b$. 
+    A checker then only has to check that $g=a s + b t$ hold and that $g$ divides both $a$ and $b$. 
 \end{example}
 
 For decision problems, we require an explanation when the input is in a language as well as an explanation when the input is not in the language. A common misconception is that therefore certifying algorithms are only possible for problems that are known to be in $NP \cap coNP$, which is presumed to not include the interesting $NP$-complete problems. This is not the case as we do not require the certificate to be polynomial in the size of the input. Indeed, SAT-solvers that decide the NP-complete satisfiability problem of propositional logic offer certificates in the DRAT proof format as a model or a proof of unsatisfiability\cite{DRAT}.
 
 In the datalog case, many modern reasoners such as Nemo or Soufflé already offer certificates for atoms in the form of the previously introduced proof trees. We therefore focus on implementing a checker for datalog.
 
-In \cite{CertCheckerWorkflow} an approach to develop checkers for certifying algorithms is outlined. There the checker is implemented in C, because already the certifying algorithm itself is written in C++, so that both versions are similar. In order to verify the correctness of the checker they employ the proof assistant Isabelle. The C-code is exported by a tool into Isabelle so that the verification can take place. In Isabelle then the problem defined and it is proven that the export does fulfill the desired properties. 
+In \cite{CertCheckerWorkflow} an approach to develop checkers for certifying algorithms is outlined. There the checker is implemented in C because already the certifying algorithm itself is written in C++, so that both versions are similar. In order to verify the correctness of the checker they employ the proof assistant Isabelle. The C-code is exported by a tool into Isabelle so that the verification can take place. In Isabelle then the problem is defined and it is proven that the export does fulfill the desired properties. 
 
-In this workflow we have to trust the correctness of the hardware, the C compiler, the tool that exports C code to Isabelle and of Isabelle itself. Additionally, we have to trust that we have correctly defined and specified the problem in Isabelle.
+In this workflow, we have to trust the correctness of the hardware, the C compiler, the tool that exports C code to Isabelle and of Isabelle itself. Additionally, we have to trust that we have correctly defined and specified the problem in Isabelle.
 
-In this work we modify this workflow a bit. We use a different proof assistant, Lean, instead of Isabelle. Lean not only a proof assistant, but also a functional programming language. Therefore we can implement the checker directly in Lean and do not have to export a model of our code into the proof assistant. Our trust base is therefore smaller, as we no longer need an additional compiler for the language the checker is written in nor a tool to export this into the proof assistant. 
+In this work, we modify this workflow a bit. We use a different proof assistant, Lean, instead of Isabelle. Lean not only a proof assistant but also a functional programming language. Therefore we can implement the checker directly in Lean and do not have to export a model of our code into the proof assistant. Our trust base is therefore smaller, as we no longer need an additional compiler for the language the checker is written in nor a tool to export this into the proof assistant. 
 
 
 \subsection{Lean}
 We introduce in this section Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. A more in-depth introduction can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
 
-Lean's core is a small trusted kernel\cite{LeanSysDescr}, that captures the most important functionalities and can be extended by the user. Since version 4 Lean is implemented in Lean itself\cite{Lean4}. The most important libraries for Lean which we will use are the standard library Std4\cite{stdLean} that contains important data structures and tactics and mathlib4\cite{mathlib}, that contains definitions, tactics and theorem from diverse areas of mathematics and computer science.
+Lean's core is a small trusted kernel\cite{LeanSysDescr}, that captures the most important functionalities and can be extended by the user. Since version 4 Lean is implemented in Lean itself\cite{Lean4}. The most important libraries for Lean that we will use are the standard library Std4\cite{stdLean} which contains important data structures and tactics and mathlib4\cite{mathlib}, which contains definitions, tactics and theorem from diverse areas of mathematics and computer science.
 
-As we have just heard, Lean is able to encode many mathematical results. The foundations of mathematics are often build on top of set theory (e.g. \cite{logic}) but most proof assistants instead use \textit{type theory}. Type theory was introduced by Bertrand Russel as an alternative foundation during the foundational crisis of mathematics.
+As we have just heard, Lean can encode many mathematical results. The foundations of mathematics are often built on top of set theory (e.g. \cite{logic}) but most proof assistants instead use \textit{type theory}. Type theory was introduced by Bertrand Russel as an alternative foundation during the foundational crisis of mathematics.
 
 Any element, a \textit{term}, has a \textit{type} in type theory. This is denoted by \lstinline|term:type|. 
 
@@ -457,34 +457,34 @@ Any element, a \textit{term}, has a \textit{type} in type theory. This is denote
 
 In contrast to set theory, functions are a direct element of type theory and do not need a complicated encoding. For any types \lstinline|A| and \lstinline|B|, there exists the type of functions from A to B, \lstinline| A $\to$ B|.
 
-We can define functions in Lean by the keyword \lstinline|def| similar to other functional programming languages, such as the id function for natural numbers. In the parentheses, we denote an argument \lstinline|x| with its type. Due to currying a function can have multiple arguments. After the colon we denote the returned type of the function, which is here again a natural number. Therefore we have the following type \lstinline|$\mathbb{N} \to \mathbb{N}$|, as the function takes a natural number as an input and returns a natural number as well. After the \lstinline|:=| we denote the natural number this function actually returns. 
+We can define functions in Lean by the keyword \lstinline|def| similar to other functional programming languages, such as the id function for natural numbers. In the parentheses, we denote an argument \lstinline|x| with its type. Due to currying a function can have multiple arguments. After the colon, we denote the returned type of the function, which is here again a natural number. Therefore we have the following type \lstinline|$\mathbb{N} \to \mathbb{N}$|, as the function takes a natural number as an input and returns a natural number as well. After the \lstinline|:=| we denote the natural number this function returns. 
 \begin{lstlisting}
             def id (x: $\mathbb{N}$): $\mathbb{N}$:= x
 \end{lstlisting}
 
-Everything we have seen so far holds in general in type theory. Lean itself is based however on a specific type theory, the Calculus of Inductive Constructions (CIC),a dependent type theory\cite{Lean4, CoC}.
+Everything we have seen so far holds in general in type theory. Lean itself is based however on a specific type theory, the Calculus of Inductive Constructions (CIC), a dependent type theory\cite{Lean4, CoC}.
 
-Our id function we defined above is correct, but only works for natural numbers. We would have to implement another id function for booleans, string or any other type. This is rather cumbersome because we never actually use any properties of the specific type. We can generalize this function to help us with this problem.
+The id function we defined above is correct but only works for natural numbers. We would have to implement another id function for booleans, string or any other type. This is rather cumbersome because we never actually use any properties of the specific type. We can generalize this function to help us with this problem.
 
 \begin{lstlisting}
             def id (A: Type)(a: A): A:= a
 \end{lstlisting}
 
-This id function has now two arguments. First the type we want to use it on, secondly the element of this type. \lstinline| id $\mathbb{N}$| works as previously and has the type \lstinline|$\mathbb{N} \to \mathbb{N}$|. It seems less clear which type id itself has, because this depends on the first argument.
-Such types are called dependent types and we would denote this as \lstinline|$\Pi$ (A:Type) A $\to$ A|. Intuitively, this is a function that returns a type for any input value.
+This id function has now two arguments. The first argument is the type we want to use it on, the second argument is an element of this type. \lstinline| id $\mathbb{N}$| works as previously and has the type \lstinline|$\mathbb{N} \to \mathbb{N}$|. It seems less clear which type id itself has because this depends on the first argument.
+Such types are called \textit{dependent types} and we would denote this specific type as \lstinline|$\Pi$ (A:Type) A $\to$ A|, known as a \textit{Pi type} Intuitively, a Pi type is a function that returns a type for any input value.
 
-In practice, we often do not want to write down to much. We can write the function instead also as:
+In practice, we often do not want to write down too much. We can write the function instead also as:
 \begin{lstlisting}
             def id {A: Type}(a: A): A:= a
 \end{lstlisting}
 
 Now the type $A$ is an implicit argument, which is denoted by the braces, and Lean can fill it in for the user based on the input $a$. Therefore the user can write just \lstinline|id 42| instead of \lstinline|id $\mathbb{N}$ 42|.
 
-So far we have discussed what types are and how we can define functions which are important for the programming aspect of lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence proofs of statement can be equivalently seen als functions, that have the type of the statement. This type of statements in known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:$\mathbb{N}), 0 $\le$ x | or \lstinline| x = y $\lor$ $\neg$ x = y|.
+So far we have discussed what types are and how we can define functions that are important for the programming aspect of lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence a proof of statement can be equivalently seen as a function that has the type of the statement. This type of statements is known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:$\mathbb{N}), 0 $\le$ x | or \lstinline| x = y $\lor$ $\neg$ x = y|.
 
-Every statement defines its own type, whose elements are the proofs for it. In contrast to other types, all elements of these types are equivalent known as \textit{proof irrelevance}, so that elements of these types only serve as a witness for their truth.
+Every statement defines its own type, whose elements are the proofs for it. In contrast to other types, all elements of these types are equivalent which is known as \textit{proof irrelevance}, so that elements of these types only serve as a witness for their truth.
 
-Proofs can be constructed in Lean by two ways.  We start by writing theorem (or lemma, proposition etc. in mathlib) and write it similar as we did for a function. The main difference is that the type is what we want to prove and that the function can not be executed.
+Proofs can be constructed in Lean in two ways.  We start by writing \lstinline|theorem| (or lemma, proposition etc. in mathlib) and denote it as we did for a function. The main difference is that the type is what we want to prove and that the function can not be executed.
 
 \begin{lstlisting}
 theorem testTheorem {A: Type}: ∀ (x y z: A), x = y → id y = z → z = x := by
@@ -499,18 +499,18 @@ The proof is done in tactic mode. We open the tactic mode with the keyword \lsti
 
 \[ \{A:Type\} \vdash ∀ (x y z: A), x = y → id y = z → z = x\]
 
-We apply tactics to the goal or our context. These may introduce new goals or fulfill old goals. A proof is finished, when all goals are proven. We explain the proof now in more detail.
+We apply tactics to change the goal or a hypothesis in the context. These may introduce new goals or fulfill old goals. A proof is finished, when all goals are proven. We explain the proof now in more detail.
 
 \begin{enumerate}
     \item We start with the \lstinline|intro| tactic. This moves elements that are universally quantified or the start of an implication from the goal into the context. Alternatively, one can use \lstinline|revert| to move a hypothesis from the context back to the goal to prove a stronger statement.
     
-    At the end the state is: 
+    At the end, the state is: 
 
     \[ \{A:Type\} (x y z: A) (h1: x = y) (h2: id y = z)\vdash z = x\]
 
-    \item After that we use the \lstinline|unfold| tactic at the hypothesis h2. This replace \lstinline with its definition in h2, which now looks like this: (h2: y = z)
+    \item After that we use the \lstinline|unfold| tactic at the hypothesis h2. This replace \lstinline|id| with its definition in h2, which now looks like this: $(h2: y = z)$
     
-    \item We use now the tactic \lstinline|rw|, i.e. rewrite, that replaces in the goal $x$ by $y$ so that the goal is now $z = y$
+    \item We use now the tactic \lstinline|rw|, i.e. rewrite, that replaces in the goal $x$ by $y$ due to the hypothesis $h1$ so that the goal is now $z = y$
     \item The goal is now almost the same as $h2$, but the order is wrong. Therefore we use the apply tactic with
     
     \lstinline|Eq.symm := $\forall \{A:Type\} (a b:A), a = b \rightarrow b = a$ |. 
@@ -524,26 +524,26 @@ We apply tactics to the goal or our context. These may introduce new goals or fu
     \item Our goal is now exactly the same as the hypothesis $h2$. The \lstinline|exact| tactic uses $h2$ to complete the goal.
 \end{enumerate}
 
-Other important tacitcs not seen here are \lstinline|by_contra| that allows a proof by contradiction, \lstinline|by_cases| that allows a case distinction or \lstinline|rcases| that splits an and statement in an hypothesis. Lean offers also methods that try to prove goals themselves like \lstinline|simp| that uses lemmas marked with \lstinline|@simp| or \lstinline|tauto|, that can recognize some tautologies. The set of tactics is however not fixed and the user can introduce new tactics to simplify the reasoning process.
+Other important tactics not seen here are \lstinline|by_contra| which allows a proof by contradiction, \lstinline|by_cases| which allows a case distinction or \lstinline|constructor| that splits an and statement into two goals. Lean offers also methods that try to prove goals themselves like \lstinline|simp| that uses lemmas marked with \lstinline|@simp| or \lstinline|tauto|, that can recognize some tautologies. The set of tactics is however not fixed and the user can introduce new tactics to simplify the reasoning process.
 
 The majority of formal proofs in this work are done in tactics mode, but we see above that describing them in natural language is quite verbose. Therefore we will only describe the idea we followed outside of this section.
 
-These proofs are done backwards, i.e. starting from the goal towards the assumptions. There are also forwards proofs that start from the assumptions by building hypotheses until we reach the goal or by composing theorems like functions. While this is possible, it was rarely done in this work because. A good source for this is either \cite{theoremProvingLean} or \cite{HitchhikerLogicVer}.
+These proofs are done backwards, i.e. starting from the goal towards the assumptions. There are also forward proofs that start from the assumptions by building hypotheses until we reach the goal or by composing theorems like functions. While this is possible, it was rarely done in this work because. A good source for this is either \cite{theoremProvingLean} or \cite{HitchhikerLogicVer}.
 
 
-We can also use \lstinline|def| to define new types. Sets of type \lstinline|A| are in Lean implemented as functions from \lstinline|A| to \lstinline|Prop|. Functions to \lstinline|Prop| are in general not computable so that the membership in set is also not computable in contrast to for example lists.
+We can also use \lstinline|def| to define new types. Sets of type \lstinline|A| are in Lean implemented as functions from \lstinline|A| to \lstinline|Prop|. Functions to \lstinline|Prop| are in general not computable so that the membership in a set is also not computable in contrast to for example lists.
 
 \begin{lstlisting}
-    def Set (α : Type u) := α → Prop
+    def Set (α : Type) := α → Prop
 \end{lstlisting}
 
-This introduces a totally new type. If we want to just use functions that have contain elements of type \lstinline|$\mathbb{N}$|, using \lstinline|def| would create a new type for which we would have to define again the set operations $\cup$ or $\cap$. In this case, one can use the \lstinline|abbrev| command, that provides a simple alias.
+This introduces a new type. If we want to just use functions that accept contain elements of type \lstinline|Set|, using \lstinline|def| would create a new type for which we would have to define again the set operations $\cup$ or $\cap$. In this case, one can use the \lstinline|abbrev| command which provides a simple alias.
 
 \begin{lstlisting}
     abbrev NatSet := Set $\mathbb{N}$
 \end{lstlisting}
 
-The CIC and Lean allow the creation of types by induction. We can create our own implementation of the natural numbers by the \lstinline|inductive| keyword. After that we list the constructors. These can be constant constructors such as \lstinline|zero| or function creators like \lstinline|succ|
+The CIC and Lean allow the creation of types by induction. We can create our own implementation of the natural numbers by the \lstinline|inductive| keyword. After that, we list the constructors. These can be constant constructors such as \lstinline|zero| or function creators like \lstinline|succ|
 An inductive type may have many constructors of both types or even none as the empty type.
 
 \begin{lstlisting}
@@ -554,7 +554,7 @@ An inductive type may have many constructors of both types or even none as the e
 
 Our definition states that an element of \lstinline|myNat| is either \lstinline|zero| or the result of \lstinline|succ| to some other element of \lstinline|myNat|. Any element of \lstinline|myNat| is only the result of one of these constructors and all elements of \lstinline|myNat| are different.
 
-An typical mathematical definition for this would be: myNat is the smallest set $S$ of elements such that it contains $zero$ and whenever an element $a$ is in $S$, then also $succ(a)$ is in $S$.
+A typical mathematical definition for this would be: myNat is the smallest set $S$ of elements such that it contains $zero$ and whenever an element $a$ is in $S$, then also $succ(a)$ is in $S$.
 
 We can define for inductive types functions recursively like the add function.
 
@@ -565,7 +565,7 @@ We can define for inductive types functions recursively like the add function.
     | succ m' => succ (add n m')
 \end{lstlisting}
 
-If we want to prove a statement about elements on an inductive type, we can use the \lstinline|induction| tactic to create proofs similar to those by (structural) induction in natural language proofs.
+If we want to prove a statement about elements on an inductive type, we can use the \lstinline|induction| tactic to create proofs similar to those by (structural) induction in natural language proofs. If no induction hypothesis is needed one can also use the \lstinline|cases| tactic that creates a goal for every constructor
 
 \begin{lstlisting}
             theorem myNat.add_zero (n: myNat): myNat.add zero n = n := by
@@ -578,11 +578,11 @@ If we want to prove a statement about elements on an inductive type, we can use 
                     rw [ih]
 \end{lstlisting}
 
-We start by the induction tactic to perform an induction over n. Each constructor is listed separatedly and after the arrow we start the proof for this constructor. In the zero case it is enough to unfold the definition of add to get \lstinline|zero=zero| and use \lstinline|rfl| which proves these equalities.
+We start with the induction tactic to perform an induction over n. Each constructor is listed separately and after the arrow, we start the proof for this constructor. In the zero case, it is enough to unfold the definition of add to get \lstinline|zero=zero| and use \lstinline|rfl| which proves these equalities.
 
-In the succ case we have in addition to the myNat element $n'$ we use in the constructor of succ also the induction hypothesis\lstinline|ih: add zero n' = n'|. We can unfold the definition of add again and use \lstinline|rw| to replace \lstinline| add zero n'| by \lstinline|n'| in the goal \lstinline|succ (add zero n') = succ n'|. The \lstinline|rw| tactic applies \lstinline|rfl| at the end automatically to finish the proof.
+In the succ case, we have two values:  the myNat element $n'$ we use in the constructor of succ and also the induction hypothesis\lstinline|ih: add zero n' = n'|. We can unfold the definition of add again and use \lstinline|rw| to replace \lstinline| add zero n'| by \lstinline|n'| in the goal \lstinline|succ (add zero n') = succ n'|. The \lstinline|rw| tactic applies \lstinline|rfl| at the end automatically to finish the proof.
 
-After defining the natural numbers inductively, we can also define the even numbers by induction. We again have the zero constructor and a succ constructor that now shall now represent the next natural number.
+After defining the natural numbers inductively, we can also define the even numbers by induction. We again have the zero constructor and a succ constructor that now shall represent the next natural number.
 
 \begin{lstlisting}
     inductive evenNat: Type
@@ -599,9 +599,9 @@ While this works, we see no relation between the elements of myNat and evenNat. 
         | succ e' => myNat.succ (myNat.succ (evennatToMyNat e'))
 \end{lstlisting}
 
-This approach works, but is a bit cumbersome. We always need to type this ourselves and if we forget Lean will complain. There exists however the \lstinline|class Coe|. A class describes an abstract property e.g. of a type and can be implemented by a specific type via \lstinline|instance|.
+This approach works but is a bit cumbersome. We always need to type this ourselves and if we forget it Lean will complain. There exists however the \lstinline|class Coe|. A class describes an abstract property e.g. of a type and can be implemented by a specific type via \lstinline|instance|.
 
-The \lstinline|Coe| looks (in a simplified version) like this. It takes two types and a function that maps from one type to the other. We can show that this property holds for \lstinline|evenNat| and \lstinline|myNat| by using \lstinline|evenNatToMyNat| to define an instance of this class. Then we can use elements of \lstinline|evenNat| in functions defined for \lstinline|myNat| and Lean will automatically convert them using \lstinline|evenNat|.
+The \lstinline|Coe| looks (in a simplified version) like this. It takes two types and a function that maps from one type to the other. We can show that this property holds for \lstinline|evenNat| and \lstinline|myNat| by using \lstinline|evenNatToMyNat| to define an instance of this class. Then we can use elements of \lstinline|evenNat| in functions defined for \lstinline|myNat| and Lean will automatically convert them using \lstinline|evenNatToMyNat|.
 
 \begin{lstlisting}
 class Coe (α : Type) (β : Type) where
@@ -610,8 +610,8 @@ class Coe (α : Type) (β : Type) where
 instance coeEvenNatMyNat: Coe evenNat myNat := ⟨evenNatToMyNat⟩
 \end{lstlisting}
 
-An alternative way of defining types are structures that are comparable to classes in object-oriented languages. Structures have fields that have a type and we start listing them one by one after the \lstinline|where| statement. Structures are like inductive types with a single constructor. Therefore they are not allowed to be recursive, i.e. no structure $A$ may have an element of type $A$.
-We can build an element of the type of the structure via passing the elements in braces and can use the name of the field to access an element.
+An alternative way of defining types are structures that are comparable to classes in object-oriented languages. Structures have fields that have a type and we start listing them one by one after the \lstinline|where| statement. Structures are like inductive types with a single constructor. Therefore they are not allowed to be recursive, i.e. no structure $A$ may have an element of type $A$, because there would be no base case.
+We can build an element of the type of the structure by passing the elements in braces and can use the name of the field to access an element.
 
 \begin{lstlisting}
     structure player where
@@ -628,13 +628,13 @@ We can build an element of the type of the structure via passing the elements in
     def player1Goals: $\mathbb{N}$ := player1.numGoals
 \end{lstlisting}
 
-Returning back to our example of myNat, we can define some more functions. In the previous section we talked about the euclidean algorithm. We can try to implment it ourselves in Lean. Firstly, we would require the modulo function for that. We will only define it for now to not loose focus and use the keyword \lstinline|sorry| in the value. This closes in proofs any goal or can be used for incomplete functions, but will throw an error if executed.
+Returning to our example of myNat, we can define some more functions. In the previous section, we talked about the Euclidean algorithm. We can try to implement it ourselves in Lean. Firstly, we would require the modulo function for that. We will only define it for now to not lose focus and use the keyword \lstinline|sorry| in the value. This closes in proofs any goal or can be used for incomplete functions, but will throw an error if executed.
 
 \begin{lstlisting}
     def myNat.mod (n m: myNat): myNat := sorry
 \end{lstlisting}
 
-The euclidean algorithm can be implemented in the following way:
+The Euclidean algorithm can be implemented in the following way:
 
 \begin{lstlisting}
     def myNat.Euclid (a b: myNat): myNat :=
@@ -643,7 +643,7 @@ The euclidean algorithm can be implemented in the following way:
     else Euclid b (myNat.mod a b)
 \end{lstlisting}
 
-Lean will not except this function and instead complain in the line of the if that it failed to synthesize an instance of \lstinline|DecidableEq| for myNat. DecidableEq allows us to use $=$ for a type in a function. This is not a trivial requirement as the equality of real numbers is already undecidable. We need to provide a function to Lean that can be used to decide whether two elements of myNat are equal. During the defintion of inductive types we already noted, that all elements of an inductive type are different, which allows us to do this. Luckily, Lean can even do this alone if we tell Lean to do this using the \lstinline|deriving| keyword. It can even derive multiple instances such as the Inhabited instance that states that there exist some default element of this type.
+Lean will not accept this function and instead complain in the line of the if that it failed to synthesize an instance of \lstinline|DecidableEq| for myNat. DecidableEq allows us to use $=$ for a type in a function. This is not a trivial requirement as for example the equality of real numbers is undecidable\cite{EqualityRealNumber}. We need to provide a function to Lean that can be used to decide whether two elements of myNat are equal. During the definition of inductive types, we already noted, that all elements of an inductive type are different, which allows us to do this. Luckily, Lean can even do this alone if we tell Lean to do this using the \lstinline|deriving| keyword. It can even derive multiple instances such as the Inhabited instance that states that there exists some default element of this type.
 
 \begin{lstlisting}
     inductive myNat: Type
@@ -653,9 +653,9 @@ Lean will not except this function and instead complain in the line of the if th
 
 \end{lstlisting}
 
-Now the error will disappear, but a new one will be introduced. Lean does not recognize the termination of \lstinline|myNat.Euclid|. We have already defined recursive functions before where we did not encounter this problem. In \lstinline|myNat.add| we however used the inductive schema and only did the recursion on $n$ in the case of $succ n$. This allowed Lean to conclude that we only call the function on smaller elements so that the function will determinate.
+Now the error will disappear, but a new one will be introduced. Lean does not recognize the termination of \lstinline|myNat.Euclid|. We have already defined recursive functions before and we did not encounter this problem. In \lstinline|myNat.add| we however used the inductive schema and only did the recursion on $n$ in the case of $succ n$. This allowed Lean to conclude that we only call the function on smaller elements so that the function will terminate.
 
-To show termination, one is required to define some \textit{well-founded relation}, i.e. a relation that does not have any infinite descending chains. Such a relation would be the less-than relation of the natural numbers, so that it is often convenient to define some size measure that measures the size of our elements in the natural numbers and use this. Such a function exists automatically for any inductive type and is called \lstinline|sizeOf|. We can provide this and are only left to prove that \lstinline|sizeOf (mod a b) < sizeOf b|, which we will leave open here.
+To show termination, one is required to define some \textit{well-founded relation}, i.e. a relation that does not have any infinite descending chains. Such a relation would be the less-than relation of the natural numbers so it is often convenient to define some size measure that measures the size of our elements in the natural numbers and use this. Such a function exists automatically for any inductive type and is called \lstinline|sizeOf|. We can provide this and are only left to prove that \lstinline|sizeOf (mod a b) < sizeOf b|, which we will leave open here.
 
 \begin{lstlisting}
 def myNat.Euclid (a b: myNat): myNat :=
@@ -668,11 +668,11 @@ decreasing_by
   sorry
 \end{lstlisting}
 
-An alternative to this termination proof would be to mark this function using the \lstinline|partial| keyword, that denotes that this function does not always terminate. This is however often not beneficial as we no longer can no longer use the \lstinline|unfold| tactic to gain the defintion of this function in a proof.
+An alternative to this termination proof would be to mark this function using the \lstinline|partial| keyword, which denotes that this function does not always terminate. This is however often not beneficial as we no longer can no longer use the \lstinline|unfold| tactic to gain the definition of this function in a proof.
 
 
 
-We want to take a look at another example of an inductive type, that we will often use namely lists. A list (here List' as List is already a standard definition) is either the empty list or the result of combining a list with a new element and we can define an is empty function
+We want to take a look at another example of an inductive type, that we will often use namely lists. A list (here List' as List is already a standard definition) is either the empty list or the result of combining a list with a new element and we can define a get function
 
 \begin{lstlisting}
     inductive List' (A: Type): Type
@@ -686,7 +686,7 @@ We want to take a look at another example of an inductive type, that we will oft
     | cons hd _ => hd
 \end{lstlisting}
 
-We see in this definition a new type of argument. We want to return an element of the list. If the list is empty, this proves to be difficult. In that case we return the default element that exists because $A$ is an instance of \lstinline|Inhabited|. Such typeclass parameter are given in brackets and Lean will look for the instance themselves when using this function.
+We see in this definition a new type of argument. We want to return an element of the list. If the list is empty, this proves to be difficult. In that case, we return the default element that exists because $A$ is an instance of \lstinline|Inhabited|. Such a type-class parameter is given in brackets and Lean will look for the instance when using this function.
 
 This may not always be the desired behaviour and maybe we want to return nothing if the list is empty. In this case, we can use the \lstinline|Option| Type. It has two constructors, one that contains the element and the other symbolizes that there is nothing. Here $\alpha$ has the type \lstinline|Type u| that symbolizes it works for any type universe.
 
