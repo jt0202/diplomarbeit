@@ -168,5 +168,130 @@ class (.\database.) (τ: signature) where
   (contains: groundAtom τ → Bool)
 \end{lstlisting}
 
+We call an interpretation a set of ground atoms as in the preliminaries.
+\begin{lstlisting}
+    abbrev (.\interpretation.) (τ: signature)
+:= Set (groundAtom τ)
+\end{lstlisting}
 
+We start by defining the proof-theoretic semantics as proof trees are our certificates in the checker. Again, we want to design our checker with best compatibility in mind. In some papers (e.g. \cite{ComplexityProvDatalog}) the leaves of a valid proof tree have to be database elements. We leave this open to allow also facts from the program to serve as leaves for those programs that do not come with a database.
+
+We express the validness of a proof tree with the root $a$ and the list of subtrees $l$ with respect to a program $P$ and a database $d$ by a disjunction with two disjuncts. We call the first the \textit{rule case}. There we require a rule $r$ and a grounding $g$, such that $r$ is in $P$, the rule grounding of $r$ with $g$ yields the ground rule we gain from the root and its children. Additionally all subtrees must be valid, which we again express via \lstinline|List.attach| for the termination proof. 
+The second case is the \textit{database case}. There $a$ must be a leaf and contained in the database.
+
+\begin{lstlisting}
+def (.\isValid.) (P: program τ) (d: database τ) (t: proofTree τ): Prop :=
+  match t with
+  | tree.node a l => ( ∃(r: rule τ) (g:grounding τ), r ∈ P ∧ ruleGrounding r g = {head:= a, body:= (List.map root l)} ∧ l.attach.Forall (fun ⟨x, _h⟩ => isValid P d x)) 
+  ∨ (l = [] ∧ d.contains a)
+termination_by sizeOf t
+decreasing_by
+  simp_wf
+  decreasing_trivial
+\end{lstlisting}
+
+We see from this definition that any element that is contained in the database has a simple proof tree. The tree is just the element as the root without any subtrees (\databaseElementsHaveValidProofTree). 
+
+We do not consider input or export predicates so that the database elements are always part of the semantics. This also simplifies the definition for isValid in contrast if we only want elements that are the result of some rule to be in our semantics.
+
+The proof-theoretic semantics with respect to a program $P$ and database $d$ is the set of ground atoms that are the root of a valid proof tree. We avoided earlier to define the types of a signature to be a finite type so that we cannot expect a finite set here. We will manage to prove the same results and have to avoid proving that there are only finitely many ground atoms.
+
+\begin{lstlisting}
+    def (.\proofTheoreticSemantics.) (P: program τ) (d: database τ): interpretation τ:= 
+    {a: groundAtom τ | ∃ (t: proofTree τ),root t = a ∧ isValid P d t}
+\end{lstlisting}
+
+The proof-theoretic semantics provides with proof trees a good explanation why an element is part of the solution. We only have to verify that the proof tree is correct. This however tells us only that we have found a subset of the solution. It tells us not whether there are no derivations possible. For this the other semantics are more equipped for. They describe the solution as the least element of some set. If we verify that the result is in this set (i.e. the set of models or the set of fixed points), then our result is a superset of the solution. If both criteria hold, then we have exactly the solution.
+
+In addition to these algorithmic goals, formalizing another semantics strengthens our formalization because we might spot some wrong assumptions we did the definitions that way.
+
+Both the model-theoretic and the fixed point semantics are the defined to be the least object of something. We decided to formalize the model-theoretic semantics, because we can directly give the model. For the fixed-point semantics we would first need to prove that the fixed-point even exists and may need some theorems about fixed-points, but such a formalization (in Coq) can be found in \cite{datalogCoq}.
+
+We start by formalizing the criteria for a rule being true. An interpretation is a set whereas a body is a list. So that we can compare them, we define the groundRuleBodySet of ground rule $r$ as the conversion of the body to a finite set. This operation preserves the members so that a ground atom is in the groundRuleBodySet of $r$ iff it is in the body of $r$.
+
+
+(\groundRuleBodySetiffgroundRuleBody)
+
+
+\begin{lstlisting}
+    def (.\groundRuleBodySet.) (r: groundRule τ): Finset (groundAtom τ) := List.toFinset r.body
+\end{lstlisting}
+
+This allows us to define the criteria for a rule being true in the natural way. Whenever all elements of the body are in the interpretation, then the head must be a member of the interpretation as well.
+
+\begin{lstlisting}
+    def (.\ruleTrue.) (r: groundRule τ) (i: interpretation τ): Prop := 
+    (groundRuleBodySet r).toSet ⊆ i → r.head ∈ i
+\end{lstlisting}
+
+An interpretation is a model, if all rules from the ground rule are fulfilled. Additionally, it also needs to contain the elements from database so that we will be able to prove the equivalence of the semantics later because all elements in the database are already in the proof-theoretic semantics.
+
+\begin{lstlisting}
+    def (.\model.) (P: program τ) (d: database τ) (i: interpretation τ) : Prop := 
+    (∀ (r: groundRule τ), r ∈ groundProgram P → ruleTrue r i) 
+    ∧ ∀ (a: groundAtom τ), d.contains a → a ∈ i
+\end{lstlisting}
+
+Now we are equipped with the necessary tools to formalize the model-theoretic semantics. In the preliminaries we defined the semantics as the intersection of all models, i.e.
+
+\[\bigcap_{\text{$M$ is model of $P$}} M\] 
+
+The corresponding operation to this intersection in Lean is called \lstinline|Set.iInter|. Therefore we would need to transform the set of interpretations to an indexed family.
+
+\begin{lstlisting}
+    def iInter (s : ι → Set α) : Set α
+\end{lstlisting}
+
+We can instead define it in a more direct way. Sets are equal whenever they have the same members by the principle of extensionality. Therefore we also try to find a formula that is true for an element whenever it is in $\bigcap_{X: \phi(X) } X $. We know that an element is in $X \cap Y$ whenever it is in both $X$ and $Y$. We can generalize this to conclude that an element is in $\bigcap_{X: \phi(X) } X $ if it is in all sets $X$ that satisfy $\phi$.
+
+\begin{lstlisting}
+    def (.\modelTheoreticSemantics.) (P: program τ) (d: database τ): interpretation τ := 
+    {a: groundAtom τ | ∀ (i: interpretation τ), model P d i → a ∈ i}
+\end{lstlisting}
+
+We now have to prove that this is actually the least model. We start by showing that it is a subset of every model. This follows basically from the definitions.
+
+\begin{lemma}[\leastModel]\label{lem:leastModel}
+    Let $P$ be a program and $d$ be database. For all models $M$ of $P$ and $d$, the model-theoreticSemantics of $P$ and $d$ is a subset of $M$
+\end{lemma}
+
+Proving that our definition is a model takes a bit more work.
+
+\begin{lemma}[\modelTheoreticSemanticsIsModel]\label{lem:modelMTS}
+    For all programs $P$ and data- bases $d$ the model-theoretic semantics of $P$ and $d$ is a model.
+\end{lemma}
+\begin{proof}
+    Let $M$ be the model-theoretic semantics of $P$ and $d$. We have to show that it fulfills both model criterias.
+    We start by showing that all rules are true in $M$. We assume for a contradiction that there is a rule $r$ that is not true, i.e. that the body set is a subset of $M$, but the head of $r$ is not in $M$. Then there must be a model $M'$ of $P$ and $d$ such that the head of $r$ is not in $M'$. By \cref{lem:leastModel} we know that all elements of $M$ must be in the model of $M'$. Therefore the body of $r$ is a subset of $M'$ and since $M'$ is a model the head of $r$ must be in $M'$ with violates our assumptions.
+
+    Now we show that all elements in $d$ are in $M$ as well. The proof works in the same way as before but simpler. Suppose that this does not hold. Then there is a database element $a$ which is not in $M$. By the definition of $M$ there must exist a model $M'$ such that $a$ is not in $M'$. But any model must contain all database elements which yields the contradiction and finishes the proof.
+\end{proof}
+
+The remainder of this chapter is spent proving the equivalence of both semantics, i.e. the following theorem.
+
+\begin{lstlisting}
+    theorem (.\SemanticsEquivalence.) (P: program τ) (d: database τ): 
+    proofTheoreticSemantics P d = modelTheoreticSemantics P d
+\end{lstlisting}
+
+By the anti-symmetry of the subset operation it suffices to show that both semantics are a subset of each other.
+
+We start by proving \lstinline|proofTheoreticSemantics P d $\subseteq$ modelTheoreticSemantics P d|. We actually prove a stronger statement by showing that all elements in the proof-theoretic semantics are in any model. By \cref{lem:modelMTS} the model-theoretic semantics are a model so that the proof follows.
+
+\begin{lemma}[\proofTreeAtomsInEveryModel]
+    Let $P$ be a program and $d$ be a database. Let $a$ be a ground atom in the proof-theoretic semantics of $P$ and $d$. Then we have $a \in M$ for all models $M$ of $P$ and $d$.
+\end{lemma}
+\begin{proof}
+    An element is in the proof-theoretic semantics whenever it is the root of a valid proof tree $t$. We prove this by strong induction on the height of $t$ for all trees $t$ and ground atoms $a$.
+
+    There are two cases when $t$ is valid. If it is valid and in the rule case, then there exists a rule $r$ and grounding $g$ such that $r$ is in $P$ and the grounding of $r$, which we call $r'$, has the head $a$ and the body $l$. All elements of $l$ are the root of valid proof trees as well and by the definition of height function have a smaller height. By the induction hypothesis therefore all elements of $l$ are in $M$. Since $r'$ is the result of applying a grounding to a rule from $P$, $r'$ must be true in $M$. Therefore $a$ is also in $M$.
+
+    In the database case the root is an element of the database. Any element of the database must be in any model by definition. 
+\end{proof}
+
+For the back direction it suffices to show that the proof-theoretic semantics are a model as well by \cref{lem:leastModel}.
+
+\begin{lemma}[\proofTheoreticSemanticsIsModel]\label{lem:PTSModel}
+    Let $P$ be a program and $d$ be a database. Then the proof-theoretic semantics of $P$ and $d$ is a model for $P$ and $d$.
+\end{lemma}
 
