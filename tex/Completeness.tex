@@ -1,0 +1,108 @@
+\section{Completeness}
+
+    In the previous chapter we described a method why an atom is in the datalog semantics. This criteria is however not sufficient to recognize a solution. The empty list passes this test for any program while not being the semantics in most cases. Proof trees were a method to recognize why a ground atom is part of the semantics, but we are not aware of any simple way to describe why a ground atom is not in the semantics. Instead we want to show that the set of elements in the proof trees, $S$ are complete in the sense that nothing else can derived from it any more. This is the case when the $T_P$ operator has a fixed-point for $S$ or alternatively when $S$ is a model. In this chapter we are going to create a certified model checker to show the completeness. If $S$ passed the tree validation algorithm and is a model the following statements hold:
+
+    \[ S \subseteq \mathtt{proofTheoreticSemantics\ P\ d} = \mathtt{modelTheoreticSemantics\ P\ d} \subseteq S \]
+
+    \subsection{Partial ground rules}
+    
+        We defined the model property on the ground program $ground(P)$. In order to check if a set of ground atoms is a model for a program we therefore have to ground the program. We want to avoid simply grounding all the rules at once and instead do it in a more intelligent way. For this we introduce a new data structure, the partial ground rule. This bears some similarities to the rules we defined in chapter 3. It has a head that is an atom. The body is split into two lists. The first list contains the ground atoms and represents the atoms in the rule we already grounded, whereas the second list consists of the so far ungrounded atoms in the rule body. We want to move the ungrounded atoms one by one into the grounded list by applying substitutions, which map all variables of this atom to constants, so that we can transform this atom into a ground atom.
+
+        \begin{lstlisting}
+            structure partialGroundRule (τ: signature)  where
+                head: atom τ
+                groundedBody: List (groundAtom τ)
+                ungroundedBody: List (atom τ)
+        \end{lstlisting}
+
+        \begin{example}
+            A rule $r := q(X) :- r(a, b), t(X, c), s(c, d), u(d, X) .$ may be viewed as the following partial ground rule
+            $pgr_1 = $
+            \begin{lstlisting}
+                {
+                    head:= q(X),
+                    groundedBody := [],
+                    ungroundedBody := [r(a, b), t(X, c), s(c, d), u(d, X)]
+                }
+            \end{lstlisting}
+            
+            This representation does not look any different to the rule itself as we do not use the grounded body at all. We can however move ground atoms from the ungrounded body into the grounded body. The order of the atoms in the body does not matter semantically as we use a set definition when defining the criteria for a rule being true, so that we can simply move all ground atoms in the grounded body.
+
+            \begin{lstlisting}
+                {
+                    head:= q(X),
+                    groundedBody := [r(a, b), s(c, d)],
+                    ungroundedBody := [t(X, c),  u(d, X)]
+                }
+            \end{lstlisting}
+
+        \end{example}
+
+        We can transform any rule into a partial ground rule by setting the head as the head, the body as the ungrounded body and setting the grounded body to be empty.
+
+        \begin{lstlisting}
+            def partialGroundRuleFromRule (r: rule τ): partialGroundRule τ :=
+            {
+                head := r.head, 
+                groundedBody := [],
+                ungroundedBody := r.body
+            }
+        \end{lstlisting}
+
+        \begin{example}
+            $pgr_1$ is exactly the result of \texttt{partialGroundRuleFromRule $r$}.
+        \end{example}
+
+        We choose this representation instead of the approach used for $pgr_2$ as this does not require iterating over the whole body to find ground atoms. As we will apply multiple substitutions in the grounding process, we will create anyways ground atoms in different place to the atom in the body we are currently trying to ground.
+
+        Any partial ground rule can also be transformed back into a rule by concatenating the grounded and ungrounded body and combining creating first a partial ground rule from a rule and then transforming the resulting partial ground rule yields the original rule. This does not hold if we swap the operations as we do not explicitly move atoms without variables from the start of the body into the grounded body.
+
+        \begin{lstlisting}
+            def partialGroundRule.toRule (pgr: partialGroundRule τ)
+            : rule τ :=
+    
+            {
+                head:= pgr.head, 
+                body := (List.map (groundAtom.toAtom) pgr.groundedBody)
+                ++ pgr.ungroundedBody
+            }
+
+            lemma partialGroundRuleToRuleInverseToFromRule (r: rule τ): 
+                r = partialGroundRule.toRule (partialGroundRuleFromRule r)
+        \end{lstlisting}
+
+        \begin{example}
+            The application of \texttt{partialGroundRule.toRule} on $pgr_1$ yields $r$ as predicted by the lemma.
+
+            If we swap both functions and first apply \texttt{partialGroundRule.toRule} to a partial ground rule and then convert the resulting rule back to a partial ground rule, we see that this is no longer equal. Applying {partialGroundRule.toRule} to $pgr_2$ results in the rule $ q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . $. Converting this back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
+
+            \begin{lstlisting}
+                {
+                    head:= q(X),
+                    groundedBody := [],
+                    ungroundedBody := [r(a, b), s(c, d), t(X, c),  u(d, X)]
+                }
+            \end{lstlisting}
+            which is different from $pgr_2$
+        \end{example}
+
+        Using the transformation to rules we can lift defintions like safety or being true to partial ground rules.
+
+        \begin{lstlisting}
+            def partialGroundRule.isSafe (pgr: partialGroundRule τ) :=
+                pgr.toRule.isSafe
+
+            def partialGroundRule.ruleTrue (pgr: partialGroundRule τ) 
+            (i: interpretation τ) :=
+                ruleTrue pgr.toRule i
+        \end{lstlisting}
+
+        So far we only split the body into two parts and have the goal of applying substitutions to move everything into the grounded body. This is not to different to just applying groundings directly. 
+        This process allows us to potentially stop early. If the substitutions we applied so far resulted in a ground atom that is not part of the interpretation $i$ we already know that the rule is true. No matter how the remaining variables are mapped, the body will never be a part of $i$ and therefore the antecedent is false and the rule is therefore true. We call a partial ground rule \textit{active in an interpretation} $i$ where all ground atoms in the \texttt{groundedBody} 
+
+        \begin{lstlisting}
+            def active (pgr: partialGroundRule τ) (i: interpretation τ):=
+            ∀ (ga: groundAtom τ), ga ∈ pgr.groundedBody → ga ∈ i 
+        \end{lstlisting}
+
+    \subsection{Explore grounding}
