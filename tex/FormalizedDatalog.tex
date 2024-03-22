@@ -117,6 +117,7 @@ We can therefore employ \lstinline|groundAtom.toAtom| safely as the type coercio
 
 For the back direction it would be enough to use a proposition that says that all elements are constants. In later uses such as the definition of safety for rules, it will be beneficial to have a function that computes all variables that occur in an atom. 
 
+\todo{Think of a way to present the back transformation in a good way.}
 
 
 After defining the conversions we define ground rules similar to rules.
@@ -174,7 +175,56 @@ We call an interpretation a set of ground atoms as in the preliminaries.
 := Set (groundAtom τ)
 \end{lstlisting}
 
-We start by defining the proof-theoretic semantics as proof trees are our certificates in the checker. Again, we want to design our checker with best compatibility in mind. In some papers (e.g. \cite{ComplexityProvDatalog}) the leaves of a valid proof tree have to be database elements. We leave this open to allow also facts from the program to serve as leaves for those programs that do not come with a database.
+We start by defining the proof-theoretic semantics as proof trees are our certificates in the checker so that this is most important semantic for us.
+
+We require the notion of a tree to formalize the proof-theoretic semantics. In mathlib exists a definition of a tree\footnote{see at \protect\url{https://leanprover-community.github.io/mathlib4_docs/Mathlib/Data/Tree.html}}, but this is in spite of the name only a binary tree. Then we could only represent rules in the proof tree whose body has at most length two. While any datalog program can be transformed into an equivalent program that only contains rules whose body has a length of at most two, this is not desireable as rules in practice are often longer. We could require the user to just transform the rules into this form, but this seems to hinder the acceptance of this tool and may mask errors that only occur in optimizations for longer rules.
+
+Therefore we start by defining a trees as an element $t$ with as a vertex $a$ and a list of subtrees $l$. We call $a$ the root of $t$ and the root of the trees in $l$ as the children of $t$. A leaf is an element whose subtree list is empty.
+
+\begin{lstlisting}
+inductive (.\tree.) (A: Type)
+| node: A → List (tree A) → tree A
+
+def (.\treeRoot.): tree A → A
+| tree.node a _ => a
+
+def (.\children.): tree A → List A
+| tree.node _ l => List.map root l
+\end{lstlisting}
+
+An important measure for trees is the height defined as the longest path from the root to a leaf. An alternative recursive definition is that it is the maximum of the height of all subtrees plus one, which we can implement with the listMax function.
+
+\begin{lstlisting}
+def (.\listMax.) {A: Type} (f: A → ℕ): List A → ℕ
+| [] => 0
+| (hd::tl) => if f hd > listMax f tl then f hd else listMax f tl
+
+def (.\height.) (t:tree A): ℕ :=
+  match t with
+  | tree.node a l => 1 + listMax (fun ⟨x, _h⟩ => height x) l.attach
+termination_by sizeOf t
+decreasing_by
+    simp_wf
+    apply Nat.lt_trans (m:= sizeOf l)
+    apply List.sizeOf_lt_of_mem _h
+    simp
+\end{lstlisting}
+
+Our implementation looks a bit different compared to the text. This is because we are required to prove the termination of this function. We call the height function recursively, but with a list function so that we no longer follow the inductive schema directly. We use the \lstinline|List.attach| function that takes a list $l$ and maps any element $a$ from $l$ to an element of \lstinline|{ a // a  $\in$ l}|, so a pair of the original element and a proof that it is a member of $l$.
+
+Using the sizeOf function, we prove termination by showing that \lstinline|sizeOf x < 1 + sizeOf a + sizeOf l|. By transitivity it is sufficient to prove that \lstinline|sizeOf x < sizeOf l| holds. Because we used \lstinline|l.attach| instead of simply \lstinline|l|, we have a proof of $x \in l$ available and can use that the size of any list member must be smaller than the size of the list itself, which finishes the proof. 
+
+We call a tree $t_2$ a \member of a tree $t_1$ if it occurs in the subtrees of $t_1$ and can prove that any member has a smaller height than the original tree (\heightOfMemberIsSmaller), because the result of $f$ for some member $a$ of $l$ is less-equal to the value of \lstinline|listMax f l|(\listMaxlefmember).
+
+With this we finish the general results about trees and can return to formalizing the proof-theoretic semantics. A proof tree is a tree whose vertices are ground atoms.
+
+\begin{lstlisting}
+    abbrev (.\proofTree.) (τ: signature):= tree (groundAtom τ)
+\end{lstlisting}
+
+Some proof trees will not represent valid derivations by our definition. The next step is to define a predicate that shows the validness of a tree similar to our definition in the preliminaries.
+
+Again, we want to design our checker with best compatibility in mind. In some papers (e.g. \cite{ComplexityProvDatalog}) the leaves of a valid proof tree have to be database elements. We leave this open to allow also facts from the program to serve as leaves for those programs that do not come with a database.
 
 We express the validness of a proof tree with the root $a$ and the list of subtrees $l$ with respect to a program $P$ and a database $d$ by a disjunction with two disjuncts. We call the first the \textit{rule case}. There we require a rule $r$ and a grounding $g$, such that $r$ is in $P$, the rule grounding of $r$ with $g$ yields the ground rule we gain from the root and its children. Additionally all subtrees must be valid, which we again express via \lstinline|List.attach| for the termination proof. 
 The second case is the \textit{database case}. There $a$ must be a leaf and contained in the database.
@@ -294,4 +344,28 @@ For the back direction it suffices to show that the proof-theoretic semantics ar
 \begin{lemma}[\proofTheoreticSemanticsIsModel]\label{lem:PTSModel}
     Let $P$ be a program and $d$ be a database. Then the proof-theoretic semantics of $P$ and $d$ is a model for $P$ and $d$.
 \end{lemma}
+\begin{proof}
+    As any element from the database $d$ has a valid proof tree, the database is contained in the proof-theoretic semantics. 
 
+    We need to prove that all rules from $ground(P)$ are true in the proof-theoretic semantics. Let $r$ be such a rule and suppose that every element of $body(r)$ is in the proof-theoretic semantics. Therefore there exists a list of trees $t_1 \dots t_n$ such that all trees are valid and the list $root(t_1) \dots root(t_n)$ equal the body of $r$. Then we can build a new tree with the root $head(r)$ and the children $t_1 \dots t_n$. This tree is valid, because all subtrees are valid and the root and its children are the instance of a ground rule of $P$. Therefore also $head(r)$ is in the proof-theoretic semantics and $r$ is true.
+\end{proof}
+
+We expand a bit on the proof above. The lemma we use to get the valid proof tree for $head(r)$ is called \createProofTreeForRule. We know that all elements in the body have valid proof trees and need a list of these proofs trees. We show in the lemma \getTreeHelper a more general property from which this follows.
+
+\begin{lemma}[\getTreeHelper]\label{lem:getTreeHelper}
+    Let $A$ and $B$ be types. Let $l$ be a list of type $A$ and $S$ be a finite set of type $A$. Let $f$ be a function from $B$ to $A$ and $valid$ a property of elements of type $B$. If all elements from $l$ are in $S$ and for any element $a$ in $S$ there exists an element $b$ such that $f(b) = a $ and $b$ is valid, then there exists a list $l'$ such that mapping $l'$ with $f$ yields $l$ and all elements of $l'$ fulfill the isValid predicate.
+\end{lemma}
+
+Before proving the statement, we explain how we want to use this. $A$ is supposed to be the ground atoms and $B$ is supposed to be the proof trees. The function $f: B \to A$ is the root function, $l$ is the body of the rule $r$ and $S$ the finite set of the body elements. If we want to show that the head is in the proof-theoretic semantics, we already know that every atom $a$ in the body has a valid proof tree whose root is $a$. Then we get the list of proof trees we can use as the children for the rule creation.
+
+\begin{proof}[Proof of \cref{lem:getTreeHelper}]
+    We prove this by structural induction on $l$. If $l$ is empty then we can simply use the empty list for $l'$ that fulfills the desired properties.
+
+    If $l$ has the shape $hd::tl$, then we can get a $hd_b$ element for $hd$ since $hd$ in $S$. By the properties of $S$, $hd_b$ is valid and is mapped to $a$ via $f$. Any element in $tl$ is still in $S$ so that the induction hypothesis provides us a list $tl'$ that maps via $f$ to $tl$ with only valid members. Then the list $hd_b::tl'$ is the witness for $l'$.
+\end{proof}
+
+This concludes the back direction and we finish the proof of the equivalence of the semantics and conclude this chapter.
+
+\begin{theorem}[\SemanticsEquivalence]\label{trm:semanticsEquiv}
+    For any program $P$ and database $d$ the model-theoretic and the proof theoretic semantics of $P$ and $d$ coincide.
+\end{theorem}
