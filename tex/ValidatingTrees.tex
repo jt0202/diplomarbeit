@@ -495,92 +495,77 @@ Using the previous lemmas and an induction over the height of the tree for the r
     Let P be a program, $m$ be the result of \lstinline|parseProgramToSymbolSequenceMap P (fun _  => [])| and $d$ be a database. For any proof tree $t$ \lstinline|treeValidator m d t| returns ok iff $t$ is valid for $P$ and $d$.
 \end{theorem}
 
-\subsection{Validating multiple trees}
 
-As we want to validate the whole result of a datalog program, we will often need many proof trees and a function that can validate them. Additionally, we need to preprocess the program to gain the map from symbol sequences to rules. This is done in the following function.
-
-\begin{lstlisting}
-    def validateTreeList (P: List (rule τ)) (d: database τ) 
-    (l: List (proofTree τ)) 
-    (ruleToString: rule τ → String): Except String Unit :=
-    let m:= parseProgramToSymbolSequenceMap P (fun _ => [])
-    List.map_except_unit l 
-        (fun t => treeValidator m d t  ruleToString)
-
-\end{lstlisting}
-
-Using the properties of \texttt{treeValidator} and \texttt{List.map\_except\_unit}, we can show that this function returns \texttt{ok ()} iff all trees in \texttt{l} are valid. We know that a ground atom $ga$ is in the \texttt{proofTheoreticSemantics} if there exists a proof tree with the root $ga$, so that we can conclude the set of roots of the trees in $l$ is a subset of the semantics. In order to get an iff statement, we also have to include that all trees are valid, because a root preserving permutation of a proof tree will in general not be valid and therefore \texttt{validateTreeList} will report an error, but its root is still in the semantics.
+If we want to validate the whole result of a datalog program, we will often need many proof trees and a function that can validate them. Additionally, we need to preprocess the program to gain the map from symbol sequences to rules. We can reuse the \Listmapexceptunit function for this purpose
 
 \begin{lstlisting}
-    lemma validateTreeListUnitIffSubsetSemanticsAndAllElementsHaveValidTrees 
-    (P: List (rule τ)) (d: database τ) (l: List (proofTree τ)) 
-    (ruleToString: rule τ → String) : 
-    validateTreeList P d l  ruleToString = Except.ok () ↔ 
-        {ga: groundAtom τ| ∃ (t: proofTree τ), t ∈ l ∧ root t = ga } ⊆ proofTheoreticSemantics P.toFinset d 
-        ∧ ∀ (t: proofTree τ), t ∈ l → isValid P.toFinset d t
+def (.\validateTreeList.) (P: List (rule τ)) (d: database τ) (l: List (proofTree τ)) : Except String Unit :=
+let m:= parseProgramToSymbolSequenceMap P (fun _ => [])
+List.map_except_unit l (fun t => treeValidator m d t)
 \end{lstlisting}
+
+Using \cref{trm:treeValidator} and \ListmapexceptunitIsUnitIffAll, we can show that this function returns ok iff all trees in $l$ are valid. We know that a ground atom $ga$ is in the proof-theoretic semantics if there exists a proof tree with the root $ga$, so that we can conclude the set of roots of the trees in $l$ is a subset of the semantics. 
+
 
 It turns out however that we can do a bit better and prove a stronger statement as the following example shows.
 \begin{example}
     Consider the program $P:$
     \begin{align*}
-        & A(X, Z) \leftarrow B(U, X, Y, Z). \\
-        & B(U, X, Y, Z) \leftarrow C(U, X), D(Z, Y). \\
+        & A(?x, ?z) \leftarrow B(?u,?x, ?y, ?z). \\
+        & B(?u,?x, ?y, ?z) \leftarrow C(?u,?x), D(?z, ?y). \\
         & C(a,b). \\
         & D(c,d).
         \end{align*}
-    where variables are capital letters. In order to validate the input according the previous lemma we would need the following proof trees.
 
-    \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
-        \node {D(c,d)};
-    \end{tikzpicture}
+    The result of this program over an empty database is $\{A(a,c), B(a,b,d,c), C(a,b), D(c,d)\}$ and a proof tree is depicted below for each of them.
+    \\
 
-    \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
-        \node {C(a,b)};
-    \end{tikzpicture}
 
-    \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=20mm]
-        \node {B(a, b, c, d)}
-            child {node {C(a,b)}}
-            child {node {D(c,d)}};
-    \end{tikzpicture}
+    \begin{tikzpicture}
+        \node (D1) at (0,0) {D(c,d)};
 
-    \begin{tikzpicture}[every node/.style={circle, minimum size=8mm}, level/.style={sibling distance=40mm/#1}, level distance=25mm]
-        \node {A(b, d)}
-            child {node {B(a, b, c, d)}
-            child {node {C(a,b)}}
-            child {node {D(c,d)}}};
-            
+        \node (C1) at (2,0) {C(a,b)};
+
+        \node (B1) at (5,0) {B(a,b,d,c)};
+        \node (B2) at (4, -1) {C(a,b)};
+        \node (B3) at (6, -1) {D(c,d)};
+        \draw (B1) -- (B2);
+        \draw (B1) -- (B3);
+
+        \node (A1) at (9,0) {A(a,c)};
+        \node (A2) at (9,-1) {B(a,b,d,c)};
+        \node (A3) at (8, -2) {C(a,b)};
+        \node (A4) at (10, -2) {D(c,d)};
+        \draw (A1) -- (A2);
+        \draw (A2) -- (A3);
+        \draw (A2) -- (A4);
     \end{tikzpicture}
 
     The proof tree for $A(b,d)$ already contains proofs for all the other elements of the program so that it would be enough to check this single tree.
 \end{example}
 
-We can define an element member function for trees in the usual way:
+If we want to check a complete datalog result, we therefore do not have to include a proof tree for every element as they can occur in other proof trees already. We formalize this using the element member function that is true if this element is the root or a member in a subtree.
 
 \begin{lstlisting}
-    def elementMember (a: A) (t: tree A): Bool  :=
+def (.\elementMember.) (a: A) (t: tree A): Bool  :=
     match t with
     | tree.node a' l => (a=a') ∨
         List.any l.attach (fun ⟨x, _h⟩ => elementMember a x)
 \end{lstlisting}
-In order for a tree to be valid all subtrees must be valid. A ground atom $ga$ is exactly then a member of a tree $t$ if there is a subtree of $t$ of which $ga$ is the root, so that if a proof tree is valid all elements are a subset of the semantics.
 
-\begin{lstlisting}
-    lemma allTreeElementsOfValidTreeInSemantics 
-    (t: proofTree τ)  (P: program τ) (d: database τ) 
-    (valid: isValid P d t)(ga:groundAtom τ)(mem: elementMember ga t):
-        ga ∈ proofTheoreticSemantics P d :=
-\end{lstlisting}
+In order for a tree to be valid all subtrees must be valid. In the rule case we explicitly required this, whereas there are no subtrees in in the database case. Any element member is the root of some subtree and therefore any element member of a valid proof tree is in the proof-theoretic semantics 
 
-This allows us to establish the alternative property of \texttt{validateTreeList}
+(\allTreeElementsOfValidTreeInSemantics).
 
-\begin{lstlisting}
-    lemma validateTreeListUnitIffSubsetSemanticsAndAllElementsHaveValidTrees 
-    (P: List (rule τ)) (d: database τ) (l: List (proofTree τ)) 
-    (ruleToString: rule τ → String) : validateTreeList P d l  ruleToString = Except.ok () ↔
-    {ga: groundAtom τ| ∃ (t: proofTree τ), t ∈ l ∧ elementMember ga t } ⊆ proofTheoreticSemantics P.toFinset d 
-    ∧ ∀ (t: proofTree τ), t ∈ l → isValid P.toFinset d t
-\end{lstlisting}
+This allows us to establish the alternative property of validateTreeList. We added the requirement of all proofs being valid in order to prove the back direction. As validity of a proof tree is in general not preserved under permutation, it is not sufficient to just require every element member to be in the proof-theoretic semantics.
 
-Now it is enough to pass just one proof tree from our example to validate the whole input and use in general less trees. 
+\begin{lemma}[\validateTreeListUnitIffSubsetSemanticsAndAllElementsHaveValidTrees]
+    Let $P$ be a program, $d$ be a database and $l$ a list of proof trees. Then validateTreeList returns ok iff all element members of the trees in $l$ are in the proof-theoretic semantics and all trees in $l$ are valid.
+\end{lemma}
+\begin{proof}
+    For the forward direction we already noted that if validateTreeList returns ok, then every tree in $l$ must be valid. By the previous lemma therefore any element member of one of these  trees is in the proof theoretic semantics.
+
+    For the back-direction follows from the previous observation, that validateTreeList returns ok iff all trees in $l$ are valid.
+\end{proof}
+
+Now it is enough to pass just the proof tree for $A(a,c)$ from our example into the checker to validate the whole input and use in general less trees. 

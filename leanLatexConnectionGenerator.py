@@ -15,7 +15,7 @@ def process_file(root, file):
                 result = re.split(splitSymbols, line)
                 # allow string to be valid latex
                 resultName = result[1].replace("_", "").replace(".", "").replace("'", "2")
-                textVersion =  result[1].replace("_", "\_").replace(".", "\.").replace("'", "\\textsc{\char13}")
+                textVersion =  result[1].replace("_", "\_").replace("'", "\\textsc{\char13}")
                 if "'" in result[1]:
                     continue
 
