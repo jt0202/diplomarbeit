@@ -384,20 +384,23 @@ We now have a method to replace this quantifier by a computable function and can
 
 \subsection{Tree validation}
 
-We have so far introduced introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or from the previous results a substitution $s$) and a rule $r$ from the program $P$, so that applying $g$ to $r$ yields $gr$. We want to use the \matchRule function defined earlier for this. This function required that both bodies of the rules to have the same length in order to work properly. Instead of just computing the length we want to do a bit more. We previously noted that substitutions (or groundings) never change the symbol of an atom, so that we do not have to try to match rules whose symbols differ. The symbols of a rule are expressed in the symbol sequence.
+We have so far introduced introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or by \cref{trm:groundingSubstitutionEquivalence} a substitution $s$) and a rule $r$ from the program $P$, so that applying $g$ to $r$ yields $gr$. We want to use the \matchRule function defined earlier for this. 
+We can simply pass each rule of the program given as a list of rules into this function and stop when \matchRule returns a some object. This works but requires in the worst case to match every rule in the program with a given ground rule. Suppose that the predicate symbol of the head of the given ground rule is $T$. We can safely discard any rule whose head is not an atom with the predicate symbol $T$. This can be generalized into the symbol sequence which is a list of predicate symbols that starts with the predicate symbol of the head and then the predicate symbols of the body atoms in the order the atoms occur in the body.
 
 \begin{lstlisting}
-    def symbolSequence (r: rule τ): List τ.relationSymbols := 
+    def (.\symbolSequence.) (r: rule τ): List τ.predicateSymbols := 
         r.head.symbol::(List.map atom.symbol r.body)
 
 \end{lstlisting}
 
-We can now compare the symbol sequence of a rule and the symbol sequence of a ground rule. If they are equal, we see that the bodies have the same length, since we just map each body element and attached for both the head at the front. If they are however not equal, then no substitution can be applied to the rule so that it will yield the ground rule.
+The equality of symbol sequences is a necessary condition for the existence of substitution that matches a rule with a ground rule, as the application of any substitution does not change the symbols and therefore not the symbol sequence. (\symbolSequenceNotEq).
 
-We can use this to check whether a ground rule $gr$ is in the ground program of $P$ by computing the symbol sequence of $gr$ and comparing it with the symbol sequence of every rule in the program. For those rules where the symbol sequences are equal, we can apply the \texttt{matchRule} function until we find the first matching rule. While this work, we have to iterate in the worst case always over the whole program. Instead we can preprocess the program into a function that returns for a symbol sequence a list of rules with the same symbol sequence.
+Now we could iterate over the whole program and calculate the symbol sequence for every rule and only start the matchRule process for those whose symbol sequences are equal to the given ground rule. In the worst case we still have to iterate over the whole program. It would be even better to preprocess  the program into a look-up structure that returns a list of rules for a given symbol sequence.
+
+We use a function of the type \lstinline|List τ.predicateSymbols → List (rule τ)| as the look up structure and build it iteratively by adding the first rule of the given program to the right symbol sequence element.
 
 \begin{lstlisting}
-    def parseProgramToSymbolSequenceMap (P: List (rule τ)) 
+    def (.\parseProgramToSymbolSequenceMap.) (P: List (rule τ)) 
     (m: List τ.relationSymbols → List (rule τ)): 
     List τ.relationSymbols → List (rule τ) :=
     match P with
@@ -408,35 +411,52 @@ We can use this to check whether a ground rule $gr$ is in the ground program of 
             (fun x => if x = seq then hd::(m x) else m x)
 \end{lstlisting}
 
-By induction we can prove that any symbol sequence $s$ the result of 
+If start this with a function that maps any symbol sequence to the empty list and gain a function $m'$ then for any list of predicate symbols $l$, $m'(l)$ returns exactly those rules in $P$ whose symbol sequence matches $l$. This follows from the following lemma.
 
-\texttt{parseProgramToSymbolSequenceMap P m} returns a the list consisting of those rules in $P$ whose symbol sequence matches $s$ and those rules that in $m (s)$. If we therefore use a function that maps any symbol sequence to the empty list for m we get exactly the list of rules that match a particular symbol sequence. As only those rules can result into the ground rule $gr$ with the symbol sequence $s$ by applying a grounding $g$, its enough to iterate over those rules. The \texttt{List.any} function does this and returns true as soon \texttt{matchRule} returns a \texttt{some}. The preprocesssing of $P$ is given as a function $m$, so that it only will be done once.  
+\begin{lemma}[\parseProgramToSymbolSequenceMapmem]\label{lem:parseProgramToSymbolSequenceMap}
+    Let $P$ be a program and $m$ be a function that maps a list of predicate symbols to the list of rules. Let $m'$ be the result of \lstinline|parseProgramToSymbolSequenceMap P m|. Then for any list of predicate symbols $l$ and rule $r$, we have $r$ is in $m'(l)$ iff $r$ was in $m(l)$ or $r$ is in $P$ and the symbol sequence of $r$ equals $l$.
+\end{lemma}
+\begin{proof}
+    We prove this by induction on the structure of $P$ for arbitrary $m$.
+
+    If $P$ is empty, then $m' = m$ and no rule is a member of $P$ so that the claim follows.
+
+    If $P$ has the structure $hd::tl$, then $m'$ is the result of 
+
+    \begin{lstlisting}
+        parseProgramToSymbolSequenceMap tl (fun x => if x = (symbolSequence hd) then hd::(m x) else m x)
+    \end{lstlisting}
+
+    Applying the induction hypothesis we see that for any rule $r$ and list $l$, $r$ is in $m'(l)$ iff it is in $tl$ and has the symbol sequence $l$ or was in \lstinline|(fun x => if x = (symbolSequence hd) then hd::(m x) else m x)|
+
+    The only element of $P$ not yet considered was $hd$ and is is either obtained by its symbol sequence or was already there in $m$ so that the proof follows.
+\end{proof}
+
+Since at the start $m(l)$ has no member for any $l$, the desired property holds. Now we can use this to check whether a substitution exists.
 
 \begin{lstlisting}
-    def checkRuleMatch (m: List τ.relationSymbols → List (rule τ)) 
-    (gr: groundRule τ) (ruleToString: rule τ → String)
-    : Except String Unit :=
-    if List.any (m (symbolSequence gr.toRule)) 
-        (fun x => Option.isSome (matchRule x gr)) = true
-    then Except.ok ()
-    else Except.error ("No match for " ++ ruleToString gr)
+def (.\checkRuleMatch.) (m: List τ.predicateSymbols → List (rule τ)) (gr: groundRule τ): Except String Unit :=
+  if List.any (m (symbolSequence gr.toRule)) 
+    (fun x => Option.isSome (matchRule x gr)) = true
+  then Except.ok ()
+  else Except.error ("No match for " ++ ToString.toString gr)
 \end{lstlisting}
 
-If $m$ is the result of \texttt{parseProgramToSymbolSequenceMap} of $P$ and a function that maps anything to the empty list, \texttt{checkRuleMatch} returns ok if and only if there is a rule $r$ in $P$ and a grounding $g$ such that applying $g$ to $r$ results in the ground rule $gr$.
+\begin{lemma}[\checkRuleMatchOkIffExistsRuleForGroundRule]
+    Let P be a program, $m$ be the result of \lstinline|parseProgramToSymbolSequenceMap P (fun _  => [])| and $gr$ a ground rule. Then \lstinline|checkRuleMatch m gr| returns ok iff there exists a rule $r$ in $P$ and a grounding $g$ such that grounding $r$ with $g$ yields $gr$.
+\end{lemma}
+\begin{proof}
+    Let $l$ be the symbol sequence of $gr$. Then if checkRuleMatch returns ok, then there exists a rule $r$ in $m(l)$ there exists a grounding $g$ such that grounding $r$ by $g$ yields $gr$. By \cref{lem:parseProgramToSymbolSequenceMap} this rule $r$ is a member of $P$ so the claim is proven.
+
+    If checkRuleMatch returns an error, then we have to show that for rule $r \in P$ and grounding $g$ grounding $r$ by $g$ yields a different ground rule compared to $gr$. If $r$ has the same symbol sequence as $gr$, then it occured in $m(l)$ and since checkRuleMatch returned an error matchRule r gr must return none so that the property holds.
+
+    If $r$ has a different symbol sequence to $gr$ then this property holds as well due to \symbolSequenceNotEq and \cref{trm:groundingSubstitutionEquivalence}.
+\end{proof}
+
+This function is almost enough to complete the rule case. We just need to also verify all subtrees. For this we introduce the \lstinline|List.map_except_unit| function that applies a function of the type \lstinline|A → Except B Unit| to a list $l$ until the first error occurs. If no error occurs, then we return unit which is a type that has only one element $()$ and is the place holder because we have to return something.
 
 \begin{lstlisting}
-    lemma checkRuleMatchOkIffExistsRuleForGroundRule 
-    (m: List τ.relationSymbols → List (rule τ)) (P: List (rule τ)) 
-    (gr: groundRule τ) (ruleToString: rule τ → String ) 
-    (ssm: m = parseProgramToSymbolSequenceMap P (fun _ => [])): 
-    checkRuleMatch m gr ruleToString = Except.ok () 
-    ↔ ∃ (r: rule τ) (g:grounding τ),r ∈ P ∧ ruleGrounding r g = gr
-\end{lstlisting}
-
-In order to start validating we need another helper function. The tree validation function will return an element of type \texttt{Except String Unit}, so that if the tree is invalid an Exception with an error message in a String is thrown. If it is valid, then nothing is return. In order to show that a tree with the root $a$ is valid, we have to show that all direct subtrees of $a$ are valid using the same function. We could use \texttt{List.all (Except.isOk)} and this would return true iff all subtrees are valid. We would however loose the error message. Instead we define the following function, that returns the first error message it finds.
-
-\begin{lstlisting}
-    def List.map_except_unit {A B: Type} (l: List A) 
+    def (.\Listmapexceptunit.) {A B: Type} (l: List A) 
     (f: A → Except B Unit): Except B Unit :=
     match l with
     | [] => Except.ok ()
@@ -446,54 +466,34 @@ In order to start validating we need another helper function. The tree validatio
         | Except.error b => Except.error b
 \end{lstlisting}
 
-By induction we prove that it returns \texttt{ok ()} iff for all elements in the list $f$ is evaluated to \texttt{ok ()}.
+We can prove by induction that this function returns unit iff $f$ returns unit on all elements of the list $l$ (\ListmapexceptunitIsUnitIffAll).
+
+Now we have the necessary tools to check whether a given proof tree is valid which is done by the \treeValidator. For a tree with the root $a$ and subtrees $l$, we do a case distinction whether $l$ is empty. If $a$ is additionally an element of the database, then we accept because we are in the database case. If not we use checkRuleMatch to check for the rule case. This is returns ok, then we can already accept because there are no subtrees.
+
+If not we can only be in the rule case and first use checkRuleMatch and if this returns ok, then we check all subtrees using the treeValidator again called via \Listmapexceptunit.
 
 \begin{lstlisting}
-    lemma List.map_except_unitIsUnitIffAll {A B: Type} (l: List A) 
-    (f: A → Except B Unit): 
-    List.map_except_unit l f = Except.ok () 
-    ↔ ∀ (a:A), a ∈ l → f a = Except.ok ()
-\end{lstlisting}
-
-In order to validate a tree we have to consider two cases. If it has no children, then it is a fact. This fact may be part of the database or it may be a fact in the program. We can detect if the list of children is empty and ask the database whether it contains the root. If that is the case, the tree is valid and we return \texttt{ok ()}. If not, we use \texttt{checkRuleMatch} to find a fact for the root in $P$ and return the result. Since the tree has no children, all children are valid as well.
-If it has children we try to find a rule using \texttt{checkRuleMatch} that matches the current node and its children and if that is the case we check that all children are valid using the \texttt{List.map\_except\_unit} function.
-
-\begin{lstlisting}
-    def treeValidator (m: List τ.relationSymbols → List (rule τ)) 
-    (d: database τ)(t: proofTree τ) (ruleToString: rule τ → String):
-        Except String Unit :=
-    match t with
-    | tree.node a l =>
-        if l.isEmpty
-        then    if d.contains a
-                then Except.ok ()
-                else
-                    match checkRuleMatch m 
-                    {head:= a, body := []} ruleToString with
-                    | Except.ok _ => Except.ok ()
-                    | Except.error msg => Except.error msg
-        else
-            match checkRuleMatch m 
-            {head:= a, body := List.map root l} ruleToString with
-            | Except.ok _ => 
-                List.all l.attach (fun ⟨x, _h⟩ => Except.isOK 
-                (treeValidator m d x ruleToString))
+def treeValidator (m: List τ.predicateSymbols → List (rule τ)) (d: database τ) (t: proofTree τ) : Except String Unit :=
+  match t with
+  | tree.node a l =>
+    if l.isEmpty
+    then  if d.contains a
+          then Except.ok ()
+          else
+            match checkRuleMatch m {head:= a, body := List.map root l} with
+            | Except.ok _ => Except.ok ()
             | Except.error msg => Except.error msg
+    else
+      match checkRuleMatch m {head:= a, body := List.map root l} with
+      | Except.ok _ => List.map_except_unit l.attach (fun ⟨x, _h⟩ => treeValidator m d x)
+      | Except.error msg => Except.error msg
 \end{lstlisting}
 
-By induction on the height of the tree we can prove the correctness of this algorithm as the children have a smaller height than the tree.
+Using the previous lemmas and an induction over the height of the tree for the recursive calls, we prove the correctness of the treeValidator.
 
-\begin{lstlisting}
-    lemma treeValidatorOkIffIsValid 
-    (m: List τ.relationSymbols → List (rule τ)) 
-    (P: List (rule τ)) (d: database τ) (t: proofTree τ) 
-    (ruleToString: rule τ → String) 
-    (ssm: m = parseProgramToSymbolSequenceMap P (fun _ => [])): 
-    
-    treeValidator m d t ruleToString = Except.ok () 
-    ↔ isValid (List.toFinset P) d t :=
-
-\end{lstlisting}
+\begin{theorem}[\treeValidatorOkIffIsValid]\label{trm:treeValidator}
+    Let P be a program, $m$ be the result of \lstinline|parseProgramToSymbolSequenceMap P (fun _  => [])| and $d$ be a database. For any proof tree $t$ \lstinline|treeValidator m d t| returns ok iff $t$ is valid for $P$ and $d$.
+\end{theorem}
 
 \subsection{Validating multiple trees}
 
