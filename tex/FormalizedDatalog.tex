@@ -1,4 +1,4 @@
-\section{Formalization of Datalog}
+\section{Formalization of Datalog}\label{sec:formDatalog}
 In the previous section, we introduced datalog. Our goal is to check whether ground atoms are the result of correct datalog derivations. In the pursuit of a proof of correctness for our algorithms, we need to know what correct derivations are which we solve by formalizing the syntax and semantics of datalog in Lean. As of writing, there is to the best of our knowledge no formalization of datalog in Lean yet. 
 
 There does exist a formalization of datalog in Coq\cite{datalogCoq}. The formalization includes the syntax of datalog and the fixed point semantics of datalog with a certified datalog engine. Similarly, we will also formalize the syntax of datalog. After that, the paths will diverge as we are interested in the proof-theoretic semantics of datalog to check proof trees. Additionally, we will also formalize the model-theoretic semantics of datalog for completeness arguments and to have extra security that our formalization holds by proving that both semantics are equivalent.

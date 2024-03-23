@@ -1,1 +1,34 @@
 \section{Introduction}
+
+One of the most important problems in software engineering is writing bug-free software.  Bugs in software may endanger the well-being of property and humans.
+
+A recent example of the consequences of buggy software was the Horizon software used by the British Royal Mail \cite{horizonRoyalMail}. It was supposed to be an accounting software used in the accounting of the individual post offices. Horizon wrongly calculated the balance which led to the individual subpostmasters being accused of theft or fraud. Over 900 people were sentenced to the repayment of alleged damages or prison sentences. These people still suffer financial, social or health consequences despite being innocent and multiple persons committed suicide.
+
+The Royal Mail trusted their program too much to consider that it contained errors. But what methods exist to increase the confidence in a program?
+Firstly, we can prove the correctness of a program, which is done in the field of formal verification. These proofs are complicated and often very large so they need computer assistance. Due to time constraints or unfamiliarity with the methods this is only very rarely done in use cases that require specific security guarantees. An example is the verified C compiler CompCert\cite{CCertComp}.
+
+In practice, software developers mostly employ a test-driven approach to software correctness. They design specific use cases and specify what the program is supposed to do in this case. Designing such cases is difficult and cannot cover every scenario so we can only see that some scenarios are bug-free.
+
+An interesting development in algorithms research are certifying algorithms \cite{CertAlg}. These algorithms do not only return a solution but also a certificate as an explanation why the returned value is the correct answer. In the case of SAT-solving, they would for example return a possible model as well as stating that a formula is satisfiable. The user can then verify on their own that the result is correct without inspecting the code's inner workings. This can also be done by programs called checkers. These are usually smaller and simpler so that they can be formally verified. 
+
+Our interest concerns computing the results of datalog programs. Datalog is a logic programming and query language that allows to write rules in the following way
+
+\begin{equation}
+    \begin{split}
+        T(?x, ?y) &\leftarrow E(?x, ?y). \\
+        T(?x, ?z) &\leftarrow E(?x, ?y), T(?y, ?z). \\
+    \end{split}
+\end{equation}
+
+The rules can be interpreted as formulas from first-order logic that are universally quantified and use the implication. There are multiple equivalent semantics of datalog that deal with the question of what follows from a datalog program and a given set of facts often known as the database.
+
+This task can be solved in polynomial time which allows using datalog in multiple interesting applications from data analysis to data integration.
+
+Modern datalog engines like Nemo\cite{Nemo} or Souffle\cite{Souffle} can work with millions of database elements and use many optimization techniques to achieve this. Unfortunately, the correctness may suffer from this and formally verifying an engine is out of reach. They offer proof trees as an explanation why a certain element was derived so that we may view them as an instance of certifying algorithms. In this style, we want to implement a checker that takes these certificates and tells us whether a datalog reasoning result is correct.
+
+With the goal of improving the confidence in the correctness of our checker, we will formally verify it using the proof assistant Lean\cite{Lean4}. A proof assistant allows users to define functions and objects and prove results about the objects in machine-readable style. Therefore the proof assistant can verify that the proof is indeed correct or if not raise errors.
+
+After introducing the basics about datalog, certifying algorithms and Lean in \cref{sec:prelim}, we will formalize datalog in Lean in \cref{sec:formDatalog}. After that, we provide two methods to verify a datalog reasoning result: a classical result based on proof trees in \cref{sec:valTree} and another result based on graphs we see as more promising in practice in \cref{sec:valGraph}. 
+These methods however can only tell us that all atoms present in the result are correctly derived, i.e. soundness. They do not tell us whether more could be derived. A method to solve this question is presented in \cref{sec:completeness}.
+
+Finally, we show in \cref{sec:eval} that our results are not only formally correct but can also be used in practice.

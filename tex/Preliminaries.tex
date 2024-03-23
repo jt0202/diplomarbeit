@@ -1,4 +1,4 @@
-\section{Preliminaries}
+\section{Preliminaries}\label{sec:prelim}
 
 
 In this section, we introduce concepts that we are going to use in future sections. We start by defining datalog, which we will formalize later. After that, we review the concept of certifying algorithms and finally, we introduce Lean.
@@ -356,13 +356,8 @@ What are the semantics of this newly created safe program $P'$? It turns out, th
     \label{fig:certifyingAlgorithm}
 \end{figure}
 
-Most algorithms one encounters either in books like \cite{AlgorithmsBook} or in real programs are comparable to \cref{fig:programNormal}. We have an input, give this into an algorithm which is a black box for us and then we receive a result as an output. What guarantees do we have that the algorithm does what we expect it to do?
-
-In general, we have only very few guarantees. While formal verification of programs exists, it is rarely done in practice due to the complexity of modern programs, time constraints or unfamiliarity with the methods. It is often only done in very important use cases such as the verified C compiler CompCert \cite{CCertComp}.
-
-In practice, one often resolves to testing. There the developer specifies an input and the desired property and a user can run the tests and convince themselves that the program is correct in this case. This shows however only correctness in this case and not in general. Additionally, it is difficult to design good tests, that capture all later use cases, so we cannot conclude the absence of bugs.
-
-An alternative to this are \textit{Certifying algorithms} depicted in \cref{fig:certifyingAlgorithm}. An overview about this topic can be found in \cite{CertAlg}. 
+Most algorithms one encounters either in books like \cite{AlgorithmsBook} or in real programs are comparable to \cref{fig:programNormal}. We have an input, give this into an algorithm which is a black box for us and then we receive a result as an output. Without inspecting the implementation we have to trust that the results are correct.
+An alternative to this are \textit{Certifying algorithms} depicted in \cref{fig:certifyingAlgorithm}. They offer an explanation in addition to the result that can be checked independently by the checker or the user themselves. We follow the presentation in \cite{CertAlg} which offers information far beyond this section as well. 
 
 Recall a definition of the class NP from complexity theory:
 

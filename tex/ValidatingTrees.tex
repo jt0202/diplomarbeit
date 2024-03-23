@@ -1,4 +1,4 @@
-\section{Validating proof trees}
+\section{Validating proof trees}\label{sec:valTree}
 
 After introducing the problem and modelling in Lean, we now describe the algorithm to verify a solution. In this chapter we deal with the soundness, which means here that every atom in the interpretation is actually in the semantics. For this we use the proof trees as the certificate and the proof theoretic semantics.
 
@@ -20,10 +20,10 @@ The second part of this disjunction consists of a database check and an easy che
 
 
 \subsection{Substitutions}
-    A grounding is function from variables to constants. This mean that we always need to specify for every variable a constant that it is mapped to. This was good in the definitions to ensure that we always get a ground atom, but raises in the unification case problems as the following example demonstrates.
+    A grounding is function from variables to constants. This means we always need to specify for every variable a constant that it is mapped to. This was good in the definitions to ensure that we always get a ground atom, but raises in the unification case problems as the following example demonstrates.
 
     \begin{example}
-        Consider the signature consisting of $C = \{a,b,c\}$, $V = \{x,y,z \}$ and $R = \{R\}$. Suppose we want to match a list of terms with a list of constant. The first term is $t_1 = x$ and the first constant is $a$. We might use the the grounding $g = x \mapsto a, y \mapsto a, z \mapsto a$.
+        Consider the signature consisting of $C = \{a,b,c\}$, $V = \{?x,y,z \}$ and $R = \{R\}$. Suppose we want to match a list of terms with a list of constant. The first term is $t_1 = x$ and the first constant is $a$. We might use the the grounding $g = x \mapsto a, y \mapsto a, z \mapsto a$.
 
         Now we want to use this result and match another term $t_2 = y$ with the constant $b$. The variable $y$ is already mapped to a different constant, but we cannot say whether this is due to a previous matching process or simply because we needed to define a value for every input.
         
@@ -114,7 +114,7 @@ The second part of this disjunction consists of a database check and an easy che
 
 \subsection{Unification}
 
-We know that instead of finding a grounding, it suffices to find a substitution. Now we want to describe an algorithm that tells us whether the ground rule that is formed from a node of the proof tree is the substituted rule of some rule of the program. For this we take inspiration from the unification problem of first-order logic.
+We know that instead of finding a grounding, it suffices to find a substitution. Now we want to describe an algorithm that tells us whether the ground rule that is formed from a vertex of the proof tree and its children is in the ground program. For this we take inspiration from the unification problem of first-order logic.
 
 In the unification problem we are given a set of equations between first-order terms and are required to present the most-general unifier.
 
@@ -138,12 +138,12 @@ An algorithm to solve the first-order unfication problem is the algorithm of Mar
 \end{algorithm}
 
 This algorithm offers a good starting point for our own algorithm, but we certain transformation can't occur in the limited syntactic form we operate in. Additionally, we want to output a substitution instead of just answering whether a substitution exists. It is sufficient to do it here, but will later be important. Instead of mapping all $x$ to $t$ as done there in step 5, we will add $x\mapsto t$ to a substitution that is presented as an input. If a variable occurs on the left side, we will check whether it is already in the domain of the substitution and if so check if its current value is consistent with the right side.
-As function symbols appart from constant symbols are not allowed, we can simplify steps 2 and 3, as we never add new equations and instead only check if the constant symbol matches. Finally, as the one side of the equation is always a ground object there will never be a variable on this side, so that we do not have to swap the equation as in step 4.
+As function symbols apart from constant symbols are not allowed, we can simplify steps 2 and 3, as we never add new equations and instead only check if the constant symbol matches. Finally, as the one side of the equation is always a ground object there will never be a variable on this side, so that we do not have to swap the equation as in step 4.
 
 We will start with matching a term to a constant with the following algorithm.
 
 \begin{lstlisting}
-    def matchTerm (t: term τ)(c: τ.constants) (s: substitution τ):
+    def (.\matchTerm.) (t: term τ)(c: τ.constants) (s: substitution τ):
     Option (substitution τ) :=
     match t with
     | term.constant c' =>
@@ -345,7 +345,7 @@ We now have a method to replace this quantifier by a computable function and can
 
 \subsection{Tree validation}
 
-We have so far introduced introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or from the previous results a substitution $s$) and a rule $r$ from the program $P$, so that applying $g$ to $r$ yields $gr$. We want to use the \texttt{matchRule} function defined earlier for this. This function required that both bodies of the rules to have the same length in order to work properly. Instead of just computing the length we want to do a bit more. We previously noted that substitutions (or groundings) never change the symbol of an atom, so that we do not have to try to match rules whose symbols differ. The symbols of a rule are expressed in the symbol sequence.
+We have so far introduced introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or from the previous results a substitution $s$) and a rule $r$ from the program $P$, so that applying $g$ to $r$ yields $gr$. We want to use the \matchRule function defined earlier for this. This function required that both bodies of the rules to have the same length in order to work properly. Instead of just computing the length we want to do a bit more. We previously noted that substitutions (or groundings) never change the symbol of an atom, so that we do not have to try to match rules whose symbols differ. The symbols of a rule are expressed in the symbol sequence.
 
 \begin{lstlisting}
     def symbolSequence (r: rule τ): List τ.relationSymbols := 
@@ -455,6 +455,8 @@ By induction on the height of the tree we can prove the correctness of this algo
     ↔ isValid (List.toFinset P) d t :=
 
 \end{lstlisting}
+
+\subsection{Validating multiple trees}
 
 As we want to validate the whole result of a datalog program, we will often need many proof trees and a function that can validate them. Additionally, we need to preprocess the program to gain the map from symbol sequences to rules. This is done in the following function.
 

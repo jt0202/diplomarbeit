@@ -15,6 +15,16 @@
 \usepackage{todonotes}
 \usepackage{url}
 \usetikzlibrary{automata, positioning, chains,fit,shapes}
+
+\tikzset{
+diagonal fill/.style 2 args={fill=#2, path picture={
+\fill[#1, sharp corners] (path picture bounding box.south west) -|
+                         (path picture bounding box.north east) -- cycle;}},
+reversed diagonal fill/.style 2 args={fill=#2, path picture={
+\fill[#1, sharp corners] (path picture bounding box.north west) |- 
+                         (path picture bounding box.south east) -- cycle;}}
+}
+
 \definecolor{keywordcolor}{rgb}{0.7, 0.1, 0.1}   % red
 \definecolor{commentcolor}{rgb}{0.4, 0.4, 0.4}   % grey
 \definecolor{symbolcolor}{rgb}{0.0, 0.1, 0.6}    % blue
@@ -53,7 +63,7 @@
 \definecolor{leansymbolcolor}{HTML}{2010A0} % mainly debugging; use black to hide
 \input{codeCommands.tex}
 
-
+\AddToHook{cmd/section/before}{\clearpage}
 
 \title{LEAN-aided verification of datalog reasoning results}
 \author{Johannes Tantow}
