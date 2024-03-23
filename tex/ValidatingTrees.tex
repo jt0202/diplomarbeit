@@ -1,8 +1,6 @@
 \section{Validating proof trees}\label{sec:valTree}
 
-After introducing the problem and modelling in Lean, we now describe the algorithm to verify a solution. In this chapter we deal with the soundness, which means here that every atom in the interpretation is actually in the semantics. For this we use the proof trees as the certificate and the proof theoretic semantics.
-
-A ground atom is in the proof theoretic semantics if there exists a valid proof tree, that has this ground atom as its head. We were provided with all the proof trees and checking the heads is rather easy, so what remains to be checked is the validness of a proof tree, that was defined in the previous chapter.
+After introducing the problem and modelling in Lean, we now describe the algorithm to verify a solution partially. We focus in this section on the soundness by verifying a given proof tree. In the previous section we introduced the following characterization for valid proof trees:
 
 \begin{lstlisting}
     def isValid(P: program τ) (d: database τ) (t: proofTree τ): 
@@ -16,31 +14,35 @@ A ground atom is in the proof theoretic semantics if there exists a valid proof 
     ∨ (l = [] ∧ d.contains a)
 \end{lstlisting}
 
-The second part of this disjunction consists of a database check and an easy check of list emptyness. The first part is more interesting. Since we use there existential quantifiers, we have to implement something to check this. As the program is given as a list of rules, we can simply iterate over this list. For the grounding we however can something more sophisticated, but groundings are not our object of choice for that.
+This is a disjunction so we need for both disjuncts procedures to decide if they are true.
+The second part of this disjunction consists of a database check and an easy check of list emptyness. Both can be done in a straightforward way.
+The first part is more interesting. Since we use there existential quantifiers, this is not computable and have to implement a function for this. While we can simply iterate over the program to check for the existance of an $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use some more sophisticated to check this which we introduce next.
 
 
 \subsection{Substitutions}
     A grounding is function from variables to constants. This means we always need to specify for every variable a constant that it is mapped to. This was good in the definitions to ensure that we always get a ground atom, but raises in the unification case problems as the following example demonstrates.
 
     \begin{example}
-        Consider the signature consisting of $C = \{a,b,c\}$, $V = \{?x,y,z \}$ and $R = \{R\}$. Suppose we want to match a list of terms with a list of constant. The first term is $t_1 = x$ and the first constant is $a$. We might use the the grounding $g = x \mapsto a, y \mapsto a, z \mapsto a$.
+        Suppose we want ask whether we can unify the list of terms $l_1 = [?x, ?y]$ with the list of constants $l_2= [a,b]$, i.e. we look for a function $f: V \to C$ such that mapping every element of $l_1$ with $f$ yields $l_2$.
 
-        Now we want to use this result and match another term $t_2 = y$ with the constant $b$. The variable $y$ is already mapped to a different constant, but we cannot say whether this is due to a previous matching process or simply because we needed to define a value for every input.
-        
+        We start by trying to unify $x$ and $a$. If we use groundings, we might use this function $g = x \mapsto a, y \mapsto a, z \mapsto a$.
 
-        
+        Now we want to use this result and match another term $y$ with the constant $b$. The variable $y$ is already mapped to a different constant, but we cannot say whether this is due to a previous matching process or simply because we needed to define a value for every input.         
     \end{example}
-
+    
+    One solution might be to use a special constant symbol that we map variables to that are really unmapped for now.
     Instead, we want to use substitutions that were already introduced in \cite{datalogCoq}. A substitution is a partial mapping from variables to constants. We implement this by mapping to an Option of constant.
 
     \begin{lstlisting}
-    def substitution (τ: signature):= τ.vars → Option (τ.constants)
+    def (.\substitution.) (τ: signature):= τ.vars → Option (τ.constants)
     \end{lstlisting}
 
-    This allows us to only specify what is necessary. If we apply a substitution to a term, we only replace a variable by a constant, if the substitution is defined for this variable and the constant will be the result of the substitution in this case.
+    This allows us to only specify what is necessary. We call the substitution that maps any variable to none the empty substitution.
+    
+    If we apply a substitution to a term and this term is a constant, we do not change the term. If the term is a variable and the substitution does not map the variable to none we replace the variable with the result of the substitution.
 
     \begin{lstlisting}
-    def applySubstitutionTerm (s: substitution τ) (t: term τ): term τ :=
+    def (.\applySubstitutionTerm.) (s: substitution τ) (t: term τ): term τ :=
     match t with
     | term.constant c => term.constant c
     | term.variableDL v => 
@@ -49,52 +51,87 @@ The second part of this disjunction consists of a database check and an easy che
         else term.variableDL v
     \end{lstlisting}
 
-    We can use similar defintions as previously for groundings to apply substitutions to atoms or rules.
+    Similar to groundings we can extend this to atoms (\applySubstitutionAtom) and rules (\applySubstitutionRule). As we no longer replace all variables by constants, this only results in atoms instead of ground atoms.
 
     The main result we want to prove is the following.
 
     \begin{lstlisting}
     theorem groundingSubstitutionEquivalence 
-        [Nonempty τ.constants] (r: groundRule τ) (r': rule τ):
+        (r: groundRule τ) (r': rule τ):
         (∃ (g: grounding τ), ruleGrounding r' g = r) ↔ 
         (∃ (s: substitution τ), applySubstitutionRule s r'= r)
     \end{lstlisting}
 
     This allows us to replace the grounding check by a substitution check, when trying to validate trees and by this we can bypass the problems that were illustrated in the example above. 
 
-    For the forward implication, we can transform any grounding in a simple way to a substitution. In this substitution every value is defined with the value of the grounding.
+    For the forward direction, we want to find an equivalent substitution for every grounding. We can do this by mapping every variable to the the same value of the grounding and place this in the some constructor to obtain an element of the Option type.
 
     \begin{lstlisting}
-    def groundingToSubstitution (g: grounding τ): substitution τ
+    def (.\groundingToSubstitution.) (g: grounding τ): substitution τ
         := fun x => Option.some (g x)
     \end{lstlisting}
 
-    It is very easy to prove that this is equivalent on every rule.
+    We have to prove that these are actually equivalent. We defined in the previous section a coercion from ground atoms to atoms. We can also coerce constants to terms by the \lstinline|term.constant| constructor which enables to us to use an equality in the following lemma.
 
-    For the back direction, we need additionally that the set of constants is non-empty. We can ensure this during the input phase by adding a fresh constant symbol to the constant symbols similar to Herbrand universes. This symbol does not appear in any proof trees and does not influence the results. Since we only look at safe programs, it will also not introduce any new ground atoms to the model.
+    \begin{lemma}[\groundingToSubsitutionEquivTerm]
+        Let $t$ be a term and $g$ be a grounding. Then the grounding of $t$ by $g$ is equal to the application of
+        
+        \lstinline|groundingToSubstitution g| to $t$.
+    \end{lemma}
+    \begin{proof}
+        If $t$ is a constant, then both elements will simply return $t$.
 
-    The following example shows the problems that occur without the non-emptyness assured.
+        If $t$ is a variable $v$, then the term grounding by $g$ will return $g(v)$. By the definition of \lstinline|groundingToSubstitution| all variables $v'$ return a some type which contains $g(v')$. Therefore the application replaces $v$ by $g(v)$ and both results are equal. 
+    \end{proof}
 
+    Using this result we can extend this equality to the atom level 
+    
+    (\groundingToSubsitutionEquivAtom), because in both cases only the terms change by the application of the functions of the previous lemma. Finally, we can extend this to the rule level (\groundingToSubsitutionEquivRule).
+
+    For the back direction, we need an additional property illustrated by the following example.
     \begin{example}
-        Consider the program $P= \{p \leftarrow, q \leftarrow p\}$ and the signature $C = \emptyset$, $V = \{x,y,z \}$ and $R = \{p,q\}$
+        Consider the program $\mathcal{P} = \{P \leftarrow, Q \leftarrow P\}$ and the signature $C = \emptyset$, $V = \{?x,?y,?z \}$ and $P = \{p,q\}$
 
-        Any rule in $P$ is already a ground rule and there exists a substitution, the empty substitution that maps all variables to none, so that the rule is equal to itself as a ground rule.
+        Any rule in $\mathcal{P}$ is already a ground rule and there exists a substitution, the empty substitution that maps all variables to none, so that the rule is equal to itself as a ground rule.
         
         There is however no grounding that can achieve this. We cannot define a grounding since we have no constant available, but have variables that need to be mapped somewhere. Therefore the equivalence does not hold here.
     \end{example}
 
-    Since the set of constants is non-empty, we can use the axiom of choice to get values for which the substitution is not defined.
+    In order for the equivalence to hold we always need at least one constant symbol. There exist at least two possibilities to achieve this in Lean. We could require that the type of constants is inhabited or that it is non-empty. We decided to use the first as the inhabited class offers directly a constant, the default value, whereas the class non-empty only proves that such an element exists and requires the axiom of choice to extract it.
 
     \begin{lstlisting}
-    noncomputable def substitutionToGrounding 
-        [ex: Nonempty τ.constants] (s: substitution τ): grounding τ := 
-        fun x =>    if p:Option.isSome (s x) 
-                then Option.get (s x) p 
-                else Classical.choice ex
-
+        def (.\substitutionToGrounding.) [ex: Inhabited τ.constants] 
+        (s: substitution τ): grounding τ :=
+        fun x => 
+        if p:Option.isSome (s x) 
+        then Option.get (s x) p 
+        else ex.default
     \end{lstlisting}
 
-    When introducing substitutions, we had the goal to only add what is needed to a substitution and usually we want the smallest possible substitution. In order to formalize this, we want to define a linear relation on substitutions, that is denoted by $\subseteq$
+    \begin{contexample}
+        If we add the fresh symbol $a$ to $C$, we can use the function $f: V \to C, v \mapsto a$. This will not cause any problems during the verification of a proof tree. While it increases the number of groundings it will not result in any match if used, because it does not occur in the proof tree.
+    \end{contexample}
+
+    This is similar to the Herbrand base where we also add a constant symbol, if no constant is present.
+
+    For the back direction, we prove again that it is equivalent on terms and then the atom and rule case easily follow.
+
+    \begin{lemma}[\substitutionToGroundingEquivTerm]
+        Let $\tau$ be a signature that contains at least one constant symbol. For any substitution $s$, term $t$ and constant $c$ such that applying $s$ to $t$ yields $t$, also grounding $t$ by \lstinline|substitutionToGrounding| yields $c$.
+    \end{lemma}
+    \begin{proof}
+        If $t$ is a constant, then it must be equal to $c$ and neither the grounding nor the substitution change the term.
+
+        If $t$ is a variable $v$, then $s(v)$ must be $c$ in order to be equal to $c$. Therefore $s(v)$ is defined and \lstinline|substitutionToGrounding| replaces $v$ by the same value, so that the equality holds as well.
+    \end{proof}
+
+    In the end, we obtain the desired theorem with the additional requirement on the set of constants.
+
+    \begin{theorem}[\groundingSubstitutionEquivalence]\label{trm:groundingSubstitutionEquivalence}
+        Let $\tau$ be a signature that contains at least one constant symbol. Then for any $\tau$ rule $r'$ and ground rule $r$ we have that there exists a grounding $g$ such that grounding $r'$ by $g$ yields $r$ iff there exists a substitution $s$ such that applying $s$ to $r'$ yields $r$.
+    \end{theorem}
+
+    When introducing substitutions, we had the goal to only add what is needed to a substitution and usually we want the smallest possible substitution. In order to formalize this, we want to define a partial order on substitutions, that is denoted by $\subseteq$
 
     Firstly, we define the substitution domain of a substitution as the set of variables for which the substitution is defined. 
 
@@ -110,7 +147,9 @@ The second part of this disjunction consists of a database check and an easy che
     ∀ (v: τ.vars), v ∈ substitution_domain s1 → s1 v = s2 v
     \end{lstlisting}
 
-    This can be proven to be a partial order.
+    This relation is by defintion reflexive (\substitutionsubsrefl). It is also anti-symmetric (\substitutionsubsantisymm). Since $s_1 \subseteq s_2$ anywhere where $s_1$ is defined $s_2$ is defined as well and has the same value. Since $s_2 \subseteq s_1$ anywhere where $s_2$ is defined the same holds, so that they have the same substitution domain and on it the same values. By the principle of function extensionaliy both functions are equal.
+
+    Lastly, it is also transitive (\substitutionsubstrans), so it is an instance of a partial order.
 
 \subsection{Unification}
 
