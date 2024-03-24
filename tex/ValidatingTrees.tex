@@ -1,6 +1,6 @@
 \section{Validating proof trees}\label{sec:valTree}
 
-After introducing the problem and modelling in Lean, we now describe the algorithm to verify a solution partially. We focus in this section on the soundness by verifying a given proof tree. In the previous section we introduced the following characterization for valid proof trees:
+After introducing the problem and modeling datalog in Lean, we now describe the algorithm to verify a solution partially. We focus in this section on the soundness by verifying a given proof tree. In the previous section, we introduced the following characterization for valid proof trees:
 
 \begin{lstlisting}
     def isValid(P: program τ) (d: database τ) (t: proofTree τ): 
@@ -14,16 +14,17 @@ After introducing the problem and modelling in Lean, we now describe the algorit
     ∨ (l = [] ∧ d.contains a)
 \end{lstlisting}
 
-This is a disjunction so we need for both disjuncts procedures to decide if they are true.
-The second part of this disjunction consists of a database check and an easy check of list emptyness. Both can be done in a straightforward way.
-The first part is more interesting. Since we use there existential quantifiers, this is not computable and have to implement a function for this. While we can simply iterate over the program to check for the existance of an $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use some more sophisticated to check this which we introduce next.
+This is a disjunction so we need procedures to decide for both disjuncts if they are true.
+The second disjunct consists of a database check and a check of list emptiness. Both can be done straightforwardly.
+
+The first part is more interesting. Since we use there existential quantifiers, this is not computable and have to implement a function for this. While we can simply iterate over the program to check for the existence of an $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use some more sophisticated to check this which we introduce next.
 
 
 \subsection{Substitutions}
-    A grounding is function from variables to constants. This means we always need to specify for every variable a constant that it is mapped to. This was good in the definitions to ensure that we always get a ground atom, but raises in the unification case problems as the following example demonstrates.
+    A grounding is a function from variables to constants. This means we always need to specify for every variable a constant that it is mapped to. This was good in the definitions to ensure that we always get a ground atom, but raises problems in the unification case as the following example demonstrates.
 
     \begin{example}\label{ex:subsGroun}
-        Suppose we want ask whether we can unify the list of terms $l_1 = [?x, ?y]$ with the list of constants $l_2= [a,b]$, i.e. we look for a function $f: V \to C$ such that mapping every element of $l_1$ with $f$ yields $l_2$.
+        Suppose we want to know whether we can unify the list of terms $l_1 = [?x, ?y]$ with the list of constants $l_2= [a,b]$, i.e. we look for a function $f: V \to C$ such that mapping every element of $l_1$ with $f$ yields $l_2$.
 
         We start by trying to unify $x$ and $a$. If we use groundings, we might use this function $g = x \mapsto a, y \mapsto a, z \mapsto a$.
 
@@ -51,7 +52,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
         else term.variableDL v
     \end{lstlisting}
 
-    Similar to groundings we can extend this to atoms (\applySubstitutionAtom) and rules (\applySubstitutionRule). As we no longer replace all variables by constants, this only results in atoms instead of ground atoms.
+    Similar to groundings we can extend this to atoms (\applySubstitutionAtom) and rules (\applySubstitutionRule). As we no longer replace all variables with constants, this only results in atoms instead of ground atoms.
 
     The main result we want to prove is the following.
 
@@ -62,16 +63,16 @@ The first part is more interesting. Since we use there existential quantifiers, 
         (∃ (s: substitution τ), applySubstitutionRule s r'= r)
     \end{lstlisting}
 
-    This allows us to replace the grounding check by a substitution check, when trying to validate trees and by this we can bypass the problems that were illustrated in the example above. 
+    This allows us to replace the grounding check with a substitution check when trying to validate trees and by this, we can bypass the problems that were illustrated in the example above. 
 
-    For the forward direction, we want to find an equivalent substitution for every grounding. We can do this by mapping every variable to the the same value of the grounding and place this in the some constructor to obtain an element of the Option type.
+    For the forward direction, we want to find an equivalent substitution for every grounding. We can do this by mapping every variable to the same value of the grounding and place this in the some constructor to obtain an element of the Option type.
 
     \begin{lstlisting}
     def (.\groundingToSubstitution.) (g: grounding τ): substitution τ
         := fun x => Option.some (g x)
     \end{lstlisting}
 
-    We have to prove that these are actually equivalent. We defined in the previous section a coercion from ground atoms to atoms. We can also coerce constants to terms by the \lstinline|term.constant| constructor which enables to us to use an equality in the following lemma.
+    We have to prove that these are equivalent. We defined in the previous section a coercion from ground atoms to atoms. We can also coerce constants to terms by the \lstinline|term.constant| constructor which enables us to use an equality in the following lemma.
 
     \begin{lemma}[\groundingToSubsitutionEquivTerm]
         Let $t$ be a term and $g$ be a grounding. Then the grounding of $t$ by $g$ is equal to the application of
@@ -94,10 +95,10 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
         Any rule in $\mathcal{P}$ is already a ground rule and there exists a substitution, the empty substitution that maps all variables to none, so that the rule is equal to itself as a ground rule.
         
-        There is however no grounding that can achieve this. We cannot define a grounding since we have no constant available, but have variables that need to be mapped somewhere. Therefore the equivalence does not hold here.
+        There is however no grounding that can achieve this. We cannot define a grounding since we have no constant available but have variables that need to be mapped somewhere. Therefore the equivalence does not hold here.
     \end{example}
 
-    In order for the equivalence to hold we always need at least one constant symbol. There exist at least two possibilities to achieve this in Lean. We could require that the type of constants is inhabited or that it is non-empty. We decided to use the first as the inhabited class offers directly a constant, the default value, whereas the class non-empty only proves that such an element exists and requires the axiom of choice to extract it.
+    For the equivalence to hold we always need at least one constant symbol. There exist at least two possibilities to achieve this in Lean. We could require that the type of constants is inhabited or that it is non-empty. We decided to use the first as the inhabited class offers directly a constant, the default value, whereas the class non-empty only proves that such an element exists and requires the axiom of choice to extract it.
 
     \begin{lstlisting}
         def (.\substitutionToGrounding.) [ex: Inhabited τ.constants] 
@@ -112,7 +113,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
         If we add the fresh symbol $a$ to $C$, we can use the function $f: V \to C, v \mapsto a$. This will not cause any problems during the verification of a proof tree. While it increases the number of groundings it will not result in any match if used, because it does not occur in the proof tree.
     \end{contexample}
 
-    This is similar to the Herbrand base where we also add a constant symbol, if no constant is present.
+    This is similar to the Herbrand base where we also add a constant symbol if no constant is present.
 
     For the back direction, we prove again that it is equivalent on terms and then the atom and rule case easily follow.
 
@@ -131,7 +132,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
         Let $\tau$ be a signature that contains at least one constant symbol. Then for any $\tau$ rule $r'$ and ground rule $r$ we have that there exists a grounding $g$ such that grounding $r'$ by $g$ yields $r$ iff there exists a substitution $s$ such that applying $s$ to $r'$ yields $r$.
     \end{theorem}
 
-    When introducing substitutions, we had the goal to only add what is needed to a substitution and usually we want the smallest possible substitution. In order to formalize this, we want to define a partial order on substitutions, that is denoted by $\subseteq$
+    When introducing substitutions, we had the goal to only add what is needed to a substitution and usually, we want the smallest possible substitution. In order to formalize this, we want to define a partial order on substitutions, that is denoted by $\subseteq$
 
     Firstly, we define the substitution domain of a substitution as the set of variables for which the substitution is defined. 
 
@@ -140,22 +141,22 @@ The first part is more interesting. Since we use there existential quantifiers, 
         {v | Option.isSome (s v) = true}
     \end{lstlisting}
 
-    A substitution $s_1$ is then a subset of a substitution $s_2$, if both substitutions agree on the substitution domain of $s_1$. Outside of this $s_1$ is never defined, whereas $s_2$ might be, so that we view $s_1$ as smaller.
+    A substitution $s_1$ is then a subset of a substitution $s_2$, if both substitutions agree on the substitution domain of $s_1$. Outside of this $s_1$ is never defined, whereas $s_2$ might be, so we view $s_1$ as smaller.
 
     \begin{lstlisting}
     def substitution_subs (s1 s2: substitution τ): Prop :=
     ∀ (v: τ.vars), v ∈ substitution_domain s1 → s1 v = s2 v
     \end{lstlisting}
 
-    This relation is by defintion reflexive (\substitutionsubsrefl). It is also anti-symmetric (\substitutionsubsantisymm). Since $s_1 \subseteq s_2$ anywhere where $s_1$ is defined $s_2$ is defined as well and has the same value. Since $s_2 \subseteq s_1$ anywhere where $s_2$ is defined the same holds, so that they have the same substitution domain and on it the same values. By the principle of function extensionaliy both functions are equal.
+    This relation is by defintion reflexive (\substitutionsubsrefl). It is also anti-symmetric (\substitutionsubsantisymm). Since $s_1 \subseteq s_2$ anywhere where $s_1$ is defined $s_2$ is defined as well and has the same value. Since $s_2 \subseteq s_1$ anywhere where $s_2$ is defined the same holds, so that they have the same substitution domain and on it the same values. By the principle of function extensionality, both functions are equal.
 
     Lastly, it is also transitive (\substitutionsubstrans), so it is an instance of a partial order.
 
 \subsection{Unification}
 
-We know that instead of finding a grounding, it suffices to find a substitution. Now we want to describe an algorithm that tells us whether the ground rule that is formed from a vertex of the proof tree and its children is in the ground program. For this we take inspiration from the unification problem of first-order logic.
+We know that instead of finding a grounding, it suffices to find a substitution. Now we want to describe an algorithm that tells us whether the ground rule that is formed from a vertex of the proof tree and its children is in the ground program. For this, we take inspiration from the unification problem of first-order logic.
 
-In the unification problem of first-order logic we are given a set of equations $s_1 = t_1 \dots s_n = t_n$ between first-order terms and are required to present the most-general unifier. A unifier $\mu$ is function from variables to term so that if we replace every variable $v$ in $s_i$ and $t_i$ by $\mu (v)$ then all equations are fulfilled. A unifier $\mu$ is called the most general unifier if for every unifier $\sigma$ there exists a function $\tau$ with $\sigma = \tau \circ \mu$.
+In the unification problem of first-order logic we are given a set of equations $s_1 = t_1 \dots s_n = t_n$ between first-order terms and are required to present the most general unifier. A unifier $\mu$ is a function from variables to term so that if we replace every variable $v$ in $s_i$ and $t_i$ by $\mu (v)$ then all equations are fulfilled. A unifier $\mu$ is called the most general unifier if for every unifier $\sigma$ there exists a function $\tau$ with $\sigma = \tau \circ \mu$.
 
 Our problem is similar and is in general an instance of the following problem.
 
@@ -169,7 +170,7 @@ Our problem is similar and is in general an instance of the following problem.
 
 An example would be to consider $A$ as the type of terms and $B$ as the type of constants. Then $f$ is \lstinline|applySubstitutionTerm|. Another instance would be with atoms and ground atoms. $a$ is in general the normal object and $b$ the ground object.
 
-An algorithm to solve the first-order unfication problem is the algorithm of Martelli and Montanari \cite{MartMont} and is depicted below.
+An algorithm to solve the first-order unification problem is the algorithm of Martelli and Montanari \cite{MartMont} and is depicted below.
 
 
 \begin{algorithm}
@@ -188,12 +189,12 @@ An algorithm to solve the first-order unfication problem is the algorithm of Mar
 \end{algorithmic}
 \end{algorithm}
 
-This algorithm offers a good starting point for our own algorithms, but we certain transformation can't occur in the limited syntactic form we operate in. Additionally, we want to output a substitution instead of just answering whether a substitution exists. It is sufficient to do it here, but will later be important. Instead of mapping all $x$ to $t$ as done there in step 5, we will add $x\mapsto t$ to a substitution that is presented as an input. If a variable occurs on the left side, we will check whether it is already in the domain of the substitution and if so check if its current value is consistent with the right side.
-Steps 2 and 3 deal with function symbols that are not allowed in our language apart from constants, so that we can replace it by checking whether two constants are equal in the term case. For atoms or rules we use something similar and split the problem into multiple smaller problems for terms or atoms.
+This algorithm offers a good starting point for our algorithms, but we know that certain transformations can't occur in the limited syntactic form we operate in. Additionally, we want to output a substitution instead of just answering whether a substitution exists. It is sufficient to do it here, but will later be important. Instead of mapping all $x$ to $t$ as done there in step 5, we will add $x\mapsto t$ to a substitution that is presented as an input. If a variable occurs on the left side, we will check whether it is already in the domain of the substitution and if so check if its current value is consistent with the right side.
+Steps 2 and 3 deal with function symbols that are not allowed in our language apart from constants, so that we can replace them by checking whether two constants are equal in the term case. For atoms or rules, we use something similar and split the problem into multiple smaller problems for terms or atoms.
 
-Finally, as the one side of the equation is always a ground object there will never be a variable on this side, so that we do not have to swap the equation as in step 4.
+Finally, as the one side of the equation is always a ground object there will never be a variable on this side, so we do not have to swap the equation as in step 4.
 
-We will start with matching a term to a constant with the following algorithm.
+We will start by matching a term to a constant with the following algorithm.
 
 \begin{lstlisting}
     def (.\matchTerm.) (t: term τ)(c: τ.constants) (s: substitution τ):
@@ -217,7 +218,7 @@ We will start with matching a term to a constant with the following algorithm.
 
 We are given a term $t$, a constant $c$ and a current substitution $s$ and want to return the minimal solution.
 
-This is done by case distinction. If $t$ is a constant, then we either return $s$ if $t$ is equal to $c$, or return none as two different constants can not be unified by a substitution. If $t$ is variable, we check if $t$ is in the domain of $s$. If it is already defined we check if the value matches the required value. If it is not defined we extend $s$ with the new mapping $v \mapsto c$.
+This is done by case distinction. If $t$ is a constant, then we either return $s$ if $t$ is equal to $c$ or return none as two different constants can not be unified by a substitution. If $t$ is variable, we check if $t$ is in the domain of $s$. If it is already defined we check if the value matches the required value. If it is not defined we extend $s$ with the new mapping $v \mapsto c$.
 Formally extend is defined in the following way:
 
 \begin{lstlisting}
@@ -226,7 +227,7 @@ Formally extend is defined in the following way:
     := fun x => if x = v then Option.some c else s x
 \end{lstlisting}
 
-We know formally prove the correctness of this algorithm. 
+We now formally prove the correctness of this algorithm. 
 
 \begin{lemma}[\matchTermFindsSolution]
     Let $t$ be a term, $c$ be a constant and $s$ be a substitution. If matchTerm $t$ $c$ $s$ returns a substitution $s'$, then $s'$ is a solution.
@@ -234,11 +235,11 @@ We know formally prove the correctness of this algorithm.
 \begin{proof}
 The proof is done via case distinction. Suppose firstly that $t$ is a constant $c'$. Since matchTerm returned a substitution we must have that $c$ and $c'$ are the same constant and therefore $s'$ is $s$. Applying a substitution to a constant does not change it, so $s' t = s' (c') = c' = c$. Additionally since $\subseteq$ is a partial order and $s' = s$, we have that $s \subseteq s'$
 
-Now we assume that $t$ is a variable $v$. Now we do another case distinction on whether $s v$ is defined or not. If it is defined, $v$ must already be mapped to $c$ and we return $s$ as this is a solution as seen previously. If it would be mapped to something else, then matchTerm would return none, which would be in violation to our assumptions.
-If it is not defined, we use extend. After that $v$ is mapped to $c$, so that $s' t$ will be equal to $c$. Now we finally have to show that $s \subseteq$ extend $s$ $v$ $c$. We only change the value of $v$. Since $s v$ was not defined earlier, for any variable in the domain of $s$, $s$ and extend $s$ $v$ $c$ agree, so that it is fulfilled.(\ssubsetextends)
+Now we assume that $t$ is a variable $v$. Now we do another case distinction on whether $s v$ is defined or not. If it is defined, $v$ must already be mapped to $c$ and we return $s$ as this is a solution as seen previously. If it would be mapped to something else, then matchTerm would return none, which would violate our assumptions.
+If it is not defined, we use extend. After that $v$ is mapped to $c$, so that $s' t$ will be equal to $c$. Now we finally have to show that $s \subseteq$ extend $s$ $v$ $c$. We only change the value of $v$. Since $s v$ was not defined earlier, for any variable in the domain of $s$, $s$ and extend $s$ $v$ $c$ agree, so that it is fulfilled(\ssubsetextends).
 \end{proof}
 
-We have proven so far the matchTerm returns a solution, but it might not be a minimal solution. As we can transform any grounding into a substitution a match function might return the grounding in \cref{ex:subsGroun}. As we are interested in matching rules and ground rules, we will have to match many terms so that the minimality is an important property for later proofs.
+We have proven so far that matchTerm returns a solution, but it might not be a minimal solution. As we can transform any grounding into a substitution a match function might return the grounding in \cref{ex:subsGroun}. As we are interested in matching rules and ground rules, we will have to match many terms so that the minimality is an important property for later proofs.
 
 \begin{lemma}[\matchTermFindsMinimalSolution]\label{lem:matchTermMin}
     Let $t$ be a term, $c$ be a constant and $s$ be a substitution. If matchTerm $t$ $c$ $s$ returns a substitution $s'$, then $s'$ is a minimal solution.
@@ -250,7 +251,7 @@ We prove the minimality again via case distinction on $t$. If $t$ is constant, t
 
 Now we consider the case of $t$ being a variable $v$ and do a case distinction whether $s v$ is defined. If it was already defined, then $s'$ must again be equal to $s$, so that the claim is fulfilled by the argument above.
 If $s v$ was not defined, we have to show that extend $s$ $v$ $c$ is a subset of any such $s^\ast$. We assume for a contradiction that this is not the case. Then there must be a variable in the domain of extend $s$ $v$ $c$ such that extend $s$ $v$ $c$ and $s^\ast$ differ. Suppose this variable is $v$. Then $s^\ast$ would either not be defined for $v$ or map $v$ to some other constant $c'$. In both cases $s^\ast v \neq c$, so that $s^\ast$ would not be a solution and we would have reached a contradiction.
-If it is some other variable $v'$, then the value of extend $s$ $v$ $c$ is simply the value of $s$. Since $s^\ast$ maps $v$ to a different value compared $s$, $s$ would not be a subset of $s^\ast$ and we have reached another contradiction.
+If it is some other variable $v'$, then the value of extend $s$ $v$ $c$ is simply the value of $s$. Since $s^\ast$ maps $v$ to a different value compared to $s$, $s$ would not be a subset of $s^\ast$ and we have reached another contradiction.
 \end{proof}
 
 So we know that if matchTerm returns a substitution then it is a minimal solution. This holds however already if we never return a solution. We have to prove that if no substitution exists, then there is no solution.
@@ -286,21 +287,21 @@ After proving the correctness for terms we now want to move up to atoms. Unfortu
 \end{lstlisting}
 
 Here we are given as previously a substitution as an input with the two lists. We see that if both lists differ in length then the function always returns none.
-If both list are the same length we start matching the front and recursively call matchTermList with the resulting substitution until no substitution is found or the entire list is processed.
+If both lists are the same length we start matching the front and recursively call matchTermList with the resulting substitution until no substitution is found or the entire list is processed.
 
 \begin{lemma}[\matchTermListFindsSolution]
     Let $s$ be a substitution, $l_1$ a list of terms and $l_2$ a list of constants. If matchTermList $s$ $l_1$ $l_2$ returns a substitution $s'$, then $s'$ is a solution.
 \end{lemma}
 \begin{proof}
     We prove this by induction on $l_1$ for arbitrary $s$ and $l_2$.
-    In the base case $l_1$ is the empty list. Since matchTermList returns something, $l_2$ must also be the empty list. Then $s'$ is equal to $s$. Applying this to an empty list returns an empty list and by reflexivity we have that $s' \subseteq s$.
+    In the base case, $l_1$ is the empty list. Since matchTermList returns something, $l_2$ must also be the empty list. Then $s'$ is equal to $s$. Applying this to an empty list returns an empty list and by reflexivity, we have that $s' \subseteq s$.
 
     In the induction step we have that $l_1$ is of the form $hd::tl$ and we can similarly assume that $l_2$ is of the form $hd'::tl'$ since matchTermList returns a substitution. Since matchTermList returned a substitution, matchTerm $hd$ $hd'$ also must return a substitution $s^\ast$.
 
-    We then use this as an input to gain $s'$ from matchTermList $s^\ast$ $tl$ $tl'$. By the induction hypothesis we know that $s^\ast \subseteq s'$ and applying $s'$ to $tl$ results in it being equal to $tl'$. 
-    First, we have to show that $s \subseteq s'$. From the correctness proof of matchTerm we know that $s \subseteq s^\ast$ and from the induction hypothesis we know that $s^\ast \subseteq s'$. Since $\subseteq$ is transitive, the result follows.
+    We then use this as an input to gain $s'$ from matchTermList $s^\ast$ $tl$ $tl'$. By the induction hypothesis, we know that $s^\ast \subseteq s'$ and applying $s'$ to $tl$ results in it being equal to $tl'$. 
+    First, we have to show that $s \subseteq s'$. From the correctness proof of matchTerm, we know that $s \subseteq s^\ast$ and from the induction hypothesis we know that $s^\ast \subseteq s'$. Since $\subseteq$ is transitive, the result follows.
 
-    Secondly, we prove that $s'$ is a solution for $hd::tl$ and $hd'::tl'$. From the induction hypothesis we know that mapping $tl$ with $s'$ yields $tl'$. We know that $s^\ast$ was a solution for $hd$ and $hd'$ and since $s^\ast \subseteq s'$, $s'$ agrees on the domain of $s^\ast$ with $s^\ast$. Therefore it is still a solution for $hd$ and $hd'$. If $hd$ was a constant, then any substitution will do. If $hd$ was a variable, then it is mapped to the same element as by $s^\ast$ so that applying $s'$ to $hd$ yields $hd'$ as well, so that applying $s'$ to $hd::tl$ yields $hd':tl'$. 
+    Secondly, we prove that $s'$ is a solution for $hd::tl$ and $hd'::tl'$. From the induction hypothesis, we know that mapping $tl$ with $s'$ yields $tl'$. We know that $s^\ast$ was a solution for $hd$ and $hd'$ and since $s^\ast \subseteq s'$, $s'$ agrees on the domain of $s^\ast$ with $s^\ast$. Therefore it is still a solution for $hd$ and $hd'$. If $hd$ was a constant, then any substitution would do. If $hd$ was a variable, then it is mapped to the same element as by $s^\ast$ so that applying $s'$ to $hd$ yields $hd'$ as well, so that applying $s'$ to $hd::tl$ yields $hd':tl'$. 
 \end{proof}
 
 After proving that it is a solution, we prove that the solution is minimal.
@@ -318,17 +319,17 @@ After proving that it is a solution, we prove that the solution is minimal.
     
 \end{proof}
 
-Finally the negative case that confirms that the return value of none does indeed state that there is no solution.
+Finally, the negative case that confirms that the return value of none does indeed state that there is no solution.
 
 \begin{lemma}[\matchTermListNoneImplNoSolution]
     Let $s$ be a substitution, $l_1$ a list of terms and $l_2$ a list of constants. If matchTermList $s$ $l_1$ $l_2$ returns none, then there exists no solution $s'$.
 \end{lemma}
 \begin{proof}
-    We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is the empty list then $l_2$ must non-empty and then no solution exists.
+    We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is the empty list then $l_2$ must be non-empty and then no solution exists.
 
     In the induction step we have that $l_1$ has the form $hd::tl$. If $l_1$ is empty, the claim is proven, so we assume that $l_2$ has the form $hd'::tl'$. There are two cases where matchTermList can return none. The first case is when matchTerm $hd$ $hd'$ $s$ returns none. If that is the case there is no $s'$ with $s\subseteq s'$ and applying $s$ to $hd$ will make it equal to $hd'$. Therefore the two lists cannot be equal either and the proof is finished.
 
-    If matchTerm $hd$ $hd'$ $s$ returns a substitution $s^\ast$, then matchTermList $s^\ast$ $tl$ $tl'$ must return none. From the induction hypothesis we know that there is no substitution $s'$ with $s^\ast \subseteq s'$ and applying $s'$ to $tl$ bringing it equal to $tl'$. Since $s^\ast$ is already the minimal solution to match $hd$ with $hd'$ there cannot exist a solution whose application will lead to $hd$ and $hd'$ being equal and $tl$ and $tl'$ being equal.
+    If matchTerm $hd$ $hd'$ $s$ returns a substitution $s^\ast$, then matchTermList $s^\ast$ $tl$ $tl'$ must return none. From the induction hypothesis, we know that there is no substitution $s'$ with $s^\ast \subseteq s'$ and applying $s'$ to $tl$ bringing it equal to $tl'$. Since $s^\ast$ is already the minimal solution to match $hd$ with $hd'$ there cannot exist a solution whose application will lead to $hd$ and $hd'$ being equal and $tl$ and $tl'$ being equal.
 \end{proof}
 
 This can be used to create a matchAtom procedure. We are given an atom and a ground atom and check if the symbols are equal. If they are, we use matchTermList to find a unifier.
@@ -345,7 +346,7 @@ If the symbols are different, we will never unify them and can already return no
 
 The correctness proofs follow from the proofs of matchTermList.
 
-Now we can create a \matchAtomList function similarly to \matchTermList and use this to define a \matchRule function. We first try match the head of the rule with the head of the ground rule. If this returns a solution, we use this as the start for matching the bodies. If not, we will not find a solution and return none.
+Now we can create a \matchAtomList function similar to \matchTermList and use this to define a \matchRule function. We first try to match the head of the rule with the head of the ground rule. If this returns a solution, we use this as the start for matching the bodies. If not, we will not find a solution and return none.
 
 \begin{lstlisting}
     def (.\matchRule.) (r: rule τ) (gr: groundRule τ):
@@ -357,7 +358,7 @@ Now we can create a \matchAtomList function similarly to \matchTermList and use 
 
 \end{lstlisting}
 
-We know prove again that if this returns a substitution then this is a solution and if none is return then there is no solution using our previous results. 
+We now prove again that if this returns a substitution then this is a solution and if none is returned then there is no solution using our previous results. 
 We want a statement with the quantifier to combine it with the theorem about the equivalence between groundings and substitutions. We can prove this statement by using the result of \matchRule as a witness for the quantifier. For the back direction, we see that this statement implies that a solution exists, which we always find with \matchRule.
 
 \begin{theorem}[\matchRuleIsSomeIffSolution]\label{trm:matchRule}
@@ -365,11 +366,11 @@ Let $r$  be a rule and $gr$ be a ground rule. Then there exists a substitution $
 \end{theorem}
 
 
-We now have a method to replace this quantifier by a computable function and can finally devise the check for tree validation.
+We now have a method to replace this quantifier with a computable function and can finally devise the check for tree validation.
 
 \subsection{Tree validation}
 
-We have so far introduced introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or by \cref{trm:groundingSubstitutionEquivalence} a substitution $s$) and a rule $r$ from the program $P$, so that applying $g$ to $r$ yields $gr$. We want to use the \matchRule function defined earlier for this. 
+We have so far introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step, we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or by \cref{trm:groundingSubstitutionEquivalence} a substitution $s$) and a rule $r$ from the program $P$ so that applying $g$ to $r$ yields $gr$. We want to use the \matchRule function defined earlier for this. 
 We can simply pass each rule of the program given as a list of rules into this function and stop when \matchRule returns a some object. This works but requires in the worst case to match every rule in the program with a given ground rule. Suppose that the predicate symbol of the head of the given ground rule is $T$. We can safely discard any rule whose head is not an atom with the predicate symbol $T$. This can be generalized into the symbol sequence which is a list of predicate symbols that starts with the predicate symbol of the head and then the predicate symbols of the body atoms in the order the atoms occur in the body.
 
 \begin{lstlisting}
@@ -380,9 +381,9 @@ We can simply pass each rule of the program given as a list of rules into this f
 
 The equality of symbol sequences is a necessary condition for the existence of substitution that matches a rule with a ground rule, as the application of any substitution does not change the symbols and therefore not the symbol sequence. (\symbolSequenceNotEq).
 
-Now we could iterate over the whole program and calculate the symbol sequence for every rule and only start the matchRule process for those whose symbol sequences are equal to the given ground rule. In the worst case we still have to iterate over the whole program. It would be even better to preprocess  the program into a look-up structure that returns a list of rules for a given symbol sequence.
+Now we could iterate over the whole program and calculate the symbol sequence for every rule and only start the matchRule process for those whose symbol sequences are equal to the given ground rule. In the worst case, we still have to iterate over the whole program. It would be even better to preprocess the program into a look-up structure that returns a list of rules for a given symbol sequence.
 
-We use a function of the type \lstinline|List τ.predicateSymbols → List (rule τ)| as the look up structure and build it iteratively by adding the first rule of the given program to the right symbol sequence element.
+We use a function of the type \lstinline|List τ.predicateSymbols → List (rule τ)| as the look-up structure and build it iteratively by adding the first rule of the given program to the right symbol sequence element.
 
 \begin{lstlisting}
     def (.\parseProgramToSymbolSequenceMap.) (P: List (rule τ)) 
@@ -396,7 +397,7 @@ We use a function of the type \lstinline|List τ.predicateSymbols → List (rule
             (fun x => if x = seq then hd::(m x) else m x)
 \end{lstlisting}
 
-If start this with a function that maps any symbol sequence to the empty list and gain a function $m'$ then for any list of predicate symbols $l$, $m'(l)$ returns exactly those rules in $P$ whose symbol sequence matches $l$. This follows from the following lemma.
+If we start this with a function that maps any symbol sequence to the empty list and gain a function $m'$ then for any list of predicate symbols $l$, $m'(l)$ returns exactly those rules in $P$ whose symbol sequence matches $l$. This follows from the following lemma.
 
 \begin{lemma}[\parseProgramToSymbolSequenceMapmem]\label{lem:parseProgramToSymbolSequenceMap}
     Let $P$ be a program and $m$ be a function that maps a list of predicate symbols to the list of rules. Let $m'$ be the result of \lstinline|parseProgramToSymbolSequenceMap P m|. Then for any list of predicate symbols $l$ and rule $r$, we have $r$ is in $m'(l)$ iff $r$ was in $m(l)$ or $r$ is in $P$ and the symbol sequence of $r$ equals $l$.
@@ -431,14 +432,14 @@ def (.\checkRuleMatch.) (m: List τ.predicateSymbols → List (rule τ)) (gr: gr
     Let P be a program, $m$ be the result of \lstinline|parseProgramToSymbolSequenceMap P (fun _  => [])| and $gr$ a ground rule. Then \lstinline|checkRuleMatch m gr| returns ok iff there exists a rule $r$ in $P$ and a grounding $g$ such that grounding $r$ with $g$ yields $gr$.
 \end{lemma}
 \begin{proof}
-    Let $l$ be the symbol sequence of $gr$. Then if checkRuleMatch returns ok, then there exists a rule $r$ in $m(l)$ there exists a grounding $g$ such that grounding $r$ by $g$ yields $gr$. By \cref{lem:parseProgramToSymbolSequenceMap} this rule $r$ is a member of $P$ so the claim is proven.
+    Let $l$ be the symbol sequence of $gr$. If checkRuleMatch returns ok, then there exists a rule $r$ in $m(l)$ there exists a grounding $g$ such that grounding $r$ by $g$ yields $gr$. By \cref{lem:parseProgramToSymbolSequenceMap} this rule $r$ is a member of $P$ so the claim is proven.
 
-    If checkRuleMatch returns an error, then we have to show that for rule $r \in P$ and grounding $g$ grounding $r$ by $g$ yields a different ground rule compared to $gr$. If $r$ has the same symbol sequence as $gr$, then it occured in $m(l)$ and since checkRuleMatch returned an error matchRule r gr must return none so that the property holds.
+    If checkRuleMatch returns an error, then we have to show that for rule $r \in P$ and grounding $g$ grounding $r$ by $g$ yields a different ground rule compared to $gr$. If $r$ has the same symbol sequence as $gr$, then it occurred in $m(l)$ and since checkRuleMatch returned an error matchRule r gr must return none so that the property holds.
 
     If $r$ has a different symbol sequence to $gr$ then this property holds as well due to \symbolSequenceNotEq and \cref{trm:groundingSubstitutionEquivalence}.
 \end{proof}
 
-This function is almost enough to complete the rule case. We just need to also verify all subtrees. For this we introduce the \lstinline|List.map_except_unit| function that applies a function of the type \lstinline|A → Except B Unit| to a list $l$ until the first error occurs. If no error occurs, then we return unit which is a type that has only one element $()$ and is the place holder because we have to return something.
+This function is almost enough to complete the rule case. We just need to also verify all subtrees. For this we introduce the \lstinline|List.map_except_unit| function that applies a function of the type \lstinline|A → Except B Unit| to a list $l$ until the first error occurs. If no error occurs, then we return Unit which is a type that has only one element $()$ and is the placeholder because we have to return something.
 
 \begin{lstlisting}
     def (.\Listmapexceptunit.) {A B: Type} (l: List A) 
@@ -453,7 +454,7 @@ This function is almost enough to complete the rule case. We just need to also v
 
 We can prove by induction that this function returns unit iff $f$ returns unit on all elements of the list $l$ (\ListmapexceptunitIsUnitIffAll).
 
-Now we have the necessary tools to check whether a given proof tree is valid which is done by the \treeValidator. For a tree with the root $a$ and subtrees $l$, we do a case distinction whether $l$ is empty. If $a$ is additionally an element of the database, then we accept because we are in the database case. If not we use checkRuleMatch to check for the rule case. This is returns ok, then we can already accept because there are no subtrees.
+Now we have the necessary tools to check whether a given proof tree is valid which is done by the \treeValidator. For a tree with the root $a$ and subtrees $l$, we do a case distinction whether $l$ is empty. If $a$ is additionally an element of the database, then we accept $a$ because we are in the database case. If not we use checkRuleMatch to check for the rule case. If this returns ok, then we can already accept $a$ because there are no subtrees.
 
 If not we can only be in the rule case and first use checkRuleMatch and if this returns ok, then we check all subtrees using the treeValidator again called via \Listmapexceptunit.
 
@@ -474,10 +475,10 @@ def treeValidator (m: List τ.predicateSymbols → List (rule τ)) (d: database 
       | Except.error msg => Except.error msg
 \end{lstlisting}
 
-Using the previous lemmas and an induction over the height of the tree for the recursive calls, we prove the correctness of the treeValidator.
+Using the previous lemmas and induction over the height of the tree for the recursive calls, we prove the correctness of the treeValidator.
 
 \begin{theorem}[\treeValidatorOkIffIsValid]\label{trm:treeValidator}
-    Let P be a program, $m$ be the result of \lstinline|parseProgramToSymbolSequenceMap P (fun _  => [])| and $d$ be a database. For any proof tree $t$ \lstinline|treeValidator m d t| returns ok iff $t$ is valid for $P$ and $d$.
+    Let P be a program, $m$ be the result of \lstinline|parseProgramToSymbolSequenceMap P (fun _  => [])| and $d$ be a database. For any proof tree $t$, \lstinline|treeValidator m d t| returns ok iff $t$ is valid for $P$ and $d$.
 \end{theorem}
 
 
@@ -489,7 +490,7 @@ let m:= parseProgramToSymbolSequenceMap P (fun _ => [])
 List.map_except_unit l (fun t => treeValidator m d t)
 \end{lstlisting}
 
-Using \cref{trm:treeValidator} and \ListmapexceptunitIsUnitIffAll, we can show that this function returns ok iff all trees in $l$ are valid. We know that a ground atom $ga$ is in the proof-theoretic semantics if there exists a proof tree with the root $ga$, so that we can conclude the set of roots of the trees in $l$ is a subset of the semantics. 
+Using \cref{trm:treeValidator} and \ListmapexceptunitIsUnitIffAll, we can show that this function returns ok iff all trees in $l$ are valid. We know that a ground atom $ga$ is in the proof-theoretic semantics if there exists a proof tree with the root $ga$ so that we can conclude the set of roots of the trees in $l$ is a subset of the semantics. 
 
 
 It turns out however that we can do a bit better and prove a stronger statement as the following example shows.
@@ -526,7 +527,7 @@ It turns out however that we can do a bit better and prove a stronger statement 
         \draw (A2) -- (A4);
     \end{tikzpicture}
 
-    The proof tree for $A(b,d)$ already contains proofs for all the other elements of the program so that it would be enough to check this single tree.
+    The proof tree for $A(b,d)$ already contains proofs for all the other elements of the program so it would be enough to check this single tree.
 \end{example}
 
 If we want to check a complete datalog result, we therefore do not have to include a proof tree for every element as they can occur in other proof trees already. We formalize this using the element member function that is true if this element is the root or a member in a subtree.
@@ -538,19 +539,19 @@ def (.\elementMember.) (a: A) (t: tree A): Bool  :=
         List.any l.attach (fun ⟨x, _h⟩ => elementMember a x)
 \end{lstlisting}
 
-In order for a tree to be valid all subtrees must be valid. In the rule case we explicitly required this, whereas there are no subtrees in in the database case. Any element member is the root of some subtree and therefore any element member of a valid proof tree is in the proof-theoretic semantics 
+A tree is valid if all subtrees are valid. In the rule case, we explicitly required this, whereas there are no subtrees in the database case. Any element member is the root of some subtree and therefore any element member of a valid proof tree is in the proof-theoretic semantics 
 
 (\allTreeElementsOfValidTreeInSemantics).
 
-This allows us to establish the alternative property of validateTreeList. We added the requirement of all proofs being valid in order to prove the back direction. As validity of a proof tree is in general not preserved under permutation, it is not sufficient to just require every element member to be in the proof-theoretic semantics.
+This allows us to establish the alternative property of validateTreeList. We added the requirement of all proofs being valid to prove the back direction. As the validity of a proof tree is in general not preserved under permutation, it is not sufficient to just require every element member to be in the proof-theoretic semantics.
 
 \begin{lemma}[\validateTreeListUnitIffSubsetSemanticsAndAllElementsHaveValidTrees]
     Let $P$ be a program, $d$ be a database and $l$ a list of proof trees. Then validateTreeList returns ok iff all element members of the trees in $l$ are in the proof-theoretic semantics and all trees in $l$ are valid.
 \end{lemma}
 \begin{proof}
-    For the forward direction we already noted that if validateTreeList returns ok, then every tree in $l$ must be valid. By the previous lemma therefore any element member of one of these  trees is in the proof theoretic semantics.
+    For the forward direction, we already noted that if validateTreeList returns ok, then every tree in $l$ must be valid. By the previous lemma therefore any element member of one of these trees is in the proof-theoretic semantics.
 
     For the back-direction follows from the previous observation, that validateTreeList returns ok iff all trees in $l$ are valid.
 \end{proof}
 
-Now it is enough to pass just the proof tree for $A(a,c)$ from our example into the checker to validate the whole input and use in general less trees. 
+Now it is enough to pass just the proof tree for $A(a,c)$ from our example into the checker to validate the whole input and use in general fewer trees. 
