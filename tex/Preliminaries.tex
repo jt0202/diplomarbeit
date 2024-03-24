@@ -466,7 +466,7 @@ The id function we defined above is correct but only works for natural numbers. 
 \end{lstlisting}
 
 This id function has now two arguments. The first argument is the type we want to use it on, the second argument is an element of this type. \lstinline| id $\mathbb{N}$| works as previously and has the type \lstinline|$\mathbb{N} \to \mathbb{N}$|. It seems less clear which type id itself has because this depends on the first argument.
-Such types are called \textit{dependent types} and we would denote this specific type as \lstinline|$\Pi$ (A:Type) A $\to$ A|, known as a \textit{Pi type} Intuitively, a Pi type is a function that returns a type for any input value.
+Such types are called \textit{dependent types} and we would denote this specific type as \lstinline|$\Pi$ (A:Type) A $\to$ A|, known as a \textit{Pi type}. Intuitively, a Pi type is a function that returns a type for any input value.
 
 In practice, we often do not want to write down too much. We can write the function instead also as:
 \begin{lstlisting}
@@ -475,7 +475,7 @@ In practice, we often do not want to write down too much. We can write the funct
 
 Now the type $A$ is an implicit argument, which is denoted by the braces, and Lean can fill it in for the user based on the input $a$. Therefore the user can write just \lstinline|id 42| instead of \lstinline|id $\mathbb{N}$ 42|.
 
-So far we have discussed what types are and how we can define functions that are important for the programming aspect of lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence a proof of statement can be equivalently seen as a function that has the type of the statement. This type of statements is known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:$\mathbb{N}), 0 $\le$ x | or \lstinline| x = y $\lor$ $\neg$ x = y|.
+So far we have discussed what types are and how we can define functions that are important for the programming aspect of lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence a proof of statement can be equivalently seen as a function that has the type of the statement. This type of statements is known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:\mathbb{N}$), 0 $\le$ x | or \lstinline|$\exists$ (x y: Bool), x = y $\lor$ $\neg$ x = y|.
 
 Every statement defines its own type, whose elements are the proofs for it. In contrast to other types, all elements of these types are equivalent which is known as \textit{proof irrelevance}, so that elements of these types only serve as a witness for their truth.
 
@@ -492,7 +492,7 @@ theorem testTheorem {A: Type}: ∀ (x y z: A), x = y → id y = z → z = x := b
 
 The proof is done in tactic mode. We open the tactic mode with the keyword \lstinline|by|. At the start our context only contains that $A$ is a type and the goal is $∀ (x y z: A), x = y → id y = z → z = x$, which is compactly written as
 
-\[ \{A:Type\} \vdash ∀ (x y z: A), x = y → id y = z → z = x\]
+\[ \{A:Type\} \vdash ∀ (x\ y\ z: A), x = y → id\ y = z → z = x\]
 
 We apply tactics to change the goal or a hypothesis in the context. These may introduce new goals or fulfill old goals. A proof is finished, when all goals are proven. We explain the proof now in more detail.
 
@@ -501,7 +501,7 @@ We apply tactics to change the goal or a hypothesis in the context. These may in
     
     At the end, the state is: 
 
-    \[ \{A:Type\} (x y z: A) (h1: x = y) (h2: id y = z)\vdash z = x\]
+    \[ \{A:Type\} (x\ y\ z: A) (h1: x = y) (h2: id\ y = z)\vdash z = x\]
 
     \item After that we use the \lstinline|unfold| tactic at the hypothesis h2. This replace \lstinline|id| with its definition in h2, which now looks like this: $(h2: y = z)$
     
@@ -514,7 +514,7 @@ We apply tactics to change the goal or a hypothesis in the context. These may in
 
     Our current proof state is this:
 
-    \[ \{A:Type\} (x y z: A) (h1: x = y) (h2: y = z)\vdash y = z\]
+    \[ \{A:Type\} (x\ y\ z: A) (h1: x = y) (h2: y = z)\vdash y = z\]
 
     \item Our goal is now exactly the same as the hypothesis $h2$. The \lstinline|exact| tactic uses $h2$ to complete the goal.
 \end{enumerate}
