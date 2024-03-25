@@ -1,6 +1,128 @@
 \section{Validating graphs}\label{sec:valGraph}
 
+In the previous section, we described an algorithm to verify proof trees. Proofs trees are a very natural way to encode certificates for datalog results but have some drawbacks. 
+
+\begin{example}\label{ex:treeGraph}
+    Consider the following program that computes the transitive closure in a different way.
+
+    \begin{equation}
+        \begin{split}
+            T(?x,?y) &\leftarrow E(?x,?y). \\
+            T(?x,?z) &\leftarrow E(?x,?y), T(?y, ?z), T(?y, ?z). \\
+        \end{split}
+    \end{equation}
+
+    The database shall encode the elements of a chain $E(i, i+1)$ for $i \in \{0, n\}$. In the proof tree representation we need the same proof tree twice for $T(?y, ?z)$ in the second rule and will need copies for it later, which results in large trees \todo{Show the exponential growth for clearer}
+\end{example}
+
+Proof trees offer no reusability as they need to stay in the tree shape. Formally we can view the proof tree as a tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices have the same label in a proof tree as in the example above.
+
+A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  with $V_G = \{a \mid \exists v \in V_T, label(v)=a\}$ and $E_G = \{ (a_1, a_2) \mid \exists v_1, v_2 \in V_T,  label(v_i) = a_i \land (v_1, v_2) \in E_T\}$. Then a vertice can be considered equal to its label as no label occurs multiple times anymore.
+
+
+\todo{Do a picture}
+
+Another advantage occurs when we want to validate multiple trees or even a complete result. Multiple trees will often share labels as well and combining them into a graph, i.e. the union of $G_{T_i}$ for trees $T_i$ will again include every label just once. In the previous section, we introduced the possibility of not having to check every proof tree as they occur in other proof trees as well. Selecting a minimal amount of proof trees to check a complete result is however still an instance of the NP-hard subset cover problem.
+
+Any explanation by a proof tree was a finite sequence of rule applications. In order to preserve this, we require a graph to be acyclic. If not we would require an atom to derive itself. This is not possible so that there had to be another reason for this. We do not allow multiple explanation for the same fact in a proof tree for our acceptance criteria. There the recursive explanation can be ignored and we can safely require that the graph is acyclic and in total a directed acyclic graph(DAG).
+
 \subsection{Graph model}
+
+As a number of different results from mathematics are already formalized in mathlib, it is no surprise that graphs are already modelled in mathlib as depicted below:
+
+\begin{lstlisting}
+structure SimpleGraph (V : Type u) where
+  /-- The adjacency relation of a simple graph. -/
+  Adj : V → V → Prop
+  symm : Symmetric Adj 
+  loopless : Irreflexive Adj
+\end{lstlisting}
+
+This graph representation is unfortunately not what we need in an algorithm. Firstly, the adjacency relation of this graph is always symmetric so that it does not encode the directed graphs we need. Secondly, the adjacency relation is a function to \lstinline|Prop| and thus in general not computable but we want to use it in an algorithm. Finally, we need for the validation the successors of a vertex as they are supposed to represent the body of a ground rule. When we want to get them in this model we would have to ask the adjacency relation for every vertex if it would be computable.
+
+Therefore we design our own implementation of a graph. We use an adjacency list approach so that we can quickly get all the successors of a vertex. This represented by a hash map whose keys are the vertices. Each vertex is mapped via the hash map towards its successors.
+
+\begin{lstlisting}
+    abbrev (.\PreGraph.) (A: Type) [DecidableEq A] [Hashable A] := 
+        Std.HashMap A (List A)
+
+    def (.\PreGraphvertices.) (g : PreGraph A) : List A := g.toList.map Prod.fst
+    def (.\PreGraphsuccessors.) (g : PreGraph A) (a : A) : List A := g.findD a []
+\end{lstlisting}
+
+\lstinline|Std.HashMap.toList| returns here a list of pairs of the type $(A, List\ A)$, i.e. a vertex and its successors. Using \lstinline|Prod.fst| we obtain the first element of every pair in the list, which are all vertices. \lstinline|Std.HashMap.findD a []| returns the value saved with $a$ in the hash map which are the successors of $a$. If a vertex is not present (the value is not in the hash map), then $[]$ is returned which is the fall back option provided to  \lstinline|Std.HashMap.findD|.
+
+This approach contains all important elements in a graph, but there is a small technical problem with it. 
+
+\begin{example}
+    
+    Consider the graph depicted in \cref{ex:counterexampleGraph}. An element is colored, if it is in the list of vertices. The successors of a vertice are all elements that 
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[scale=0.8,transform shape]
+        % Define styles for nodes and edges
+        \tikzstyle{vertex}=[circle, draw=black, fill=white, minimum size=20pt, inner sep=0pt]
+        \tikzstyle{rednode}=[vertex, red]
+      
+        % Define vertices
+        \node[rednode] (v1) at (1.5,0) {\textcolor{white}{1}};
+        \node[rednode] (v2) at (3,0) {\textcolor{white}{2}};
+        \node[rednode] (v3) at (4.5,0) {\textcolor{white}{3}};
+        \node[vertex] (v4) at (6,0) {4};
+      
+        % Draw edges
+        \draw[->] (v1) -- (v2);
+        \draw[->] (v2) -- (v3);
+        \draw[->] (v3) -- (v4);
+      
+      \end{tikzpicture}
+    \caption{An example of a pregraph}      
+    \label{ex:counterexampleGraph}
+
+\end{figure}
+    We can view the type \lstinline|Fin 5|, i.e. the natural numbers $n$ with the property that $n<5$. The vertices are the list $[1,2,3]$. The vertex 3 has the element 4 as a successor, but 4 is not a vertex of the graph. Such a behaviour is undesireable as searching for vertices that satisfy some criteria may lead outside of the graph.
+\end{example}
+
+We define a pregraph to be complete, if every successor of a vertex is a vertex itself and can then avoid the problem.
+
+\begin{lstlisting}
+    def (.\PreGraphcomplete.) (pg: PreGraph A) := 
+    ∀ (a:A), pg.contains a →  ∀ (a':A), a' ∈ (pg.successors a) → pg.contains a'
+\end{lstlisting}
+
+A graph is then a complete pre-graph and we can lift all previous operations to this new type.
+\begin{lstlisting}
+abbrev (.\Graph.) (A: Type) [DecidableEq A] [Hashable A] := 
+    { pg : PreGraph A // pg.complete }
+\end{lstlisting}
+
+The completeness predicate was necessary, because our type is a superset than the vertices that occur in the graph. We do not expect every ground atom to be in the graph. An alternative would be to create a subtype of those ground atoms that occur in a list but this requires many types conversions when creating a graph from scratch as the list of vertices will change. Here we can add vertices to the graph and only have to prove that the completeness property still holds at the end.
+
+We start by formalizing walks in a graph. Walks allow the repitition of vertices in itself in contrast to paths which suffices us.
+
+A walk $w$ in a graph $G$ is a list of vertices that are all vertices of $G$ and are connected via the successor relation of $G$, i.e. for every $i$ with $0 < i < i.length$ we have that $w[i-1] \in G.successors\ w[i]$. The starting vertex of the walk is consequently at the back.
+
+\begin{lstlisting}
+def (.\isWalk.) (l: List A) (G: Graph A): Prop :=
+    (∀ (a:A), a ∈ l → a ∈ G.vertices ) ∧ 
+    ∀ (i: ℕ), i > 0 → ∀ (g: i < l.length), l.get (Fin.mk i.pred (pred_lt i l.length g)) ∈ G.successors (l.get (Fin.mk i g) )
+\end{lstlisting}
+
+Due to the completeness predicate it would suffice to require that the starting vertex is in $G$ but this variant is simpler to state. We also allow the empty walk $[]$ as this will be beneficial in later applications.
+
+A cycle is supposed to be a walk that starts and ends with the same node and an acyclic graph is a graph that has no cycles. As any list that only contains a single vertex of the graph would fulfill this property we require that a cycle has additionally at least length two.
+
+\begin{lstlisting}
+def (.\isCycle.) (l: List A) (G: Graph A): Prop :=
+  if h: l.length < 2
+  then False
+  else
+
+  isWalk l G ∧ l.get (Fin.mk 0 _) = l.get (Fin.mk l.length.pred _)
+
+def (.\isAcyclic.) (G: Graph A) := ∀ (l: List A), ¬ isCycle l G
+\end{lstlisting}
 
 \subsection{Validation of a graph}
 

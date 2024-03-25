@@ -2,15 +2,25 @@ import os
 import re
 
 splitSymbols= r'[(\s\:]'
+namespace_regex = r'namespace (.+)\n'
 
 # Function to perform some action on files
 def process_file(root, file):
     file_path = os.path.join(root, file)
     commands = []
     with open(file_path) as f:
+        namespace = ""
         lines = f.readlines()
 
         for i,line in enumerate(lines):
+            line = line.lstrip()
+            if line.startswith("namespace"):
+                print(line)
+                namespace = re.match(namespace_regex, line).group(1)
+                continue
+            if ''.join(line.split()) == "end" + namespace:
+                namespace = ""
+
             if line.startswith("def") or line.startswith("lemma") or line.startswith ("theorem") or line.startswith("structure") or line.startswith("inductive") or line.startswith("abbrev") or line.startswith("class"): 
                 result = re.split(splitSymbols, line)
                 # allow string to be valid latex
@@ -24,7 +34,7 @@ def process_file(root, file):
                 elif resultName == "rule":
                     commands.append(f"\\newcommand{{\\datalogrule}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
                 else:
-                    commands.append(f"\\newcommand{{\\{resultName}}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
+                    commands.append(f"\\newcommand{{\\{namespace+resultName}}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
 
     return commands
 

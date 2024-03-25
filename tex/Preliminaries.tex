@@ -540,7 +540,7 @@ This introduces a new type. If we want to just use functions that accept contain
     abbrev NatSet := Set $\mathbb{N}$
 \end{lstlisting}
 
-The CIC and Lean allow the creation of types by induction. We can create our own implementation of the natural numbers by the \lstinline|inductive| keyword. After that, we list the constructors. These can be constant constructors such as \lstinline|zero| or function creators like \lstinline|succ|
+The CIC and Lean allow the creation of types by induction. We can create our own implementation of the natural numbers with the \lstinline|inductive| keyword. After that, we list the constructors. These can be constant constructors such as \lstinline|zero| or function creators like \lstinline|succ|
 An inductive type may have many constructors of both types or even none as the empty type.
 
 \begin{lstlisting}
@@ -549,7 +549,7 @@ An inductive type may have many constructors of both types or even none as the e
     | succ: myNat → myNat
 \end{lstlisting}
 
-Our definition states that an element of \lstinline|myNat| is either \lstinline|zero| or the result of \lstinline|succ| to some other element of \lstinline|myNat|. Any element of \lstinline|myNat| is only the result of one of these constructors and all elements of \lstinline|myNat| are different.
+Our definition states that an element of \lstinline|myNat| is either \lstinline|zero| or the result of applying \lstinline|succ| to some other element of \lstinline|myNat|. Any element of \lstinline|myNat| is only the result of one of these constructors and all elements of \lstinline|myNat| are distinct.
 
 A typical mathematical definition for this would be: myNat is the smallest set $S$ of elements such that it contains $zero$ and whenever an element $a$ is in $S$, then also $succ(a)$ is in $S$.
 
