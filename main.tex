@@ -63,6 +63,11 @@ reversed diagonal fill/.style 2 args={fill=#2, path picture={
 \definecolor{leansymbolcolor}{HTML}{2010A0} % mainly debugging; use black to hide
 \input{codeCommands.tex}
 
+% starts with noncomputable not currently created by algorithm
+\newcommand{\Finsetfilternc}{\repoLinkCode{GraphValidation.lean\#667}{Finset.mem\_filter}}
+\newcommand{\globalSuccessors}{\repoLinkCode{GraphValidation.lean\#677}{globalSuccessors}}
+
+
 \AddToHook{cmd/section/before}{\clearpage}
 
 \title{LEAN-aided verification of datalog reasoning results}
@@ -75,7 +80,7 @@ reversed diagonal fill/.style 2 args={fill=#2, path picture={
     \newpage
 
     \section*{Acknowledgements}
-    I would like to thank my advisors Lukas Gerlach and Stephan Mennicke for introducing Lean and the problem to me and their helpful comments during the creation of this thesis. Lukas also improved my previous graph model by adding the hash map implementation.
+    I would like to thank my advisors Lukas Gerlach and Dr. Stephan Mennicke for introducing Lean and the problem to me and their helpful comments during the creation of this thesis. Lukas also improved my previous graph model in \cref{sec:valGraph} by adding the hash map implementation.
 
     I would like to thank Prof. Markus Krötzsch for the formal supervision and his helpful comments during the writing. He proposed amongst other things \cref{ex:treeGraph}.
     

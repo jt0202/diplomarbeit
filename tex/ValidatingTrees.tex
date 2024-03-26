@@ -137,14 +137,14 @@ The first part is more interesting. Since we use there existential quantifiers, 
     Firstly, we define the substitution domain of a substitution as the set of variables for which the substitution is defined. 
 
     \begin{lstlisting}
-    def substitution_domain (s: substitution τ): Set (τ.vars) := 
+    def (.\substitutiondomain.) (s: substitution τ): Set (τ.vars) := 
         {v | Option.isSome (s v) = true}
     \end{lstlisting}
 
     A substitution $s_1$ is then a subset of a substitution $s_2$, if both substitutions agree on the substitution domain of $s_1$. Outside of this $s_1$ is never defined, whereas $s_2$ might be, so we view $s_1$ as smaller.
 
     \begin{lstlisting}
-    def substitution_subs (s1 s2: substitution τ): Prop :=
+    def (.\substitutionsubs.) (s1 s2: substitution τ): Prop :=
     ∀ (v: τ.vars), v ∈ substitution_domain s1 → s1 v = s2 v
     \end{lstlisting}
 

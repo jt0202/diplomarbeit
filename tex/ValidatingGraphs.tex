@@ -24,8 +24,9 @@ A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  w
 
 Another advantage occurs when we want to validate multiple trees or even a complete result. Multiple trees will often share labels as well and combining them into a graph, i.e. the union of $G_{T_i}$ for trees $T_i$ will again include every label just once. In the previous section, we introduced the possibility of not having to check every proof tree as they occur in other proof trees as well. Selecting a minimal amount of proof trees to check a complete result is however still an instance of the NP-hard subset cover problem.
 
-Any explanation by a proof tree was a finite sequence of rule applications. In order to preserve this, we require a graph to be acyclic. If not we would require an atom to derive itself. This is not possible so that there had to be another reason for this. We do not allow multiple explanation for the same fact in a proof tree for our acceptance criteria. There the recursive explanation can be ignored and we can safely require that the graph is acyclic and in total a directed acyclic graph(DAG).
+We require for this that if the successors of a ground atom are the same elements  in every tree if the ground atom occured in this tree. If not an atom would have more successors then previously in the tree and probably no matching ground rule. In practice, this requirement was always fulfilled.
 
+Another requirement is acyclicity. We cannot use an atom to explain itself. Either we could have used it directly before or it cannot be explained by a proof tree at all. 
 \subsection{Graph model}
 
 As a number of different results from mathematics are already formalized in mathlib, it is no surprise that graphs are already modelled in mathlib as depicted below:
@@ -109,7 +110,16 @@ def (.\isWalk.) (l: List A) (G: Graph A): Prop :=
     ∀ (i: ℕ), i > 0 → ∀ (g: i < l.length), l.get (Fin.mk i.pred (pred_lt i l.length g)) ∈ G.successors (l.get (Fin.mk i g) )
 \end{lstlisting}
 
+The \lstinline|pred| function returns the predecessor of any natural number that is not zero and zero otherwise. Because we use the \lstinline|List.get| function we not only have to specify a position but also a proof that this position is smaller than the length of the list to not get an error. These two elements are combined into a Fin type. In the future we usually omit these proofs in this work because of the length.
+
 Due to the completeness predicate it would suffice to require that the starting vertex is in $G$ but this variant is simpler to state. We also allow the empty walk $[]$ as this will be beneficial in later applications.
+
+Lists are beneficial in this use case in contrast to arrays because they can easily be extended at the front which we will use when explore a graph algorithmically. We can always extend a walk by a successor of the leading element.
+
+\begin{lemma}[\isWalkextendssuccessors]
+    Let $w$ be a list of vertices and $a$ and $b$ be vertices.
+    If $a::w$ is a walk in $G$ and $b$ is a successor of $a$ in G then $b::a::w$ is also a walk in $G$.
+\end{lemma}
 
 A cycle is supposed to be a walk that starts and ends with the same node and an acyclic graph is a graph that has no cycles. As any list that only contains a single vertex of the graph would fulfill this property we require that a cycle has additionally at least length two.
 
@@ -125,6 +135,138 @@ def (.\isAcyclic.) (G: Graph A) := ∀ (l: List A), ¬ isCycle l G
 \end{lstlisting}
 
 \subsection{Validation of a graph}
+
+After defining the graph model, we want to specify how the graph validation takes place. For these we defined the recursive predicate \isValid and implemented it using \treeValidator. As the graph we receive may not even be acyclic we cannot simply define a recursive predicate as this will then not terminate. Instead we define a local predicate for each vertex and its successor. Then we can check every vertex individually.
+
+\begin{lstlisting}
+def (.\locallyValid.) (P: program τ) (d: database τ) (v: groundAtom τ) (G: Graph (groundAtom τ)): Prop :=
+ (∃(r: rule τ) (g:grounding τ), r ∈ P 
+    ∧ ruleGrounding r g = {head:= v, body:= (G.successors v) }) 
+ ∨ ((G.successors v) = [] ∧ d.contains v)
+\end{lstlisting}
+
+Except for the recursive case this is very similar to \isValid. Therefore we can reuse earlier concepts and build a checker for this. We expect the program again parsed into a look-up structure $m$, a database $d$, the vertex $a$ and its successors passed as a list $l$.
+
+\begin{lstlisting}
+def (.\localValidityCheck.) (m: List τ.predicateSymbols → List (rule τ)) (d: database τ) (l: List (groundAtom τ)) (a: groundAtom τ) : Except String Unit :=
+  if l.isEmpty
+  then
+    if d.contains a
+    then Except.ok ()
+    else checkRuleMatch m (groundRule.mk a l)
+  else
+    checkRuleMatch m (groundRule.mk a l)
+\end{lstlisting}
+
+The correctness is proven similar as before assuming that $m$ is the result of \parseProgramToSymbolSequenceMap of the program $P$.
+
+\begin{lemma}[\localValidityCheckUnitIffLocallyValid]
+    Let $d$ be a database and $P$ be a program. If $m$ is the result of \parseProgramToSymbolSequenceMap with a function that maps any element to the empty list and $l$ is the list of successors of a ground atom $a$. Then the \localValidityCheck returns ok iff $a$ is locally valid with respect to $P$ and $d$.
+\end{lemma}
+
+In the next section we will show a method to show that a graph is acyclic and all elements are locally valid with respect to $P$ and $d$. In the remainder of this section we assume that this is true and devise a method to show that then all vertices of the graph are in the proof-theoretic semantics of $P$ and $d$.
+
+Our goal is to create a proof-tree for every node. We devise a function that creates such a proof tree for a given node by recursively calling it on the successors.
+
+\begin{lstlisting}
+def (.\extractTree.) (a: A) (G: Graph A) (mem: a ∈ G.vertices) (acyclic: isAcyclic G): tree A :=
+  tree.node a (List.map (fun ⟨x, _h⟩ => extractTree x G (G.complete a mem x _h) acyclic) (G.successors a).attach)
+\end{lstlisting}
+
+This function only terminates because the graph is acyclic. Therefore we require the fact as an explicit argument in the function above. We will argue with the vertices that are reachable from a vertex. These decrease the further we walk in the graph or else we would be able to reach a previous node and have a cycle which is not allowed. We start by formalizing the notion of reachability. We say that a vertex $a$ \canReach a vertex $b$ if there exists a walk $w$ from $a$ to $b$. (The start of the walk is the last element in the list).
+
+\begin{lstlisting}
+    def (.\canReach.) (a b: A) (G: Graph A):= 
+    ∃ (p: List A) (neq: p ≠ []), 
+        isWalk p G ∧ p.get (Fin.mk 0 _) = b 
+        ∧ p.get (Fin.mk p.length.pred _) = a
+\end{lstlisting}
+
+Any vertex $a$ can reach it self via the walk $a$(\canReachrefl).
+
+We want to use the finite set of the vertices that are reachable from the current node so that we can argue that the cardinality decreases and by this the function terminates. This set will be a subset of the vertices of the graph $G$ since any element reachable by a walk in $G$ must be in the vertices of $G$. Ideally, we want to filter this finite set to only keep those vertices reachable from the current node. Unfortunately, \lstinline|Finset.filter| requires a decidable predicate. This predicate is in principle decidable for example by Dijkstra's algorithm. Instead of implementing and validating it, we instead use classical logic to obtain that any predicate is decidable and reuse the previous filter version. This is now no longer computable but we only want to use it in the termination proof anyway.
+
+\begin{lstlisting}
+noncomputable def (.\Finsetfilternc.) (p: A → Prop) (S: Finset A):= @Finset.filter A p (Classical.decPred p) S
+
+lemma (.\Finsetmemfilternc.) (a:A) (p: A → Prop) (S: Finset A): a ∈ Finset.filter_nc p S ↔ p a ∧ a ∈ S
+\end{lstlisting}
+
+The global successors in a graph $G$ of a vertex $a$ are then all the vertices $b$ that are reachable from $a$ in $G$.
+
+\begin{lstlisting}
+    noncomputable def (.\globalSuccessors.) (a:A) (G: Graph A): Finset A := Finset.filter_nc (fun b => canReach a b G) G.vertices.toFinset
+\end{lstlisting}
+
+\begin{figure}
+    \centering
+    \begin{tikzpicture}[every node/.style={circle,draw},level 1/.style={sibling distance=40mm},level 2/.style={sibling distance=20mm},level 3/.style={sibling distance=10mm}]
+        \node {1}
+          child {node[fill=blue!30] {2}
+            child {node[diagonal fill={red!30}{blue!30}] {4}
+              child {node[diagonal fill={red!30}{blue!30}] {8}}
+              child {node[diagonal fill={red!30}{blue!30}] {9}}
+            }
+            child {node[fill=blue!30] {5}
+              child {node[fill=blue!30] {10}}
+              child {node[fill=blue!30] {11}}
+            }
+          }
+          child {node {3}
+            child {node {6}
+              child {node {12}}
+              child {node {13}}
+            }
+            child {node {7}
+              child {node {14}}
+              child {node {15}}
+            }
+          };
+      \end{tikzpicture}
+      \caption{The global successors of $2$ are colored blue, the global successors of $4$ are colored red.}
+      \label{fig:globalSuccessors}
+\end{figure}
+
+We already see in \cref{fig:globalSuccessors} that we have that $globalSuccessors(2) \subset globalSuccessors(4)$ and $4$ is the successor of $2$. We will generalize this. In any graph we have that for every vertex $a$ and successor $b$ of $a$ we have that $globalSuccessors(b) \subseteq globalSuccessors(a)$, because any element $c$ that $b$ can reach can also be reached from $a$ by first going to $b$ and then following the path from $b$ to $c$
+
+(\globalSuccessorsSubsetWhenSuccessor).
+
+
+If the graph is additionally acyclic, we get that $globalSuccessors(b) \subset globalSuccessors(a)$, because $a$ can reach $a$ and $b$ via the successor edge. If $b$ could reach $a$, then this would lead to cylce which is not allowed.
+
+(\globalSuccessorsSSubsetWhenAcyclicAndSuccessor)
+
+Since we call \extractTree on all successors $b$ of $a$ and the global successors of $b$ are a strict subset of the global successors of $a$ the cardinality of the global successors of the vertex we call the function on always decreases.
+
+\begin{lstlisting}
+def (.\extractTree.) (a: A) (G: Graph A) (mem: a ∈ G.vertices) (acyclic: isAcyclic G): tree A :=
+  tree.node a (List.map (fun ⟨x, _h⟩ => extractTree x G (G.complete a mem x _h) acyclic) (G.successors a).attach)
+termination_by Finset.card (globalSuccessors a G)
+decreasing_by
+  simp_wf
+  apply Finset.card_lt_card
+  apply globalSuccessorsSSubsetWhenAcyclicAndSuccessor
+  apply acyclic
+  apply _h
+  apply mem
+\end{lstlisting}
+
+We see from the definition that the root of the tree returned by extractTree is always the vertex $a$ used in the arguments. (\rootOfExtractTree)
+
+It remains to be shown this leads to a valid proof tree.
+
+\begin{lemma}[\extractTreeStepValidProofTreeIffAllLocallyValidAndAcyclic]
+    Let $G$ an acyclic graph where all vertices are locally valid with respect to a program $P$ and database $d$. Then extractTree results in a valid proof tree for any vertex $a$ of $G$.
+\end{lemma}
+\begin{proof}
+    We prove this by strong induction on the cardinality of the global successors of $a$.
+
+    Since $a$ is a vertex of $g$, $a$ is locally valid. There are two cases for this. If $a$ is locally valid because it has no successors and is in the database, then the map operation creates no subtrees so that the resulting proof tree is valid as well.
+
+    If $a$ is locally valid because $a$ and its successors form a ground rule from the ground program of $P$, then we create the subtrees with extractTree. By the previous observation the roots of the subtrees equal the successors of $a$, so that we have again a ground rule from the ground program. By the induction hypothesis all these trees are valid as well, so that the proof tree for $a$ is valid.
+\end{proof}
+
+Using this result the vertices of an acyclic graph whose vertices are all locally valid with respect to $P$ and $d$ are a subset of the proof-theoretic semantics of $P$ and $d$.
 
 \subsection{Depth-first search}
 
