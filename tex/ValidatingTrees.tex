@@ -418,7 +418,7 @@ If we start this with a function that maps any symbol sequence to the empty list
     The only element of $P$ not yet considered was $hd$ and is is either obtained by its symbol sequence or was already there in $m$ so that the proof follows.
 \end{proof}
 
-Since at the start $m(l)$ has no member for any $l$, the desired property holds. Now we can use this to check whether a substitution exists.
+Since at the start $m(l)$ has no member for any $l$, the desired property holds. Now we can use this to check whether a substitution exists. \lstinline|List.any| checks whether any element in $m(symbolSequence gr.toRule)$ matches the ground rule. If that is the case, we simply return unit as a matching rule in $P$ was found. If that is not the case, we return an error message. The Except type allows us to combine these two return types.
 
 \begin{lstlisting}
 def (.\checkRuleMatch.) (m: List τ.predicateSymbols → List (rule τ)) (gr: groundRule τ): Except String Unit :=
