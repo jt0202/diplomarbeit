@@ -103,4 +103,5 @@ deriving Lean.FromJson, Lean.ToJson
 
 Additionally, there are two command line options that can be set. Firstly, the option \textit{-g} specifies that the input file as a graph instead of a list of trees which is the default option. Secondly, we tell the program with \textit{-c} to also use the \modelChecker to check for completeness.
 
+The file does not include a database yet because these databases are often very large in practice which requires more work to replicate in Lean. All evaluations are done with a mock database which assumes that any leaf of a tree is in the database and that the database is always contained in the model during the model checking. 
 \subsection{Results}
