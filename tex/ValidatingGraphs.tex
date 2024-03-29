@@ -8,19 +8,82 @@ In the previous section, we described an algorithm to verify proof trees. Proofs
     \begin{equation}
         \begin{split}
             T(?x,?y) &\leftarrow E(?x,?y). \\
-            T(?x,?z) &\leftarrow E(?x,?y), T(?y, ?z), T(?y, ?z). \\
+            T(?x,?z) &\leftarrow T(?x, ?y), T(?x, ?y), E(?y, ?z). \\
         \end{split}
     \end{equation}
 
-    The database shall encode the elements of a chain $E(i, i+1)$ for $i \in \{0, n\}$. In the proof tree representation we need the same proof tree twice for $T(?y, ?z)$ in the second rule and will need copies for it later, which results in large trees \todo{Show the exponential growth for clearer}
+    The database shall encode the elements of a chain $E(i, i+1)$ for $i \in \{0, n\}$. In the proof tree representation we need the same proof tree twice for $T(?y, ?z)$ in the second rule and will need copies for it later, which results in large trees. The proof tree for $T(0, i+1)$ needs a node for this fact, one for the $E$ fact $E(i, i+1)$ and two proof trees for $T(0, i)$. Therefore the size of $T(0, i+1)$ in the number of nodes is more than double the size of $T(0, i)$ which leads to an exponential growth.
 \end{example}
 
 Proof trees offer no reusability as they need to stay in the tree shape. Formally we can view the proof tree as a tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices have the same label in a proof tree as in the example above.
 
-A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  with $V_G = \{a \mid \exists v \in V_T, label(v)=a\}$ and $E_G = \{ (a_1, a_2) \mid \exists v_1, v_2 \in V_T,  label(v_i) = a_i \land (v_1, v_2) \in E_T\}$. Then a vertice can be considered equal to its label as no label occurs multiple times anymore.
+A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  with $V_G = \{a \mid \exists v \in V_T, label(v)=a\}$ and $E_G = \{ (a_1, a_2) \mid \exists v_1, v_2 \in V_T,  label(v_i) = a_i \land (v_1, v_2) \in E_T\}$. Then a vertice can be considered equal to its label as no label occurs multiple times anymore. Examples for a proof tree and the corresponding graph are in \cref{fig:treeGraph}.
 
 
-\todo{Do a picture}
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.65\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=.75]
+      \node (A) at (5,4) {$T(0,3)$};
+
+      \node (B) at (2,2) {$T(0,2)$};
+      \node (C) at (7,2) {$T(0,2)$};
+      \node (D) at (10,2) {$E(2,3)$};
+
+      \node (E) at (0,0) {$T(0,1)$};
+      \node (F) at (2,0) {$T(0,1)$};
+      \node (G) at (4,0) {$E(1,2)$};
+      \node (H) at (6,0) {$T(0,1)$};
+      \node (I) at (8,0) {$T(0,1)$};
+      \node (J) at (10,0) {$E(1,2)$};
+
+      \node (K) at (0,-2) {$E(0,1)$};
+      \node (L) at (2,-2) {$E(0,1)$};
+      \node (M) at (6,-2) {$E(0,1)$};
+      \node (N) at (8,-2) {$E(0,1)$};
+
+      \draw[->] (A) -- (B);
+      \draw[->] (A) -- (C);
+      \draw[->] (A) -- (D);
+      \draw[->] (B) -- (E);
+      \draw[->] (B) -- (F);
+      \draw[->] (B) -- (G);
+      \draw[->] (C) -- (H);
+      \draw[->] (C) -- (I);
+      \draw[->] (C) -- (J);
+      \draw[->] (E) -- (K);
+      \draw[->] (F) -- (L);
+      \draw[->] (H) -- (M);
+      \draw[->] (I) -- (N);
+    \end{tikzpicture}
+    \caption{A proof tree for $T(0,3)$}
+    \label{fig:proofTree}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.25\textwidth}
+    \begin{tikzpicture}
+      \node[circle] (A) at (0,4) {$T(0,3)$};
+      \node[circle] (B) at (-1,2) {$T(0,2)$};
+      \node[circle] (C) at (2,2) {$E(2,3)$};
+      \node[circle] (D) at (-1,0) {$T(0,1)$};
+      \node[circle] (E) at (2,0) {$E(1,2)$};
+      \node[circle] (F) at (-1,-2) {$E(0,1)$};
+
+      \draw [->] (A) -- (C);
+      \draw[->] (A) to[out=235, in=150] (B);
+      \draw[->] (A) to[out=280, in=45] (B);
+      \draw [->] (B) -- (E);
+      \draw[->] (B) to[out=235, in=150] (D);
+      \draw[->] (B) to[out=280, in=45] (D);
+      \draw[->] (D) -- (F);
+    \end{tikzpicture}
+    \caption{A proof graph for $T(0,3)$}
+    \label{fig:proofGraph}
+  \end{subfigure}
+  \caption{An example of a proof tree and a proof graph for the same fact from \cref{ex:treeGraph}}
+  \label{fig:treeGraph}
+\end{figure}
 
 Another advantage occurs when we want to validate multiple trees or even a complete result. Multiple trees will often share labels as well and combining them into a graph, i.e. the union of $G_{T_i}$ for trees $T_i$ will again include every label just once. In the previous section, we introduced the possibility of not having to check every proof tree as they occur in other proof trees as well. Selecting a minimal amount of proof trees to check a complete result is however still an instance of the NP-hard subset cover problem.
 

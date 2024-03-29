@@ -117,10 +117,53 @@ For this, we need the following result. If two lists are equal then mapping both
 
 We can therefore employ \lstinline|groundAtom.toAtom| safely as the type coercion from ground atom to atom.
 
-So that we can convert atoms to ground atoms, it would be enough to use a proposition that says that all elements are constants. In later uses such as the definition of safety for rules, it will be beneficial to have a function that computes all variables that occur in an atom. 
+So that we can convert atoms to ground atoms, it would be enough to use a proposition that says that all elements are constants. In later uses such as the definition of safety for rules, it will be beneficial to have a function that computes all variables that occur in an atom. If this returns the empty set, this is the required proof to convert an atom into a ground atom. 
 
-\todo{Think of a way to present the back transformation in a good way.}
+We can define the variables occuring in a term as a finite set.
 
+\begin{lstlisting}
+def (.\termVariables.): term τ → Finset τ.vars
+| (term.constant _) => ∅
+| (term.variableDL v) => {v}
+\end{lstlisting}
+
+The variables occuring in some atom are then the union of the term variables of its terms. This can be recursively expressed using \lstinline|List.foldl|. 
+
+\begin{lstlisting}
+def (.\Listfoldlunion.) {A B: Type} [DecidableEq B]  
+(f: A → Finset B) (init: Finset B) (l: List A): Finset B :=
+ List.foldl (fun x y => x ∪ f y) init l
+
+def (.\atomVariables.) (a: atom τ) : Finset τ.vars := 
+List.foldl_union termVariables ∅ a.atom_terms
+\end{lstlisting}
+
+If the term variables are empty, we know that the term must be a constant. In the variable case we use \lstinline|False.elim| which use that anything follows from false to generate an object of the right type. This can never be returned and is only there for completeness.
+
+\begin{lstlisting}
+def (.\termWithoutVariablesToConstant.) (t: term τ) (h: termVariables t = ∅): τ.constants :=
+  match t with
+  | term.constant c => c
+  | term.variableDL v =>
+      have h': False := by
+        unfold termVariables at h
+        simp at h
+      False.elim h'
+\end{lstlisting}
+
+We use this function to convert atoms with no variables to ground atoms. If the atom variables of some atom $a$ are empty, then also the term variables of every term $t$ in $a$ are empty (\atomVariablesEmptyIffAllTermVariablesEmpty). Using this we can call \termWithoutVariablesToConstant on every term in the atom. We require a proof that an element is in the list, which is given by \lstinline|List.attach| together with the element itself.
+
+\begin{lstlisting}
+def (.\atomWithoutVariablesToGroundAtom.) (a: atom τ) (h: atomVariables a = ∅): groundAtom τ :=
+{
+  symbol:= a.symbol,
+  atom_terms := List.map (fun ⟨x, _h⟩ => termWithoutVariablesToConstant x (Iff.mp (atomVariablesEmptyIffAllTermVariablesEmpty a) h x _h)) a.atom_terms.attach,
+  term_length :=
+    by
+      simp
+      apply a.term_length
+}
+\end{lstlisting}
 
 After defining the conversions we define ground rules similar to rules.
 

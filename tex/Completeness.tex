@@ -4,9 +4,17 @@
 
     \[ S \subseteq \mathtt{proofTheoreticSemantics\ P\ d} = \mathtt{modelTheoreticSemantics\ P\ d} \subseteq S \]
 
+    We only accept safe rules for the model checker which we define using the \atomVariables. A rule is safe, if every variable in the head occurs already in the body. Then we can ground a rule only using the atoms in the model. Unsafe rules would require us replace a variable that does not occur in the body by every constant symbol which is depending on the constant type not possible.
+
+    \begin{lstlisting}
+        def rule.isSafe (r: rule τ): Prop := 
+        atomVariables r.head ⊆ List.foldl_union atomVariables ∅ r.body
+
+    \end{lstlisting}
+
     \subsection{Partial ground rules}
     
-        We defined the model property on the ground program $ground(P)$. In order to check if a set of ground atoms is a model for a program we therefore have to ground the program. We want to avoid simply grounding all the rules at once and instead do it in a more intelligent way because the amount of grounding is very large or even infinite. For this we introduce a new data structure, the partial ground rule. This bears some similarities to the rules we defined in chapter 3. It has a head that is an atom. The body is split into two lists. The first list contains the ground atoms and represents the atoms in the rule we already grounded, whereas the second list consists of the so far ungrounded atoms in the rule body. We want to move the ungrounded atoms one by one into the grounded list by applying substitutions, which map all variables of this atom to constants, so that we can transform this atom into a ground atom.
+        We defined the model property on the ground program $ground(P)$. In order to check if a set of ground atoms is a model for a program we therefore have to ground the program. We want to avoid simply grounding all the rules at once and instead do it in a more intelligent way because the number of groundings is very large or even infinite similar as we already noted in \cref{sec:valTree}.  For this we introduce a new data structure, the partial ground rule. This bears some similarities to the rules we defined in chapter 3. It has a head that is an atom. The body is split into two lists. The first list contains the ground atoms and represents the atoms in the rule we already grounded, whereas the second list consists of the so far ungrounded atoms in the rule body. We want to move the ungrounded atoms one by one into the grounded list by applying substitutions, which map all variables of this atom to constants, so that we can transform this atom into a ground atom.
 
         \begin{lstlisting}
             structure partialGroundRule (τ: signature)  where
@@ -41,7 +49,7 @@
         We can transform any rule into a partial ground rule by setting the head as the head, the body as the ungrounded body and setting the grounded body to be empty.
 
         \begin{lstlisting}
-            def partialGroundRuleFromRule (r: rule τ): partialGroundRule τ :=
+            def partialGroundRule.fromRule (r: rule τ): partialGroundRule τ :=
             {
                 head := r.head, 
                 groundedBody := [],
@@ -53,9 +61,9 @@
             $pgr_1$ is exactly the result of \texttt{partialGroundRuleFromRule $r$}.
         \end{example}
 
-        We choose this representation instead of the approach used for $pgr_2$ as this does not require iterating over the whole body to find ground atoms. As we will apply multiple substitutions in the grounding process, we will create anyways ground atoms in different place to the atom in the body we are currently trying to ground.
+        We choose this representation instead of the approach used for $pgr_2$ as this does not require iterating over the whole body to find ground atoms. As we will apply multiple substitutions in the grounding process, we will create ground atoms in different places anyway.
 
-        Any partial ground rule can also be transformed back into a rule by concatenating the grounded and ungrounded body and combining creating first a partial ground rule from a rule and then transforming the resulting partial ground rule yields the original rule. This does not hold if we swap the operations as we do not explicitly move atoms without variables from the start of the body into the grounded body.
+        Any partial ground rule can also be transformed back into a rule by concatenating the grounded and ungrounded body.
 
         \begin{lstlisting}
             def partialGroundRule.toRule (pgr: partialGroundRule τ)
@@ -66,10 +74,15 @@
                 body := (List.map (groundAtom.toAtom) pgr.groundedBody)
                 ++ pgr.ungroundedBody
             }
-
-            lemma partialGroundRuleToRuleInverseToFromRule (r: rule τ): 
-                r = partialGroundRule.toRule (partialGroundRuleFromRule r)
         \end{lstlisting}
+        
+        This operation is inverse to the \lstinline|partialGroundRule.fromRule| operation.
+
+        \begin{lemma}
+            For any rule $r$, $r$ equals \lstinline|(partialGroundRule.fromRule r).toRule|
+        \end{lemma}
+
+        This does not hold if we swap the operations as we do not explicitly move atoms without variables from the start of the body into the grounded body.
 
         \begin{example}
             The application of \texttt{partialGroundRule.toRule} on $pgr_1$ yields $r$ as predicted by the lemma.
@@ -86,23 +99,33 @@
             which is different from $pgr_2$
         \end{example}
 
-        Using the transformation to rules we can lift defintions like safety or being true to partial ground rules.
+        Using the transformation to rules we can lift a rule being true to the partial ground rules.
 
         \begin{lstlisting}
-            def partialGroundRule.isSafe (pgr: partialGroundRule τ) :=
-                pgr.toRule.isSafe
-
             def partialGroundRule.ruleTrue (pgr: partialGroundRule τ) 
             (i: interpretation τ) :=
                 ruleTrue pgr.toRule i
         \end{lstlisting}
 
+        We also define safety for partial ground rules. Since ground atoms have no variables a rule $r$ is safe if the partial ground rule created from $r$ is safe.
+
+        \begin{lstlisting}     
+    def partialGroundRule.isSafe (pgr: partialGroundRule τ): Prop :=
+    atomVariables pgr.head ⊆ List.foldl_union atomVariables ∅ pgr.ungroundedBody
+        \end{lstlisting}
+
         So far we only split the body into two parts and have the goal of applying substitutions to move everything into the grounded body. This is not to different to just applying groundings directly. 
-        This process allows us to potentially stop early. If the substitutions we applied so far resulted in a ground atom that is not part of the interpretation $i$ we already know that the rule is true. No matter how the remaining variables are mapped, the body will never be a part of $i$ and therefore the antecedent is false and the rule is therefore true. We call a partial ground rule \textit{active in an interpretation} $i$ where all ground atoms in the \texttt{groundedBody} 
+        This process allows us to potentially stop early. If the substitutions we applied so far resulted in a ground atom that is not part of the interpretation $i$ we already know that the rule is true. No matter how the remaining variables are mapped, the body will never be a subset of $i$ and therefore the antecedent is false and the rule is therefore true. We call a partial ground rule \textit{active in an interpretation} $i$ where all ground atoms in the grounded body are in $i$
 
         \begin{lstlisting}
             def active (pgr: partialGroundRule τ) (i: interpretation τ):=
             ∀ (ga: groundAtom τ), ga ∈ pgr.groundedBody → ga ∈ i 
         \end{lstlisting}
+
+        \begin{lemma}
+            Let $pgr$ be a partial ground rule. If $pgr$ is not active in an interpretation $i$, then it is true in $i$.
+        \end{lemma}
+
+        Any partial ground rule that is created from a rule $r$ is active in any interpretation $i$, since the grounded body is empty.
 
     \subsection{Explore grounding}
