@@ -485,7 +485,7 @@ This statement allows us to state the theorem we want to prove for \dfsstep more
   Let $\vec{v}$ be the input arguments with the vertex $a$ and visited set $V$. If every element in $V$ has the DfsStepSemantics property, then \dfsstep $\vec{v}$ returns ok iff $a$ has the DfsStepSemantics property.
 \end{theorem}
 
-We will prove this statement by induction on the amount of vertices not covered but the current walk, i.e. \lstinline|(List.toFinset G.vertices \ List.toFinset currWalk)|, for arbitrary walks and sets of visited vertices. We note that the base case is always true, because if this is equal to zero, then every vertex of $G$ is in the current walk. In $\vec{v}$ we have however explicit proofs that $a$ is a vertex in $G$ and that $a$ is not in the current path, so that we have a contradiction. The interesting case is therefore only the induction step. There we need a criteria for when \foldlexceptset returns an error.
+We will prove this statement by induction on the amount of vertices not covered by the current walk, i.e. \lstinline|(List.toFinset G.vertices \ List.toFinset currWalk)|, for arbitrary walks and sets of visited vertices. We note that the base case is always true, because if this is equal to zero, then every vertex of $G$ is in the current walk. In $\vec{v}$ we have however explicit proofs that $a$ is a vertex in $G$ and that $a$ is not in the current path, so that we have a contradiction. The interesting case is therefore only the induction step. There we need a criteria for when \foldlexceptset returns an error.
 
 In general, this seems hard to do.\todo{Think of an example}.
 Here we already see that the set of visited vertices plays no really important role in the result of the statement as long as all elements in it have the DfsStepSemantics property. As long as we preserve this property in creating the sets we can view \foldlexceptset as individual calls when considering whether it returns an error or not.
@@ -503,9 +503,17 @@ Here we already see that the set of visited vertices plays no really important r
 
   If $l$ is empty \foldlexceptset always returns ok and there are no elements in $l$ so that the claim holds.
 
-  If $l$ has the shape $hd::tl$, then 
-  \todo{Finish proof}
+  If $l$ has the shape $hd::tl$, then $f hd init$ must return a set $S$. If not then \foldlexceptset returns an error and there is an element $a$ from $l=hd::tl$ for which $f a init$ is false so that both sides are false which finishes the prove.
+
+  The remaining result of \foldlexceptset is therefore \lstinline|foldl_except_set f tl S|. From the induction hypothesis we know that then any element $a$ from $tl$ we have that $f a S$ returns ok. We already have the required result for $hd$, it remains to get that always $f\ a\ init$ returns ok. Since $f$ preserves $p$ and any element in $init$ had the property $p$, also any element in $S$ has the property $p$. Therefore we can use the second requirement for $f$ to conclude that  $f\ a\ init$ returns true for any element $a$ from $hd::tl$.
 \end{proof}
+
+The property in our case is the DfsStepSemantics property. The first requirement will follow from the induction hypothesis. Therefore it remains to show that \dfsstep preserves the DfsStepSemantics property. 
+
+\begin{lemma}
+  Let the 
+\end{lemma}
+
 \subsection{HashSets for depth-first search}
 
 In the previous section, we used hash sets in the implementation of depth-first search. This offered a massive performance improve in practice in contrast to finite sets based on lists we used earlier. Unfortunately, while many lemmas for finite sets exist, there are currently almost no lemmas for hash sets. We try to bridge this gap partially by proving the correctness of insertion for hash sets.

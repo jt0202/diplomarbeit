@@ -1,5 +1,106 @@
 \section{Evaluation}\label{sec:eval}
 
+In the previous sections we proved the correctness the algorithms to check the soundness and completeness of datalog reasoning results. Now, we are interested in the practicability of these algorithms on actual data. We combined these algorithms into a command line tool that takes a file consisting of the problem and the certificates and tells us whether the result is correct according to the certificate. 
+
 \subsection{Input format}
+
+The input format is JSON-based because Lean offers already direct support for JSON. Similarly, as we were able to derive decidable equality or inhabitedness, we can also derive functions that convert Lean objects to JSON objects or try to create a Lean object from a JSON object.
+
+We can define mock terms similar to \term but with the variables and constants as simple strings. Lean knows how to read and write strings into JSON hence we can derive the Json methods.
+
+\begin{lstlisting}
+inductive (.\mockTerm.)
+| constant: String → mockTerm
+| variable: String → mockTerm
+deriving DecidableEq, Lean.FromJson, Lean.ToJson, Repr
+\end{lstlisting}
+
+Using this type we can similarly as to \atom define \mockAtom. In contrast to real atoms, we do not require a proof that the number of terms matches the arity of the predicate symbol as encoding such a proof is difficult and we have no information about the arity. The symbol is again just a string.
+
+\begin{lstlisting}
+structure (.\mockAtom.) where
+  (symbol: String)
+  (terms: List mockTerm)
+deriving DecidableEq, Lean.FromJson, Lean.ToJson, Repr
+\end{lstlisting}
+
+Mock atoms form mock rules similarly as atoms form rules and a program is simply a list of mockRules. Lists are a basic feature of the Json decoder which allows us to get the from a json file. 
+
+\begin{example}
+    The program 
+
+    \begin{equation}
+        \begin{split}
+            &P = \{  \\
+            &T(?x,?y) \leftarrow E(?x,?y), Q(a).\\
+            \}
+        \end{split}
+    \end{equation}
+
+    is represented as following in json:
+
+    \begin{lstlisting}
+        "program": [
+        {
+            "head": {
+                "symbol": "T",
+                "terms": [
+                    {
+                        "variable": "?x"
+                    },
+                    {
+                        "variable": "?y"
+                    }
+                ]
+            },
+            "body": [
+                {
+                    "symbol": "E",
+                    "terms": [
+                        {
+                            "variable": "?x"
+                        },
+                        {
+                            "variable": "?y"
+                        }
+                    ]
+                },
+                {
+                    "symbol": "Q",
+                    "terms": [
+                        {
+                            "constant": "a"
+                        }
+                    ]
+                }
+
+            ]
+        }]
+    \end{lstlisting}
+\end{example}
+
+Afterwards we go twice through the program. In the first run, we collect all the predicate symbols and their arities (\parsingArityHelper) and report an error if a predicate symbol is used in multiple atoms with different amounts of terms. Using such a list we can construct a signature (\parsingSignature). We use for constants and variables simply the set of string as types and for predicate symbols the subset of strings that occured as symbols. This choices allows us to directly inherit the requirements for the signature elements such as decidable equality or hashability. 
+
+In the second run, we then transform every mock object into the corresponding datalog object of the previously created signature. 
+
+The second part is the input file is either a list of trees or a graph. For these we define again mock objects and transform them after we transformed the program.
+
+\begin{lstlisting}
+inductive jsonTree (A: Type)
+| node (label: A) (children: List (jsonTree A))
+deriving Lean.FromJson, Lean.ToJson
+
+-- graph validation
+structure mockEdge where
+  (vertex: mockAtom)
+  (successors: List (mockAtom))
+deriving DecidableEq, Lean.FromJson, Lean.ToJson
+
+structure mockGraph where
+  (edges: List mockEdge)
+deriving Lean.FromJson, Lean.ToJson
+\end{lstlisting}
+
+Additionally, there are two command line options that can be set. Firstly, the option \textit{-g} specifies that the input file as a graph instead of a list of trees which is the default option. Secondly, we tell the program with \textit{-c} to also use the \modelChecker to check for completeness.
 
 \subsection{Results}
