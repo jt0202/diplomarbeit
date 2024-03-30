@@ -1,18 +1,18 @@
 \section{Conclusion and further work}
 
-In this thesis we developed and formally verified a certificate checker for datalog. For this we formalized the syntax and semantics of datalog and formally proved that the proof-theoretic and the model-theoretic semantics are equal. The checker can check both the soundness and the completeness of a reasoning result. The soundness certificate make take two forms: a list of proof trees or a directed acyclic graph as this allows a more compact representation on the cost of a more complicated checking algorithm. During the developments of the soundness algorithms we formalized a simple unification algorithm for datalog rules and a variant of depth-first search for directed graphs. Completeness can be checked using a certified model checker. 
+In this thesis, we developed and formally verified a certificate checker for datalog. For this, we formalized the syntax and semantics of datalog and formally proved that the proof-theoretic and the model-theoretic semantics are equal. The checker can check both the soundness and the completeness of a reasoning result. The soundness certificate may take two forms: a list of proof trees or a directed acyclic graph as this allows a more compact representation with the cost of a more complicated checking algorithm. During the development of the soundness algorithms, we formalized a simple unification algorithm for datalog rules and a variant of depth-first search for directed graphs. Completeness can be checked using a certified model checker. 
 
 These algorithms are not only formally verified but can also be used in practice. The soundness checks are very fast even for larger instances and can be used in practice whereas the completeness check is only possible for small examples. This is to be expected as it is very similar to the actual reasoning done by a datalog engine. The checker is independent of any tool as long as the tool offers some sort of trace which can be transformed into proof trees or graphs.
 
-The choice of using Lean proved to be good as the checker was practical and we did not have to worry about the conversion into the proof assistant. Leans standard library currently lacks some proofs of the correctness for practical data structures such as hash maps which either requires the developer of a formally verified implementation to verify these as well or accept these as axioms for the correctness.
+The choice of using Lean proved to be good as the checker was practical and we did not have to worry about the conversion into the proof assistant. Lean's standard library currently lacks some proofs for the correctness of practical data structures such as hash maps which either requires the developer of a formally verified implementation to verify these as well or accept these as axioms for the correctness.
 
-This is an avenue for further work as we still have some results about the correctness of hash maps as axioms. Further possible improvements for this work are an integration of the database into the verification process so that we no longer have to trust the leafs to be correct and an improved model checker.
+This is an avenue for further work as we still have some results about the correctness of hash maps as axioms. Further possible improvements for this work are an integration of the database into the verification process so that we no longer have to trust the leaves to be correct and an improved model checker.
 
 We currently can only check a subset of the programs a modern datalog reasoner accepts. Extending the checker to more features like
 \begin{enumerate}
     \item Negation
-    \item Datatypes and functions like integers or sets and addition or aggreate functions
+    \item Datatypes and functions like integers or sets and addition or aggregate functions
     \item existentially quantified rule heads like in dependencies
 \end{enumerate}
 
-will allow more usages in practice but this may require to find appropriate proof trees/certificates for these extensions.
+will allow more usages in practice but this may require finding first appropriate proof trees/certificates for these extensions.

@@ -35,12 +35,25 @@ def process_file(root, file):
                     commands.append(f"\\newcommand{{\\datalogrule}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
                 else:
                     commands.append(f"\\newcommand{{\\{namespace+resultName}}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
+            elif line.startswith("noncomputable") : 
+                result = re.split(splitSymbols, line)
+                # allow string to be valid latex
+                resultName = result[2].replace("_", "").replace(".", "").replace("'", "2")
+                textVersion =  result[2].replace("_", "\_").replace("'", "\\textsc{\char13}")
+                if "'" in result[2]:
+                    continue
 
+                if resultName == "root":
+                    commands.append(f"\\newcommand{{\\treeRoot}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
+                elif resultName == "rule":
+                    commands.append(f"\\newcommand{{\\datalogrule}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
+                else:
+                    commands.append(f"\\newcommand{{\\{namespace+resultName}}}{{\\repoLinkCode{{{file}\#L{i+1}}}{{{textVersion}}}}}")
     return commands
 
 # Function to traverse directories and process files
 def traverse_folders(root_folder, target_extensions, excluded_folders):
-    commands = ["\\newcommand{\\repoUrl}{https://github.com/knowsys/CertifyingDatalog/tree/main}", 
+    commands = ["\\newcommand{\\repoUrl}{https://github.com/knowsys/CertifyingDatalog/blob/develop}", 
     "\\newcommand{\\repoLinkBase}[2]{\href{\\repoUrl/#1}{\\textcolor{leansymbolcolor}{\\texttt{#2}}}\\xspace}",
     "\\newcommand{\\repoLinkCode}[2]{\\repoLinkBase{CertifyingDatalog/#1}{#2}}"
     ]
