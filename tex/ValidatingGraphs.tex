@@ -408,7 +408,7 @@ This terminates because we only call \dfsstep only on elements that do not occur
 
 The desired theorem describing the behavior of depth-first search is the following:
 
-\begin{theorem}[\dfssemantics]
+\begin{theorem}[\dfssemantics]\label{trm:dfssemantics}
     For any graph $G$ and function \lstinline|f: A → List A → Except String Unit|, \dfs $G$ $f$ returns ok iff the graph is acyclic and $f$ is evaluated to ok for every vertex $a$ of $G$ and its successors.
 \end{theorem}
 
@@ -487,11 +487,42 @@ This property is propagated back from the successors.
   If $a$ is reaches $b$ with walk longer than length 1, then the walk also must have at least three elements since $b$ is not a successor of $a$. Therefore the walk which must have the form $b \dots p\ a$ for a successor $p$ of $a$. Then also $p$ reaches a cycle.
 \end{proof}
 
+We detect an cycle if a successor $b$ of the current vertex $a$ already occurs in $a$ or the current walk . This tells us that we can reach a node from itself by a path that is has at least length two. Indeed, the walk must contain a vertex from $a$ or the current path which has length one and we can add $b$ to it to obtain the cycle. Formally, we use the following function that takes an element, a list and a proof that the element is a member of the list. It returns the part of the list until we find the required element which will be the last element of the list. Since the list has a member the empty case can never occur.
+
+\begin{lstlisting}
+  def (.\getSubListToMember.) (l: List A) (a: A) (mem: a ∈ l): List A :=
+  match l with
+  | [] =>
+    have h: False :=
+    by
+      simp at mem
+
+    False.elim h
+  | hd::tl =>
+    if p: a = hd
+    then [hd]
+    else
+      have mem': a ∈ tl :=
+      by
+        simp[p] at mem
+        apply mem
+      hd::getSubListToMember tl a mem'
+\end{lstlisting}
+
+We keep the starting element of the list (\getSubListToMemberPreservesFront) and also preserve the walk property (\getSubListToMemberPreservesWalk) since we keep the elements in their exact order and only remove the end. The list also ends with the required element (\getSubListToMemberEndsWithElement). 
+
+\begin{lemma}[\frontRepetitionInWalkImpliesCycle]
+  Let $a$ be a vertex and $l$ be a list of vertices such that $a::l$ is a walk in a graph $G$. If $a$ is a member of $l$, then the graph contains a cycle.
+\end{lemma}
+\begin{proof}
+  We use \getSubListToMember on $l$ with the element $a$. This returns a walk in $G$ that ends with $a$ and starts with an element of which $a$ is a successor. Hence, \lstinline|(a::(getSubListToMember l a mem))| is again a walk that starts and ends with $a$. It also has a length of atleast two since getSubListToMember always contains at least one element and we add $a$ to the front. Therefore it is a cycle in $G$.
+\end{proof}
+
 As we also evaluate the function $f$ during the depth-first search, we need a similar criteria that propagates the results of $f$ back as we might encounter later a vertex where $f$ is not evaluated to ok even if the starting vertex is evaluated to true similar to \cref{ex:propagatingAcyclicityResultinDFS}.
 
 We reuse the reachability predicate again to state that all vertices reachable from a vertice fulfill $f$.
 
-\begin{lemma}[\allTrueIfAllCanReachTrue]
+\begin{lemma}[\allTrueIfAllCanReachTrue]\label{lem:allTrueIfAllCanReachTrue}
   Consider a function \lstinline|f: A → List A → Except String Unit| and a graph $G$. Any vertex $a$ in $G$ is evaluated with its successors on $f$ to ok iff any vertex $b$ reachable in $G$ from a vertex $a$ in $G$ is evaluated with its successors to ok.
 \end{lemma}
 \begin{proof}
@@ -544,7 +575,7 @@ Ideally, we would want to prove the following statement: Let $a$ be the vertex i
 
 This statement allows us to state the theorem we want to prove for \dfsstep more succintly.
 
-\begin{theorem}[\dfsstepsematics]
+\begin{theorem}[\dfsstepsematics]\label{trm:dfsstepsematics}
   Let $\vec{v}$ be the input arguments with the vertex $a$ and visited set $V$. If every element in $V$ has the DfsStepSemantics property, then \dfsstep $\vec{v}$ returns ok iff $a$ has the DfsStepSemantics property.
 \end{theorem}
 
@@ -553,7 +584,7 @@ We will prove this statement by induction on the amount of vertices not covered 
 In general, this seems hard to do.\todo{Think of an example}.
 Here we already see that the set of visited vertices plays no really important role in the result of the statement as long as all elements in it have the DfsStepSemantics property. As long as we preserve this property in creating the sets we can view \foldlexceptset as individual calls when considering whether it returns an error or not.
 
-\begin{lemma}[\foldlexceptsetisok]
+\begin{lemma}[\foldlexceptsetisok]\label{lem:foldlexceptsetisok}
   Let $l$ be a list of type $A$ and $S$ be a hash set of type $B$. Consider a property $p: B \to$ \lstinline|Prop| and a function \lstinline|f: A → HashSet B → (Except String (HashSet B))|, that fulfills the following two properties.
   Firstly, that $f$ preserves $p$, i.e. if every element in $S$ has the property $p$ and $f$ returns for the input $a$ and $S$ a set $S'$, then also every element in $S'$ has the property $p$.
 
@@ -573,9 +604,59 @@ Here we already see that the set of visited vertices plays no really important r
 
 The property in our case is the DfsStepSemantics property. The first requirement will follow from the induction hypothesis. Therefore it remains to show that \dfsstep preserves the DfsStepSemantics property. 
 
-\begin{lemma}
-  Let the 
+\begin{lemma}\label{lem:dfsStepProp}[\dfssteppreservesnotReachesCycleAndCounterExample]
+  Let $\vec{v}$ be the input arguments with the vertex $a$ and visited set $V$. If every element in $V$ has the DfsStepSemantics property and \dfsstep $\vec{v}$ returns a set $V'$, then every element in $V'$ has the DfsStepSemantics property.
 \end{lemma}
+\begin{proof}
+  We will prove this statement by induction on the amount of vertices not covered by the current walk.
+
+  There are two possiblities for \dfsstep to return a set. Firstly, $a$ may be a member of $V$. Then we return $V$ and the claim follows from the assumption.
+  Now we consider the possibility of $a$ not being a member of $V$. Then $f$ must return ok for $a$ and its successors and we evaluate the recursive calls on the successors of $a$. By the induction hypothesis, they all return sets with all elements having the DfsStepSemantics property. We can prove by induction on the list, that then also their combination in \foldlexceptset returns a set $V' \setminus \{a\}$ with all elements having the DfsStepSemantics property. Now the claim almost follows but we add the ccurrent vertex $a$ into this set. The claim follows as soon as we can show that all successors of $a$ are in $V' \setminus \{a\}$, since none of the succesors reach either a cycle or an element where $f$ is evaluated to an error and $f$ is evaluated to ok on the vertex itself.
+\end{proof}
+
+We now want to show that all successors of $a$ are in $V' \setminus \{a\}$. 
+
+\begin{lemma}[\dfsstepreturnsrootelement, \dfsstepsubset]
+  Let $\vec{v}$ be the input arguments with the vertex $a$ and visited set $V$. If \dfsstep $\vec{v}$ returns a set $V'$, then $a$ is member of $V'$ and $V \subseteq V'$.
+\end{lemma}
+\begin{proof}
+  We will prove this statement by induction on the amount of vertices not covered by the current walk.
+
+  If $a$ is member of $V$, then we return $V$ and the claim follows as $\subseteq$ is reflexive.
+  If $a$ is not a member of $V$, then we return the result of \foldlexceptset on all the successors. Each individual call returns a superset of the input set by the inductive hypothesis. By an induction on the size of the list, we see that then also \foldlexceptset returns a superset of $V$ (\foldlexceptsetsubset). In this set we insert $a$ to obtain $V'$. Therefore it contains $a$ and it is still a superset of $V$.
+\end{proof}
+
+Using this results we have a criteria to show when \foldlexceptset contains the original list. Due to Lean internal features, the result must be a bit more technical. As we need to show termination in order to unfold our function, we call \foldlexceptset not on the successors of $a$ directly, but instead of the attached version of this list, which is a different type. Therefore we talk about the function $g$ in the following result which maps elements of the subtype \lstinline|{x // x $\in$ G.succesors}| back to the type $A$. 
+
+\begin{lemma}[\foldlexceptsetcontainslistmap]
+    Let \texttt{f: A → HashSet B → (Except String (HashSet B))} and {g: A → B} be functions such if $f(a,S) $ returns a hash set $S'$  then $S \subseteq S'$ and $g(a) \in S'$. Then for any list $l$ and hash set S,  if \texttt{foldl\_except\_set f l S} returns a hash set $S'$, then for all elements $a$ of $l$, $g(a) \in l$.
+\end{lemma}
+\begin{proof}
+    We prove this by induction on $l$.
+    If $l$ is empty all elements of $l$ are in their mapped form in the resulting set.
+
+    If $l$ has the shape $hd::tl$, then we first compute $f(hd,S)$ which must return a set $S'$ since the whole function returns a set. $S'$ must contain $g(hd)$ and is passed into \texttt{foldl\_except\_set} which by the induction hypothesis contains all elements of $tl$ in their mapped form. Due to the subset property all elements of $S'$ must also be contained, so that also $g(hd)$ is in the result. Therefore all elements of the list are contained in their mapped form in the resulting set, if it exists.
+\end{proof}
+
+Now we know that all successors of $a$ are in $V'\setminus\{a\}$ and we finish the claim in \cref{lem:dfsStepProp}. This also finishes the preparations to prove \cref{trm:dfsstepsematics}.
+
+\begin{proof}[Proof of \cref{trm:dfsstepsematics}]
+  We prove this by induction on the number of uncovered vertices i.e. vertices that are in $G$, but not in the current walk. The base case is trivial as it contradicts the inputs \dfsstep.
+
+  In the induction step we prove both directions separately. In the forward direction \dfsstep returns a set $V'$ and we want to show that $a$ has the DfsStepSemantics property. We know that every element in  $V'$ has the DfsStepSemantics property and that $a$ is in $V'$. Hence, the first direction is proven.
+
+  In the backwards direction we know that $a$ has the DfsStepSemantics property and want to show that \dfsstep returns ok. If $a$ is in $V$, then we return ok and the claim is proven. Now assume that $a$ is not in $V$. Since $a$ has the DfsStepSemantics property and $a$ can reach itself $f$ must be evaluated to ok on $a$ and its successors. Additionally, none of the successors of $a$ can occur in the current path as this would imply that $a$ can reach a cycle. 
+  It remains to show that \foldlexceptset returns ok for which we use \cref{lem:foldlexceptsetisok}. We know that \dfsstep return a superset of the input set \cref{lem:dfsStepProp} and by the induction hypothesis all individual calls are ok iff the vertex has the DfsStepSemantics property which marks the independence of the visited set. We only have to show that all successors of $a$ have the DfsStepSemantics property and use the induction hypothesis to show the claim. This follows due to the ropagating properties of the DfsStepSemantics property. If any successor of $a$ reaches a cycle, then also $a$ would reach a cycle, which we know is not true. Similarly, any element reachable from a successor of $a$ is also reachable from $a$ and therefore has to evaluate to ok with its successor.
+\end{proof}
+
+Now we can show the proof of \cref{trm:dfssemantics}.
+
+\begin{proof}[Proof of \cref{trm:dfssemantics}]
+  As \dfs is only the evaluation of \dfsstep in \foldlexceptset. We again employ \cref{lem:foldlexceptsetisok} and use \cref{lem:dfsStepProp} and \cref{trm:dfsstepsematics} to fulfill the requirements as in the previous proof. 
+
+  Therefore we only have to show that all vertices have the DfsStepSemantics property iff the graph is acyclic and every vertex of the graph is evaluated to ok on $f$ with its successors which we have already shown in \cref{lem:acyclicIffAllNotReachCycle} and \cref{lem:allTrueIfAllCanReachTrue}
+\end{proof}
+
 
 \subsection{HashSets for depth-first search}
 
