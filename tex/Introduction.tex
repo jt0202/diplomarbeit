@@ -1,6 +1,6 @@
 \section{Introduction}
 
-One of the most important problems in software engineering is writing bug-free software.  Bugs in software may endanger the well-being of property and humans.
+One of the most important challenges in software engineering is writing bug-free software.  Bugs in software may endanger the well-being of humans and property.
 
 A recent example of the consequences of buggy software was the Horizon software used by the British Royal Mail \cite{horizonRoyalMail}. It was supposed to be an accounting software used in the accounting of the individual post offices. Horizon wrongly calculated the balance which led to the individual subpostmasters being accused of theft or fraud. Over 900 people were sentenced to the repayment of alleged damages or prison sentences. These people still suffer financial, social or health consequences despite being innocent and multiple persons committed suicide.
 
@@ -24,7 +24,7 @@ The rules can be interpreted as formulas from first-order logic that are univers
 
 This task can be solved in polynomial time which allows using datalog in multiple interesting applications from data analysis to data integration.
 
-Modern datalog engines like Nemo\cite{Nemo} or Souffle\cite{Souffle} can work with millions of database elements and use many optimization techniques to achieve this. Unfortunately, the correctness may suffer from this and formally verifying an engine is out of reach. They offer proof trees as an explanation why a certain element was derived so that we may view them as an instance of certifying algorithms. In this style, we want to implement a checker that takes these certificates and tells us whether a datalog reasoning result is correct.
+Modern datalog engines like Nemo\cite{Nemo} or Souffle\cite{Souffle} can work with millions of database elements and use many optimization techniques to achieve this. Unfortunately, the correctness may suffer from this and formally verifying an engine is out of reach. Only a limited amount of optimization techniques was verified so far\cite{datalogOptimizationsCoq}. They do however offer proof trees as an explanation why a certain element was derived so that we may view them as an instance of certifying algorithms. In this style, we want to implement a checker that takes these certificates and tells us whether a datalog reasoning result is correct.
 
 With the goal of improving the confidence in the correctness of our checker, we will formally verify it using the proof assistant Lean\cite{Lean4}. A proof assistant allows users to define functions and objects and prove results about the objects in machine-readable style. Therefore the proof assistant can verify that the proof is indeed correct or if not raise errors.
 
@@ -32,3 +32,11 @@ After introducing the basics about datalog, certifying algorithms and Lean in \c
 These methods however can only tell us that all atoms present in the result are correctly derived, i.e. soundness. They do not tell us whether more could be derived. A method to solve this question is presented in \cref{sec:completeness}.
 
 Finally, we show in \cref{sec:eval} that our results are not only formally correct but can also be used in practice.
+
+\subsection{Related Work}
+
+The approach to use certified algorithms is well documented in the literature. Multiple examples from graph theory, linear algebra or geometry are mentioned in \cite{CertAlg}. Practical implementations can be found in the Library of Efficient Data types and algorithms(LEDA)\cite{Leda}. These checkers are often verified in a proof assistant\cite{CertCheckerWorkflow}.
+
+An alternative angle for this design principle is the de-Bruijn criterion \cite{deBruijnCriterion}. There we consider proofs verified by a program. Since these programs may contain bugs and thus create faulty proofs, the program should offer a  way to independently check the proofs instead of just returning the answer. This is done for the problem of checking proofs in propositional logic\cite{deBruijnPropProof} or in first-order logic\cite{deBruijnFOProof} or for checking the termination of higher-order rewriting systems\cite{deBruijnRewriting}.
+
+There is currently no formalization of datalog in Lean. Parts of the syntax and semantics of datalog are verified in Coq\cite{datalogCoq} with a focus on the fixed point semantics in order to implement the datalog reasoner directly in the proof assistant\cite{datalogCoq, regularDatalogCoq}. These implementations are mostly slower compared to engines written in more typical programming languages and have fewer features.
