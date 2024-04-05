@@ -43,7 +43,7 @@ In the example, some atoms used only constants in their terms, while others incl
 \begin{contexample}
     In the previous example $Q()$ and $E(2,3)$ are ground atoms. The first does not have any terms at all, whereas the other only uses constants.
 
-    For the other atoms we have $Vars(R(?x,?y)) = \{?x,?y\}$ and $Vars(E(?x, 7)) = \{?x\}$, so that they are not ground atoms.
+    The other atoms all contain at least the variable $?x$ and are thus no ground atoms.
 \end{contexample}
 
 A \textit{rule} is an expression of the form $H \leftarrow B_1 \and ... B_n$ for atoms $H$ and $B_i$ for $n \in \mathbb{N}$. We call $H$ the \textit{head} of the rule and $B_1,..., B_n$ the \textit{body} of the rule and define the functions $head(r) = H$ and $body(r) = {B_i}$. We allow rules with an empty body. These rules are called \textit{facts}.
@@ -61,11 +61,14 @@ A \textit{program} $P$ is a finite set of rules. We only consider finite sets as
 \begin{contexample}
     We consider the program $P = \{$
 
-    \begin{equation}
+    \begin{align}\label{prelim:Program}
     \begin{split}
-    E(1,2) &\leftarrow \\ E(1,3) &\leftarrow \\ E(3,5) &\leftarrow \\ E(4,6) &\leftarrow \\E(4,7) &\leftarrow\\ Q() &\leftarrow \\ T(?x,?y) &\leftarrow E(?x,?y) \\ T(?x,?x) &\leftarrow \\ T(?x, ?z) &\leftarrow T(?x,?y) \and T(?y, ?z)
+    E(1,2) &\leftarrow \\ E(1,3) &\leftarrow \\ E(3,5) &\leftarrow \\ E(4,6) &\leftarrow \\E(4,7) &\leftarrow\\\end{split} 
+    &&
+    \begin{split}
+        Q() &\leftarrow \\ T(?x,?y) &\leftarrow E(?x,?y) \\ T(?x,?x) &\leftarrow \\ T(?x, ?z) &\leftarrow T(?x,?y) \and T(?y, ?z)
     \end{split}
-    \end{equation}
+    \end{align}
     $\}$, which contains both facts and other rules.
 \end{contexample}
 
@@ -89,12 +92,12 @@ The symbol $\leftarrow$ used in the definition of rules appears to be very simil
 The semantics of a first-order theory or sentence are its models. Unfortunately, a theory may have multiple models as the following example shows for the theory for $P$.
 
 
-\begin{contexample}
+\begin{contexample}\label{prelim:models}
     Any fact must be true in a model, but the implications allow us more freedom. As both $E$ and $T$ are binary predicates, we can represent them as a graph. We use blue, when both $E$ and $T$ are present, green for only $T$ and orange for $E$
 
     \begin{figure}
         \centering
-        \begin{minipage}[b]{0.45\linewidth}
+        \begin{subfigure}{0.45\linewidth}
         \begin{tikzpicture}[, every node/.style={circle, draw, minimum size=8mm}]
             % Nodes
             \node (1) at (90:2) {1};
@@ -122,9 +125,8 @@ The semantics of a first-order theory or sentence are its models. Unfortunately,
             \draw[->,green] (1) -- (5);
         \end{tikzpicture}
         \caption{First model}
-    \end{minipage}
-    \quad
-    \begin{minipage}[b]{0.45\linewidth}
+    \end{subfigure}
+    \begin{subfigure}{0.45\linewidth}
         \begin{tikzpicture}[, every node/.style={circle, draw, minimum size=8mm}]
             % Nodes
             \node (1) at (90:2) {1};
@@ -156,7 +158,9 @@ The semantics of a first-order theory or sentence are its models. Unfortunately,
             \draw[->,blue] (4) -- (1);
         \end{tikzpicture}
         \caption{Second model}
-    \end{minipage}
+    \end{subfigure}
+    \caption{Models for the program depicted in \cref{prelim:Program}. The encoding is explained in \cref{prelim:models}}
+
     \end{figure}
     
     The first model expresses $T$ as the reflexive transitive closure of the input $E$, whereas the second model expands the first model and adds more additional atoms to a model.
@@ -185,7 +189,7 @@ In total, we call \[\bigcap_{\text{$M$ is model of $P$}} M\] the \textit{least m
 \begin{contexample}
     In this example, the first model is actually the least model and the second model is just some other model.
 
-    Therefore the semantic of this program is whenever $Q()$ is given, the reflexive-transitive closure of $E$. 
+    Therefore the semantic of this program the reflexive-transitive closure of $E$ if $Q()$ is given.
     If $Q()$ is not given then it is only the reflexive closure.
 
     Additionally, we see that the rules for $T$ encode general rules whereas the other rules are more a specific input. We might want to reuse these rules for many different instances of $E$, but so far we also need to write a new program.
@@ -250,7 +254,7 @@ A tree $t$ of ground atoms is a proof tree for a ground atom $a$ in a program $P
     \end{enumerate}
 \end{enumerate}
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.45\linewidth}
     \begin{tikzpicture}[, every node/.style={circle}]
@@ -261,8 +265,8 @@ A tree $t$ of ground atoms is a proof tree for a ground atom $a$ in a program $P
             child {node {T(3,5)}
                 child {node {E(3,5)}}};
     \end{tikzpicture}
+    \caption{A valid proof tree for $T(1,5)$ in the program in \cref{prelim:Program}}
     \label{prelim:validTree}
-    \caption{A valid proof tree}
     \end{subfigure}
     \quad
     \begin{subfigure}[b]{0.45\linewidth}
@@ -275,7 +279,7 @@ A tree $t$ of ground atoms is a proof tree for a ground atom $a$ in a program $P
                     child {node {E(3,5)}}}
                 child {node {E(6,7)}};
         \end{tikzpicture}
-        \caption{An invalid tree}
+        \caption{An invalid tree for $T(1,7)$ in the program in \cref{prelim:Program}}
         \label{prelim:invalidTree}
     \end{subfigure}
     \end{figure}
@@ -291,7 +295,7 @@ The proof-theoretic semantics of a program $P$ and database $d$ is the set of gr
 In the rules of the program $P$ we note a special rule of the form $T(?x, ?x) \leftarrow$. It is a fact, but not a ground rule and the only rule where this is the case. 
 We call a rule $H \leftarrow B_1 \land ... \land B_n$ \textit{safe}, if every variable that occurs in the head also occurs in the body, i.e. \[Vars(H) \subseteq \bigcup_{i \in \{1,..,n\} } Vars(B_i) \]
 
-We call a program safe if every rule in the program is safe. Safe programs are considered better because their result does not depend on the set of constants $C$ which is in practice often either not given or infinite, but only on the specific database and/or the facts in the program.
+We call a program safe if every rule in the program is safe. Most works only consider safe programs as their ground program does not depend on the set of constants $C$ which may not be given in practice.
 
 \begin{contexample}
     We can transform $P$ into the safe program $P'$ by adding a new unary predicate $N$ to the predicate symbols. $P'$ is then the union of $P \setminus \{T(?x, ?x) \leftarrow \}$ and the following rules:
@@ -320,7 +324,7 @@ What are the semantics of this newly created safe program $P'$? It turns out, th
         
         \node [block] (box1) {Input};
         \node [block, right of=box1, draw] (box2) {Program};
-        \node [block, right of=box2] (box3) {Output: Result};
+        \node [block, right of=box2] (box3) {Output};
         
         \draw [->] (box1.east) -- (box2.west);
         \draw [->] (box2.east) -- (box3.west);
@@ -332,17 +336,17 @@ What are the semantics of this newly created safe program $P'$? It turns out, th
 
 \begin{figure}
     \centering
-    \begin{tikzpicture}[node distance=3cm and 3cm, auto]
+    \begin{tikzpicture}[node distance=2.5cm and 1cm, auto, scale=0.5]
 
         \tikzstyle{block} = [rectangle, minimum width=2cm, minimum height=1cm, text centered]
         
         \node [block] (box1) {Input};
-        \node [block, right of=box1, draw] (box2) {algorithm};
+        \node [block, right of=box1, draw] (box2) {Algorithm};
         \node [block, below of=box3] (box4) {Certificate};
         \node [block, right of=box2] (box3) {Result};
         \node [block, right of=box3, draw ] (box5) {Checker};
-        \node [block, right of=box5 ] (box6) {Accept/Not accept};
-        \node [block, above of= box6] (box7) {Output};
+        \node [block, right of=box5, align=left] (box6) {Accept/\\Not accept};
+        \node [block, above of= box5] (box7) {Output};
 
         \draw [->] (box1.east) -- (box2.west);
         \draw [->] (box2.south) |- (box4.west);
@@ -352,7 +356,7 @@ What are the semantics of this newly created safe program $P'$? It turns out, th
         \draw [->] (box5.east) -- (box6.west); 
         \draw [->] (box3.north) |- (box7.west); 
     \end{tikzpicture}
-    \caption{A certifying algorithm algorithm}
+    \caption{A certifying algorithm}
     \label{fig:certifyingAlgorithm}
 \end{figure}
 
@@ -703,6 +707,6 @@ We will also often use the Exception type. This is uses two types and returns on
 
 \begin{figure}
     \centering
-    \includegraphics[scale=0.4]{Lean_example.png}
+    \includegraphics[scale=0.25]{Lean_example.png}
     \caption{An example of Lean in practice. On the left side is the code seen and on the right side the context in a proof with the current goal}
 \end{figure}

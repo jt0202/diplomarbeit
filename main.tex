@@ -41,9 +41,19 @@ reversed diagonal fill/.style 2 args={fill=#2, path picture={
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \newtheorem{fact}{Fact}
-\newenvironment{contexample}{
-   \addtocounter{example}{-1} \begin{example}[continued]}{
-   \end{example}}
+
+
+% Define a custom counter for contexample
+\newcounter{contexample}[example]
+\renewcommand{\thecontexample}{\theexample.\arabic{contexample}}
+
+% Define the contexample environment
+\newenvironment{contexample}{%
+   \refstepcounter{contexample}%
+   \begin{example}[continued]%
+}{%
+   \end{example}%
+}
 
 \usepackage{xspace}
 \usepackage{xcolor,colortbl}
