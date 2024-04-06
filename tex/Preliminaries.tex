@@ -74,9 +74,8 @@ A \textit{program} $P$ is a finite set of rules. We only consider finite sets as
 
 With this, we have introduced all the needed elements for the syntax of datalog, but we have not yet spoken of the semantics of datalog. What is the program $P$ supposed to express?
 
-We have noted the similarities between datalog and first-order logic when defining the syntax of datalog. Nonetheless, neither rules nor programs are direct elements of first-order logic. It is however not difficult to bring them into a form, where we can interpret them as elements of first-order logic and use the semantics of first-order logic for it.
+We have noted the similarities between datalog and first-order logic when defining the syntax of datalog. Semantically, we can view rules as elements of the universally quantified Horn-fragment of first-order logic. In the logic programming style the universal quantifiers are usually omitted and the implications written from right to left.
 
-The symbol $\leftarrow$ used in the definition of rules appears to be very similar to the implication $\rightarrow$ from first-order logic so we can use this fact to transform any rule into a first-order formula. This formula has still free variables so that we universally quantify over all remaining variables to gain a sentence. After doing this we can consider any program as a finite first-order theory.
 
 \begin{contexample}
     The equivalent sentence for the fact $E(1,2) \leftarrow$ is 
@@ -466,7 +465,7 @@ Everything we have seen so far holds in general in type theory. Lean itself is b
 The id function we defined above is correct but only works for natural numbers. We would have to implement another id function for booleans, string or any other type. This is rather cumbersome because we never actually use any properties of the specific type. We can generalize this function to help us with this problem.
 
 \begin{lstlisting}
-            def id (A: Type)(a: A): A:= a
+    def id (A: Type)(a: A): A:= a
 \end{lstlisting}
 
 This id function has now two arguments. The first argument is the type we want to use it on, the second argument is an element of this type. \lstinline| id $\mathbb{N}$| works as previously and has the type \lstinline|$\mathbb{N} \to \mathbb{N}$|. It seems less clear which type id itself has because this depends on the first argument.
@@ -474,7 +473,7 @@ Such types are called \textit{dependent types} and we would denote this specific
 
 In practice, we often do not want to write down too much. We can write the function instead also as:
 \begin{lstlisting}
-            def id {A: Type}(a: A): A:= a
+    def id {A: Type}(a: A): A:= a
 \end{lstlisting}
 
 Now the type $A$ is an implicit argument, which is denoted by the braces, and Lean can fill it in for the user based on the input $a$. Therefore the user can write just \lstinline|id 42| instead of \lstinline|id $\mathbb{N}$ 42|.
@@ -494,7 +493,7 @@ theorem testTheorem {A: Type}: ∀ (x y z: A), x = y → id y = z → z = x := b
   exact h2
 \end{lstlisting}
 
-The proof is done in tactic mode. We open the tactic mode with the keyword \lstinline|by|. At the start our context only contains that $A$ is a type and the goal is $∀ (x y z: A), x = y → id y = z → z = x$, which is compactly written as
+The proof is done in tactic mode. We open the tactic mode with the keyword \lstinline|by|. At the start our context only contains that $A$ is a type and the goal is $∀ (x\ y\ z\: A), x = y → id\ y = z → z = x$, which is compactly written as
 
 \[ \{A:Type\} \vdash ∀ (x\ y\ z: A), x = y → id\ y = z → z = x\]
 
@@ -525,14 +524,12 @@ We apply tactics to change the goal or a hypothesis in the context. These may in
 
 Other important tactics not seen here are \lstinline|by_contra| which allows a proof by contradiction, \lstinline|by_cases| which allows a case distinction or \lstinline|constructor| that splits an and statement into two goals. Lean offers also methods that try to prove goals themselves like \lstinline|simp| that uses lemmas marked with \lstinline|@simp| or \lstinline|tauto|, that can recognize some tautologies. The set of tactics is however not fixed and the user can introduce new tactics to simplify the reasoning process.
 
-The majority of formal proofs in this work are done in tactics mode, but we see above that describing them in natural language is quite verbose. Therefore we will only describe the idea we followed outside of this section.
+The majority of formal proofs in this work are done in tactics mode, but we see above that describing them in natural language is quite verbose. Therefore we will only describe the idea we followed outside of this section. Any result is also linked to the code in the later sections and can be directly accessed via the hyperlink to see the formalization instead.
 
 These proofs are done backwards, i.e. starting from the goal towards the assumptions. There are also forward proofs that start from the assumptions by building hypotheses until we reach the goal or by composing theorems like functions. While this is possible, it was rarely done in this work because. A good source for this is either \cite{theoremProvingLean} or \cite{HitchhikerLogicVer}.
 
-\todo{Tranform the tactic proof into the forward style.}
 
-
-We can also use \lstinline|def| to define new types. Sets of type \lstinline|A| are in Lean implemented as functions from \lstinline|A| to \lstinline|Prop|. Functions to \lstinline|Prop| are in general not computable so that the membership in a set is also not computable in contrast to for example lists.
+We can also use \lstinline|def| to define new types. Sets of type \lstinline|A| are in Lean implemented as functions from \lstinline|A| to \lstinline|Prop|. Functions to \lstinline|Prop| are in general not computable so that the membership in a set is also not computable in contrast to membership in lists.
 
 \begin{lstlisting}
     def Set (α : Type) := α → Prop
@@ -644,7 +641,7 @@ The Euclidean algorithm can be implemented in the following way:
     else Euclid b (myNat.mod a b)
 \end{lstlisting}
 
-Lean will not accept this function and instead complain in the line of the if that it failed to synthesize an instance of \lstinline|DecidableEq| for myNat. DecidableEq allows us to use $=$ for a type in a function. This is not a trivial requirement as for example the equality of real numbers is undecidable\cite{EqualityRealNumber}. We need to provide a function to Lean that can be used to decide whether two elements of myNat are equal. During the definition of inductive types, we already noted, that all elements of an inductive type are different, which allows us to do this. Luckily, Lean can even do this alone if we tell Lean to do this using the \lstinline|deriving| keyword. It can even derive multiple instances such as the Inhabited instance that states that there exists some default element of this type.
+Lean will not accept this function and instead complain in the line of the if that it failed to synthesize an instance of \lstinline|DecidableEq| for myNat. DecidableEq allows us to use $=$ between elements of a type in a function. This is not a trivial requirement as for example the equality of real numbers is undecidable\cite{EqualityRealNumber}. We need to provide a function to Lean that can be used to decide whether two elements of myNat are equal. During the definition of inductive types, we already noted, that all elements of an inductive type are different, which allows us to do this. Luckily, Lean can even do this alone if we tell Lean to do this using the \lstinline|deriving| keyword. It can even derive multiple instances such as the Inhabited instance that states that there exists some default element of this type.
 
 \begin{lstlisting}
     inductive myNat: Type

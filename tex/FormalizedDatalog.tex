@@ -1,7 +1,7 @@
 \section{Formalization of Datalog}\label{sec:formDatalog}
 In the previous section, we introduced datalog. Our goal is to check whether ground atoms are the result of correct datalog derivations. In the pursuit of a proof of correctness for our algorithms, we need to know what correct derivations are which we solve by formalizing the syntax and semantics of datalog in Lean. As of writing, there is to the best of our knowledge no formalization of datalog in Lean yet. 
 
-There does exist a formalization of datalog in Coq\cite{datalogCoq}. The formalization includes the syntax of datalog and the fixed point semantics of datalog with a certified datalog engine. Similarly, we will also formalize the syntax of datalog. After that, the paths will diverge as we are interested in the proof-theoretic semantics of datalog to check proof trees. Additionally, we will also formalize the model-theoretic semantics of datalog for completeness arguments and to have extra security that our formalization holds by proving that both semantics are equivalent.
+There does exist a formalization of datalog in Coq\cite{datalogCoq} which includes the syntax of datalog and the fixed point semantics of datalog with a certified datalog engine. Similarly, we will also formalize the syntax of datalog. After that, the paths will diverge as we are interested in the proof-theoretic semantics of datalog to check proof trees. Additionally, we will also formalize the model-theoretic semantics of datalog for completeness arguments and to have extra security that our formalization holds by proving that both semantics are equivalent.
 
 \subsection{Syntax}
 
@@ -11,7 +11,7 @@ We recall from the preliminaries that an atom is of the form $A(t_1 \dots t_n)$ 
     def atom (C: Type) (P: Type) (V: Type) (ar: P $\to$ $\mathbb{N}$): Type := sorry
 \end{lstlisting}
 
-Such a definition is rather verbose with already four arguments. Anything like the semantics that will use atoms will require even more inputs. To have a more compact representation we reuse the definition of a signature that shrinks the number of arguments to just one.  We use types instead of sets as this is more natural in type theory. We can consider the type as a set. If we were to use sets we would have to decide already which type these sets should have which seems unclear for now. This allows us to instead define later the types we want to use. 
+Such a definition is rather verbose with already four arguments. Anything like the semantics that will use atoms will require even more arguments. To have a more compact representation we reuse the definition of a signature that shrinks the number of arguments to just one.  We use types instead of sets as this is more natural in type theory. If we were to use sets we would have to decide already which type these sets should have which seems unclear for now. This allows us to instead define later the types we want to use. Even if this is not an issue and decide to use for predicate symbols a set $P$ of type \lstinline|set A|. Then any predicate symbol $p$ also has the type $A$ but $P$ might not contain every element of the type $A$, so that we additionally require a proof that $p$ is in $P$. Such a membership is not required when using a type for the predicate symbols as a term which would be the predicate symbol $p$ has always exactly one type. 
 
 The formalization showed us that the requirements of countability of the sets $P$, $C$ and $V$ were not required. Any result we wanted to prove holds already in this general case. Therefore we forego of modelling this assumption.
 
@@ -25,7 +25,7 @@ structure (.\signature.) where
   (predicateArity: predicateSymbols → ℕ)
 \end{lstlisting}
 
-In the future, unless denoted otherwise, we will always use a fixed signature $\tau$ and assume that all types have the \lstinline|DecidableEq| and \lstinline|Hashable| properties to use Lean automatic derivation for later uses in the program. 
+In the future, unless denoted otherwise, we will always use a fixed signature $\tau$ and assume that all types have the \lstinline|DecidableEq| and \lstinline|Hashable| properties to use Lean's automatic derivation for later uses in the program. 
 
 Another requirement was that the sets of constants and variables are distinct. This proved again to be unnecessary in our formalization because we define terms as an inductive type with a constructor for the constant and the variable case. Therefore constants and variables in an atom will always be distinct.
 
@@ -52,7 +52,7 @@ Two structures of the same type are equal if all their fields are equal. Due to 
     For all $\tau$-atoms $a_1, a_2$, we have $a_1 = a_2$ iff their \lstinline|symbol|s and \lstinline|atom_term|s are equal.
 \end{lemma}
 
-Rules and programs can be transformed in straightforward way. Here we use lists 
+Rules and programs can be transformed in straightforward way. Here we use lists to model the body as a fixed order of the atoms simplifies later algorithms.
 
 \begin{lstlisting}
 structure (.\datalogrule.) where
@@ -104,7 +104,7 @@ We start by defining these conversions that we now have to do manually. We can c
 
 For later proofs, it is interesting to know that this is an embedding of the ground atoms into the atoms, i.e. that if two ground atoms are different then the result of their toAtom functions is also different.
 
-For this, we need the following result. If two lists are equal then mapping both lists by the same function $f$ results in the same list. If the function is injective also the back direction holds, which we prove by induction(\listMapInjectiveEquality).
+For this, we need the following result (\listMapInjectiveEquality). If two lists are equal then mapping both lists by the same function $f$ results in the same list. If the function is injective also the back direction holds, which we prove by induction.
 
 \begin{lemma}[\groundAtomToAtomEquality]
     Let $a_1, a_2$ be two ground atoms. Then $a_1$ is equal to $a_2$ iff the result of \lstinline|groundAtom.toAtom| of both is equal.
@@ -127,7 +127,7 @@ def (.\termVariables.): term τ → Finset τ.vars
 | (term.variableDL v) => {v}
 \end{lstlisting}
 
-The variables occuring in some atom are then the union of the term variables of its terms. This can be recursively expressed using \lstinline|List.foldl|. 
+The variables occuring in some atom are then the union of the term variables of its terms. This can be recursively expressed using \lstinline|List.foldl|.
 
 \begin{lstlisting}
 def (.\Listfoldlunion.) {A B: Type} [DecidableEq B]  
@@ -138,7 +138,7 @@ def (.\atomVariables.) (a: atom τ) : Finset τ.vars :=
 List.foldl_union termVariables ∅ a.atom_terms
 \end{lstlisting}
 
-If the term variables are empty, we know that the term must be a constant. In the variable case we use \lstinline|False.elim| which use that anything follows from false to generate an object of the right type. This can never be returned and is only there for completeness.
+If the term variables are empty, we know that the term must be a constant. In the variable case, which is impossible to occur given the arguments, we use \lstinline|False.elim| which uses that anything follows from a false proposition to generate an object of the right type. This can never be returned and is only there for completeness.
 
 \begin{lstlisting}
 def (.\termWithoutVariablesToConstant.) (t: term τ) (h: termVariables t = ∅): τ.constants :=
@@ -259,7 +259,7 @@ decreasing_by
 
 Our implementation looks a bit different compared to the text. This is because we are required to prove the termination of this function. We call the height function recursively, but with a list function so that we no longer follow the inductive schema directly. We use the \lstinline|List.attach| function that takes a list $l$ and maps any element $a$ from $l$ to an element of \lstinline|{ a // a  $\in$ l}|, so a pair of the original element and a proof that it is a member of $l$.
 
-Using the sizeOf function, we prove termination by showing that \lstinline|sizeOf x < 1 + sizeOf a + sizeOf l|. By transitivity, it is sufficient to prove that \lstinline|sizeOf x < sizeOf l| holds. Because we used \lstinline|l.attach| instead of simply \lstinline|l|, we have a proof of $x \in l$ available and can use that the size of any list member must be smaller than the size of the list itself, which finishes the proof. 
+Using the sizeOf function, we prove termination by showing that \lstinline|sizeOf x < 1 + sizeOf a + sizeOf l|. By transitivity, it suffices to prove that \lstinline|sizeOf x < sizeOf l| holds. Because we used \lstinline|l.attach| instead of simply \lstinline|l|, we have a proof of $x \in l$ available and can use that the size of any list member must be smaller than the size of the list itself, which finishes the proof. 
 
 We call a tree $t_2$ a \member of a tree $t_1$ if it occurs in the subtrees of $t_1$ and can prove that any member has a smaller height than the original tree (\heightOfMemberIsSmaller) because the result of $f$ for some member $a$ of $l$ is less-equal to the value of \lstinline|listMax f l|(\listMaxlefmember).
 
@@ -300,7 +300,7 @@ The proof-theoretic semantics with respect to a program $P$ and database $d$ is 
 
 The proof-theoretic semantics provides with proof trees a good explanation of why an element is part of the solution. We only have to verify that the proof tree is correct. This however tells us only that we have found a subset of the solution. It tells us not whether there are no derivations possible. For this, the other semantics are more equipped for. They describe the solution as the least element of some set. If we verify that the result is in this set (i.e. the set of models or the set of fixed points), then our result is a superset of the solution. If both criteria hold, then we have exactly the solution.
 
-In addition to these algorithmic goals, formalizing another semantics strengthens our formalization because we might spot some wrong assumptions we did the definitions that way.
+Formalizing another semantics also strengthens our formalization because we might spot some wrong assumptions we did the definitions that way.
 
 Both the model-theoretic and the fixed point semantics are defined to be the least object of something. We decided to formalize the model-theoretic semantics because we can directly give the model. For the fixed-point semantics, we would first need to prove that the fixed point even exists and may need some theorems about fixed points, but such a formalization (in Coq) can be found in \cite{datalogCoq}.
 
@@ -329,17 +329,17 @@ An interpretation is a model, if all rules from the ground rule are fulfilled. A
     ∧ ∀ (a: groundAtom τ), d.contains a → a ∈ i
 \end{lstlisting}
 
-Now we are equipped with the necessary tools to formalize the model-theoretic semantics. In the preliminaries, we defined the semantics as the intersection of all models, i.e.
+Now we are equipped with the necessary tools to formalize the model-theoretic semantics.  We defined the semantics in the preliminaries as the intersection of all models, i.e.
 
 \[\bigcap_{\text{$M$ is model of $P$}} M\] 
 
-The corresponding operation to this intersection in Lean is called \lstinline|Set.iInter|. Therefore we would need to transform the set of interpretations to an indexed family.
+The corresponding operation to this intersection in Lean is called \lstinline|Set.iInter|. We would need to transform the set of interpretations to an indexed family to use this.
 
 \begin{lstlisting}
     def iInter (s : ι → Set α) : Set α
 \end{lstlisting}
 
-We can instead define it more directly. Sets are equal whenever they have the same members by the principle of extensionality. Therefore we also try to find a formula that is true for an element whenever it is in $\bigcap_{X: \phi(X) } X $. We know that an element is in $X \cap Y$ whenever it is in both $X$ and $Y$. We can generalize this to conclude that an element is in $\bigcap_{X: \phi(X) } X $ if it is in all sets $X$ that satisfy $\phi$.
+We can instead define it more directly. Sets are equal whenever they have the same members by the principle of extensionality. Therefore we also try to find a formula that is true for an element whenever it is in $\bigcap_{X: \phi(X) } X $. We know that an element is in $X \cap Y$ whenever it is in both $X$ and $Y$. We can generalize this to conclude that an element is in $\bigcap_{X: \phi(X) } X $ if it is in all sets $X$ that satisfy $\phi$. Therefore the model-theoretic semantics are atoms that are in all models.
 
 \begin{lstlisting}
     def (.\modelTheoreticSemantics.) (P: program τ) (d: database τ): interpretation τ := 
@@ -373,7 +373,7 @@ The remainder of this chapter is spent proving the equivalence of both semantics
 
 By the anti-symmetry of the subset operation, it suffices to show that both semantics are a subset of each other.
 
-We start by proving \lstinline|proofTheoreticSemantics P d $\subseteq$ modelTheoreticSemantics P d|. We actually prove a stronger statement by showing that all elements in the proof-theoretic semantics are in any model. By \cref{lem:modelMTS} the model-theoretic semantics are a model so that the proof follows.
+Our first goal is to show that the proof-theoretic semantics is a subset of the model-theoretic semantics for any fixed program $P$ and database $d$. We actually prove a stronger statement by showing that all elements in the proof-theoretic semantics are in any model. By \cref{lem:modelMTS} the model-theoretic semantics are a model so that the claim follows.
 
 \begin{lemma}[\proofTreeAtomsInEveryModel]
     Let $P$ be a program and $d$ be a database. Let $a$ be a ground atom in the proof-theoretic semantics of $P$ and $d$. Then we have $a \in M$ for all models $M$ of $P$ and $d$.
