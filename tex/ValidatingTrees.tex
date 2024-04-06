@@ -15,9 +15,9 @@ After introducing the problem and modeling datalog in Lean, we now describe the 
 \end{lstlisting}
 
 This is a disjunction so we need procedures to decide for both disjuncts if they are true.
-The second disjunct consists of a database check and a check of list emptiness. Both can be done straightforwardly.
+The second disjunct consists of a database check and a check of list emptiness. Both can be done in a straightforward way.
 
-The first part is more interesting. Since we use there existential quantifiers, this is not computable and have to implement a function for this. While we can simply iterate over the program to check for the existence of an $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use some more sophisticated to check this which we introduce next.
+The first part is more interesting. Since we use there existential quantifiers, this is not computable and we have to implement a function for this. While we can simply iterate over the program to check for the existence of an $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use some more sophisticated to check this which we introduce next.
 
 
 \subsection{Substitutions}
@@ -52,7 +52,11 @@ The first part is more interesting. Since we use there existential quantifiers, 
         else term.variableDL v
     \end{lstlisting}
 
-    Similar to groundings we can extend this to atoms (\applySubstitutionAtom) and rules (\applySubstitutionRule). As we no longer replace all variables with constants, this only results in atoms instead of ground atoms.
+    Similar to groundings we can extend this to atoms and rules. 
+    
+    (\applySubstitutionAtom, \applySubstitutionRule)
+    
+    As we no longer replace all variables with constants, this only results in atoms instead of ground atoms.
 
     The main result we want to prove is the following.
 
@@ -85,9 +89,9 @@ The first part is more interesting. Since we use there existential quantifiers, 
         If $t$ is a variable $v$, then the term grounding by $g$ will return $g(v)$. By the definition of \lstinline|groundingToSubstitution| all variables $v'$ return a some type which contains $g(v')$. Therefore the application replaces $v$ by $g(v)$ and both results are equal. 
     \end{proof}
 
-    Using this result we can extend this equality to the atom level 
+    Using this result we can extend this equality to the atom level, because in both cases only the terms change by the application of the functions of the previous lemma. Finally, we can extend this to the rule level.
     
-    (\groundingToSubsitutionEquivAtom), because in both cases only the terms change by the application of the functions of the previous lemma. Finally, we can extend this to the rule level (\groundingToSubsitutionEquivRule).
+    \noindent(\groundingToSubsitutionEquivAtom, \groundingToSubsitutionEquivRule)
 
     For the back direction, we need an additional property illustrated by the following example.
     \begin{example}
@@ -115,10 +119,17 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
     This is similar to the Herbrand base where we also add a constant symbol if no constant is present.
 
-    For the back direction, we prove again that it is equivalent on terms and then the atom and rule case easily follow.
+    For the back direction, we prove again that it is equivalent on terms and then the atom and rule case easily follow. As applying a substitution to a term does not always yield a constant, we require that all variables of the term are mapped to a constant by the substitution. We formalize this requirement using the substitution domain as the set of defined variables.
+
+    \begin{lstlisting}
+        def (.\substitutiondomain.) (s: substitution τ): Set (τ.vars) := 
+            {v | Option.isSome (s v) = true}
+    \end{lstlisting}
+    
+    
 
     \begin{lemma}[\substitutionToGroundingEquivTerm]
-        Let $\tau$ be a signature that contains at least one constant symbol. For any substitution $s$, term $t$ and constant $c$ such that applying $s$ to $t$ yields $t$, also grounding $t$ by \lstinline|substitutionToGrounding| yields $c$.
+        Let $\tau$ be a signature that contains at least one constant symbol. For any substitution $s$ and term $t$ such that the term variables of $t$ are a subset of the substitution domain of $s$, also grounding $t$ by \substitutionToGrounding of $s$ yields $c$.
     \end{lemma}
     \begin{proof}
         If $t$ is a constant, then it must be equal to $c$ and neither the grounding nor the substitution change the term.
@@ -126,21 +137,15 @@ The first part is more interesting. Since we use there existential quantifiers, 
         If $t$ is a variable $v$, then $s(v)$ must be $c$ in order to be equal to $c$. Therefore $s(v)$ is defined and \lstinline|substitutionToGrounding| replaces $v$ by the same value, so that the equality holds as well.
     \end{proof}
 
-    In the end, we obtain the desired theorem with the additional requirement on the set of constants.
-
+    In the end, we obtain the desired theorem with the additional requirement on the set of constants. Note that for the back direction if the application of a substitution to a rule yields a ground rule, then all variables of the rule are in the substitution domain. 
+    
+    \noindent(\applySubstitutionRuleIsGroundImplVarsSubsetDomain)
     \begin{theorem}[\groundingSubstitutionEquivalence]\label{trm:groundingSubstitutionEquivalence}
         Let $\tau$ be a signature that contains at least one constant symbol. Then for any $\tau$ rule $r'$ and ground rule $r$ we have that there exists a grounding $g$ such that grounding $r'$ by $g$ yields $r$ iff there exists a substitution $s$ such that applying $s$ to $r'$ yields $r$.
     \end{theorem}
 
-    When introducing substitutions, we had the goal to only add what is needed to a substitution and usually, we want the smallest possible substitution. In order to formalize this, we want to define a partial order on substitutions, that is denoted by $\subseteq$
-
-    Firstly, we define the substitution domain of a substitution as the set of variables for which the substitution is defined. 
-
-    \begin{lstlisting}
-    def (.\substitutiondomain.) (s: substitution τ): Set (τ.vars) := 
-        {v | Option.isSome (s v) = true}
-    \end{lstlisting}
-
+    When introducing substitutions, we had the goal to only add what is needed to a substitution and usually, we want the smallest possible substitution. In order to formalize this, we want to define a partial order on substitutions, that is denoted by $\subseteq$.
+    
     A substitution $s_1$ is then a subset of a substitution $s_2$, if both substitutions agree on the substitution domain of $s_1$. Outside of this $s_1$ is never defined, whereas $s_2$ might be, so we view $s_1$ as smaller.
 
     \begin{lstlisting}
@@ -156,7 +161,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
 We know that instead of finding a grounding, it suffices to find a substitution. Now we want to describe an algorithm that tells us whether the ground rule that is formed from a vertex of the proof tree and its children is in the ground program. For this, we take inspiration from the unification problem of first-order logic.
 
-In the unification problem of first-order logic we are given a set of equations $s_1 = t_1 \dots s_n = t_n$ between first-order terms and are required to present the most general unifier. A unifier $\mu$ is a function from variables to term so that if we replace every variable $v$ in $s_i$ and $t_i$ by $\mu (v)$ then all equations are fulfilled. A unifier $\mu$ is called the most general unifier if for every unifier $\sigma$ there exists a function $\tau$ with $\sigma = \tau \circ \mu$.
+In the unification problem of first-order logic we are given a set of equations $s_1 = t_1 \dots s_n = t_n$ between first-order terms and are required to present the most general unifier. A unifier $\mu$ is a function from variables to terms so that if we replace every variable $v$ in $s_i$ and $t_i$ by $\mu (v)$ then all equations are fulfilled. A unifier $\mu$ is called the most general unifier if for every unifier $\sigma$ there exists a function $\tau$ with $\sigma = \tau \circ \mu$.
 
 Our problem is similar and is in general an instance of the following problem.
 
@@ -315,7 +320,9 @@ After proving that it is a solution, we prove that the solution is minimal.
     In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ because a substitution was returned. Let $s'$ be the result of $matchTermList\ l_1\ l_2\ s$. We have to show that for any solution $s^\ast$ for $l_1$, $l_2$ and $s$, we have that $s' \subseteq s^\ast$.
     Let $s^\ast$ be a solution for $l_1$, $l_2$ and $s$. Then it also must be a solution for $hd$, $hd'$ and $s$ and due to \cref{lem:matchTermMin} we have that $matchTerm\ hd\ hd'\ s\ \subseteq s^\ast$. 
 
-    We additionally know that $s^\ast$ is a solution for $tl$, $tl'$ and $s$. Since $matchTerm\ hd\ hd'\ s\ \subseteq s^\ast$ we also know that it is a solution for $tl$, $tl'$ and $matchTerm\ hd\ hd'\ s$.  The substitution $s'$ is the result of $matchTermList\ tl\ tl'\ (matchTerm\ hd\ hd'\ s)$. The induction hypothesis tells us that $s'$ is the minimal solution for these input values. Therefore we know that $s' \subseteq s^\ast$ and the claim is proven. 
+    We additionally know that $s^\ast$ is a solution for $tl$, $tl'$ and $s$. Since \matchTerm returns a minimal solution, we also know that it is a solution for $tl$, $tl'$ and $matchTerm\ hd\ hd'\ s$. 
+
+    The result of $matchTermList\ tl\ tl'\ (matchTerm\ hd\ hd'\ s)$ is $s'$. The induction hypothesis tells us that $s'$ is the minimal solution for these input values. Therefore we know that $s' \subseteq s^\ast$ and the claim is proven. 
     
 \end{proof}
 
@@ -503,8 +510,7 @@ It turns out however that we can do a bit better and prove a stronger statement 
         & D(c,d).
         \end{align*}
 
-    The result of this program over an empty database is $\{A(a,c), B(a,b,d,c), C(a,b), D(c,d)\}$ and a proof tree is depicted below for each of them.
-    \\
+    The result of this program over an empty database is \[\{A(a,c), B(a,b,d,c), C(a,b), D(c,d)\}\] and a proof tree is depicted below for each of them.
 
 
     \begin{tikzpicture}
@@ -545,7 +551,7 @@ A tree is valid if all subtrees are valid. In the rule case, we explicitly requi
 
 This allows us to establish the alternative property of validateTreeList. We added the requirement of all proofs being valid to prove the back direction. As the validity of a proof tree is in general not preserved under permutation, it is not sufficient to just require every element member to be in the proof-theoretic semantics.
 
-\begin{lemma}[\validateTreeListUnitIffSubsetSemanticsAndAllElementsHaveValidTrees]
+\begin{lemma}[\validateTreeListUnitIffSubsetSemanticsAndAllValid]
     Let $P$ be a program, $d$ be a database and $l$ a list of proof trees. Then validateTreeList returns ok iff all element members of the trees in $l$ are in the proof-theoretic semantics and all trees in $l$ are valid.
 \end{lemma}
 \begin{proof}

@@ -22,9 +22,9 @@ A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  w
 
 \begin{figure}
   \centering
-  \begin{subfigure}[b]{0.65\textwidth}
+  \begin{subfigure}[b]{0.5\textwidth}
     \centering
-    \begin{tikzpicture}[scale=.75]
+    \begin{tikzpicture}[scale=.6]
       \node (A) at (5,4) {$T(0,3)$};
 
       \node (B) at (2,2) {$T(0,2)$};
@@ -61,8 +61,8 @@ A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  w
     \label{fig:proofTree}
   \end{subfigure}
   \hfill
-  \begin{subfigure}[b]{0.25\textwidth}
-    \begin{tikzpicture}
+  \begin{subfigure}[b]{0.4\textwidth}
+    \begin{tikzpicture}[scale=0.9]
       \node[circle] (A) at (0,4) {$T(0,3)$};
       \node[circle] (B) at (-1,2) {$T(0,2)$};
       \node[circle] (C) at (2,2) {$E(2,3)$};
@@ -118,7 +118,7 @@ Therefore we design our own implementation of a graph. We use an adjacency list 
 
 This approach contains all important elements in a graph, but there is a small technical problem with it. 
 
-\begin{example}
+\begin{example}\label{ex:incompletePregraph}
     
     Consider the graph depicted in \cref{ex:counterexampleGraph}. An element is colored, if it is in the list of vertices. The successors of a vertice are all elements that 
 
@@ -141,7 +141,7 @@ This approach contains all important elements in a graph, but there is a small t
         \draw[->] (v3) -- (v4);
       
       \end{tikzpicture}
-    \caption{An example of a pregraph}      
+    \caption{An example of an incomplete pregraph for \cref{ex:incompletePregraph}}      
     \label{ex:counterexampleGraph}
 
 \end{figure}
@@ -290,7 +290,7 @@ The global successors in a graph $G$ of a vertex $a$ are then all the vertices $
       \label{fig:globalSuccessors}
 \end{figure}
 
-We already see in \cref{fig:globalSuccessors} that we have that $globalSuccessors(2) \subset globalSuccessors(4)$ and $4$ is the successor of $2$. We will generalize this. In any graph we have that for every vertex $a$ and successor $b$ of $a$ we have that $globalSuccessors(b) \subseteq globalSuccessors(a)$, because any element $c$ that $b$ can reach can also be reached from $a$ by first going to $b$ and then following the walk from $b$ to $c$
+We already see in \cref{fig:globalSuccessors} that we have that the global successors of $2$ are a strict subset of the global successors of $4$ and $4$ is the successor of $2$. We will generalize this. In any graph we have that for every vertex $a$ and successor $b$ of $a$ we have that $globalSuccessors(b) \subseteq globalSuccessors(a)$, because any element $c$ that $b$ can reach can also be reached from $a$ by first going to $b$ and then following the walk from $b$ to $c$
 
 (\globalSuccessorsSubsetWhenSuccessor).
 
@@ -318,7 +318,7 @@ We see from the definition that the root of the tree returned by extractTree is 
 
 It remains to be shown this leads to a valid proof tree.
 
-\begin{lemma}[\extractTreeStepValidProofTreeIffAllLocallyValidAndAcyclic]
+\begin{lemma}[\extractTreeValidIffAllLocallyValidAndAcyclic]
     Let $G$ an acyclic graph where all vertices are locally valid with respect to a program $P$ and database $d$. Then extractTree results in a valid proof tree for any vertex $a$ of $G$.
 \end{lemma}
 \begin{proof}
@@ -509,7 +509,7 @@ We detect an cycle if a successor $b$ of the current vertex $a$ already occurs i
       hd::getSubListToMember tl a mem'
 \end{lstlisting}
 
-We keep the starting element of the list (\getSubListToMemberPreservesFront) and also preserve the walk property (\getSubListToMemberPreservesWalk) since we keep the elements in their exact order and only remove the end. The list also ends with the required element (\getSubListToMemberEndsWithElement). 
+\noindent We keep the starting element of the list (\getSubListToMemberPreservesFront) and also preserve the walk property (\getSubListToMemberPreservesWalk) since we keep the elements in their exact order and only remove the end. The list also ends with the required element (\getSubListToMemberEndsWithElement). 
 
 \begin{lemma}[\frontRepetitionInWalkImpliesCycle]
   Let $a$ be a vertex and $l$ be a list of vertices such that $a::l$ is a walk in a graph $G$. If $a$ is a member of $l$, then the graph contains a cycle.
@@ -532,7 +532,7 @@ We reuse the reachability predicate again to state that all vertices reachable f
 The propagation can be similarly stated but requires the vertex themselves to also be evaluated to ok. The proof follows from the recursive view on reachability.
 
 \begin{lemma}[\canReachLemma]
-  Consider a function \lstinline|f: A → List A → Except String Unit| and a graph $G$.
+  Consider a graph $G$ and a function \lstinline|f: A → List A → Except String Unit|.
   Any vertex reachable from a vertex $a$ in $G$ is evaluated with its successors on $f$ to ok iff $a$ is evaluated with its succesors on $f$ to ok and any vertex reachable from a successor of $a$ is evaluated to ok with its succesors on $b$.
 \end{lemma}
 
@@ -652,7 +652,7 @@ Now we know that all successors of $a$ are in $V'\setminus\{a\}$ and we finish t
 Now we can show the proof of \cref{trm:dfssemantics}.
 
 \begin{proof}[Proof of \cref{trm:dfssemantics}]
-  As \dfs is only the evaluation of \dfsstep in \foldlexceptset. We again employ \cref{lem:foldlexceptsetisok} and use \cref{lem:dfsStepProp} and \cref{trm:dfsstepsematics} to fulfill the requirements as in the previous proof. 
+  As \dfs is only the repeated evaluation of \dfsstep wrapped in \foldlexceptset, we again employ \cref{lem:foldlexceptsetisok} and use \cref{lem:dfsStepProp} and \cref{trm:dfsstepsematics} to fulfill the requirements as in the previous proof. 
 
   Therefore we only have to show that all vertices have the DfsStepSemantics property iff the graph is acyclic and every vertex of the graph is evaluated to ok on $f$ with its successors which we have already shown in \cref{lem:acyclicIffAllNotReachCycle} and \cref{lem:allTrueIfAllCanReachTrue}
 \end{proof}
