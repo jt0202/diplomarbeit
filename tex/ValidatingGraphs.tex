@@ -660,10 +660,82 @@ Now we can show the proof of \cref{trm:dfssemantics}.
 
 \subsection{HashSets for depth-first search}
 
-In the previous section, we used hash sets in the implementation of depth-first search. This offered a massive performance improve in practice in contrast to finite sets based on lists we used earlier. Unfortunately, while many lemmas for finite sets exist, there are currently almost no lemmas for hash sets. We try to bridge this gap partially by proving the correctness of insertion for hash sets.
+In the previous section we implemented and proved the correctness of our depth-first search implementation. The proofs were independent of the underlying set implementation and also work with finite sets which even used first. A faster implementation was made possible by using hash-based datastructures such as hash maps and hash sets. Unfortunately, the almost have no lemmas proven already in mathlib in contrast to finite sets which already have many results proven about them. We will try to bridge the gap a bit and show some correctness results and present on which assumptions we assume as axioms. 
+
+Hash maps are defined in Lean's standard library. We define hash sets as a hashmap mapping elements to the unit type. This will allow us to reuse results we prove for hash sets in the hash map case which was our underlying graph model.
 
 \begin{lstlisting}
-    lemma (.\StdHashSetcontainsinsert.) {S: HashSet A} (a:A ): 
-    ∀ (a':A), (S.insert a).contains a' ↔ S.contains a' ∨ a = a' 
+  abbrev HashSet (A:Type) [Hashable A] [DecidableEq A] := HashMap A Unit
+\end{lstlisting}
 
+A hash map is consists of buckets which are implemented as a non-empty array of associative lists, which are essentially lists of pairs.
+
+\begin{lstlisting}
+  def Std.HashMap.Imp.Buckets (α : Type u) (β : Type v) := {b : Array (AssocList α β) // 0 < b.size}
+\end{lstlisting}
+
+The hash map implementation combines the buckets with the size property as a natural number to see when the hash map has to be resized as very large buckets decrease the advantages in speed. 
+
+\begin{lstlisting}
+structure Std.HashMap.Imp (α : Type u) (β : Type v) where
+  size    : Nat
+  buckets : Imp.Buckets α β
+\end{lstlisting}
+
+This is so far only a reorganization of the data and does not explain the advantages and indeed placing elements randomly in buckets is not effective. The important property is called the well-formedness of the hash map buckets in Lean. For this require the underlying type to be hashable, i.e. a hash function for this type exists, and to have a boolean equality (\lstinline|BEq|) which is a user defined equality in contrast to the real equality based on the type. We do not care in this work about this property and use the real equality directly.
+
+The well-formedness of a hash map bucket consists of two properties. Firstly, in every bucket every element occurs at most once so that after an update no old values remain. Secondly, that any element is only the bucket whose position in the array equals the hash value modulo the size. This allows us to only check a small part of the array. The hash map implementation is well-formed if the buckets are well-formed and the size property matches the number of buckets.
+
+\begin{lstlisting}
+structure Std.HashMap.Imp.Buckets.WF [BEq α] [Hashable α] (buckets : Buckets α β) : Prop where
+  distinct [LawfulHashable α] [PartialEquivBEq α] : ∀ bucket ∈ buckets.1.data,
+    bucket.toList.Pairwise fun a b => ¬(a.1 == b.1)
+  hash_self (i : Nat) (h : i < buckets.1.size) :
+    buckets.1[i].All fun k _ => ((hash k).toUSize % buckets.1.size).toNat = i
+\end{lstlisting}
+
+A hash map is then finally a well-formed hash map implementation. The hash map is mostly a wrapper around the hash map implementation and therefore we focus in this section in the proofs on the \lstinline|Std.HashMap.Imp| level.
+
+\begin{lstlisting}
+  def Std.HashMap (α : Type u) (β : Type v) [BEq α] [Hashable α] := {m : Imp α β // m.WF}
+\end{lstlisting}
+
+The contains functions uses the well-formedness of the hash map implementation to look in the bucket placed in the position of the hash value of the element. The function \lstinline|mkIdx| calculates the position and proves that we can safely access the bucket thereafter.
+
+\begin{lstlisting}
+def contains [BEq α] [Hashable α] (m : Imp α β) (a : α) : Bool :=
+  let ⟨_, buckets⟩ := m
+  let ⟨i, h⟩ := mkIdx buckets.2 (hash a |>.toUSize)
+  buckets.1[i].contains a
+\end{lstlisting}
+
+In the depth-first search implementation we only needed the insertion and contains function as we only add the visited vertices. We never unvisit an element and therefore focus on the insertion function. We are given two elements $a$ and $b$. If $a$ is already present in the bucket of its hash value we simply replace the old value of $a$ by $b$ in $a$'s bucket. If not the we add the element at the front of the corresponding bucket. This might increase the size to a value that is larger than the capacity. In this case expand creates a new larger empty bucket and reinsert all the previous elements.
+
+\begin{lstlisting}
+def insert [BEq α] [Hashable α] (m : Imp α β) (a : α) (b : β) : Imp α β :=
+  let ⟨size, buckets⟩ := m
+  let ⟨i, h⟩ := mkIdx buckets.2 (hash a |>.toUSize)
+  let bkt := buckets.1[i]
+  bif bkt.contains a then
+    ⟨size, buckets.update i (bkt.replace a b) h⟩
+  else
+    let size' := size + 1
+    let buckets' := buckets.update i ( AssocList.cons a b bkt) h
+
+    if numBucketsForCapacity size' ≤ buckets.1.size then
+      { size := size', buckets := buckets' }
+    else
+      expand size' buckets'
+\end{lstlisting}
+
+The main result we want to prove is concerned with the correctness of the insertion with regards to the contains function.
+
+\begin{lemma}[\StdHashSetcontainsinsert]
+  Let $S$ be a hash set and $a$ an element. For any element $a'$, $a'$ is contained in the insertion of $a$ into $S$ iff $a'$ is contained in $S$ or $a'$ is $a$.
+\end{lemma}
+
+The contains function is too complicated to use directly in the proof steps. We instead want something simpler and define the keys as the set of elements that occur somewhere in the buckets.
+
+\begin{lstlisting}
+  def HashMap.Imp.Buckets.keys' (buckets: HashMap.Imp.Buckets A B): Finset A := Array.foldl (fun x y => x ∪ (y.toList.map Prod.fst).toFinset) ∅ buckets.val
 \end{lstlisting}
