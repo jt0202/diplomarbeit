@@ -104,4 +104,39 @@ deriving Lean.FromJson, Lean.ToJson
 Additionally, there are two command line options that can be set. Firstly, the option \textit{-g} specifies that the input file as a graph instead of a list of trees which is the default option. Secondly, we tell the program with \textit{-c} to also use the \modelChecker to check for completeness.
 
 The file does not include a database yet because these databases are often very large in practice which requires more work to replicate in Lean. All evaluations are done with a mock database which assumes that any leaf of a tree is in the database and that the database is always contained in the model during the model checking. 
+
+
 \subsection{Results}
+
+In this section we want to evaluate the program in practice. We are interested in the feasibility of our approach to verify proof trees and to check a complete result. Additionally, we want to compare the tree verification with the graph-based verification.
+
+We will use three kinds of datalog programs to test our approach:
+
+\begin{enumerate}
+    \item We will use the transitive closure programs we considered in this work multiple times. The exact program use the transitive predicate once in the body.
+    \begin{equation}
+        \begin{split}
+            Trans(?x, ?y) &\leftarrow Edge(?x, ?y). \\
+            Trans(?x, ?z) &\leftarrow Edge(?x, ?y),  Trans(?y, ?z). 
+        \end{split}
+    \end{equation}
+
+    This program can be used in on different directed graphs and may encode some kind of reachability problem. We create the graphs in a python script using networkx's \lstinline|gnm_random_graph| which uniformly selects a graph from the graphs for a given number of vertices and edges. Selecting different values for these numbers allows us to check the feasibility of both use cases.
+
+    \item We will reuse the program from \cref{ex:treeGraph} on chains of different lengths. We have theoretically analyzed that the proof trees are exponentially larger than the corresponding proof graphs and want to see if the algorithms also respect that in practice.
+    
+    \item Finally, we will use a large example from practice. The problem deals with reasoning in the OWL EL profile of the web ontology language OWL whose transformation to datalog is described in \cite{ELK}. As the database we reuse the medical ontology GALEN which is also used in the original paper. The ontology is preprocessed to csv files and leads to around 1.8 million derived atoms.
+\end{enumerate}
+
+We will use the datalog engine Nemo\cite{Nemo} to evaluate these examples. Nemo allows us to specify multiple facts as a file and ask for their derivations. This is returned in a machine-readable json format which allows us to transform this and the program into the input file format described in the previous section.
+
+Any other datalog engine that returns proof trees or graphs can also be used as long as such a program exists to convert it into the input format. This would also be possible with Soufflé\cite{Souffle} but the proof trees are only given in some kind of ASCII art style with complicates the parsing.
+
+The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RAM using Ubuntu in the Windows subsystem for Linux. We will also display the time used by Nemo for each tasks as a comparision. We believe that it is fine if the verification takes a bit longer than the computation but it should not takes hours for a task that Nemo can solve in seconds. As there is currently no alternative program capable of verifying datalog reasoning results this is the only other available for comparision.
+
+In the scenario (1), we randomly select a graph with 100 nodes and the given density and compare the time for checking the trees for 
+
+
+In the scenario (2), we only verify the result for $t(0,n)$. Here we clearly see the advantage of the graphs. 
+
+In scenario (3), we selected 1000

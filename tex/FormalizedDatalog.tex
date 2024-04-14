@@ -1,7 +1,7 @@
 \section{Formalization of Datalog}\label{sec:formDatalog}
 In the previous section, we introduced datalog. Our goal is to check whether ground atoms are the result of correct datalog derivations. In the pursuit of a proof of correctness for our algorithms, we need to know what correct derivations are which we solve by formalizing the syntax and semantics of datalog in Lean. As of writing, there is to the best of our knowledge no formalization of datalog in Lean yet. 
 
-There does exist a formalization of datalog in Coq\cite{datalogCoq} which includes the syntax of datalog and the fixed point semantics of datalog with a certified datalog engine. Similarly, we will also formalize the syntax of datalog. After that, the paths will diverge as we are interested in the proof-theoretic semantics of datalog to check proof trees. Additionally, we will also formalize the model-theoretic semantics of datalog for completeness arguments and to have extra security that our formalization holds by proving that both semantics are equivalent.
+There does exist a formalization of datalog in Coq\cite{datalogCoq} which includes the syntax of datalog and the fixed point semantics of datalog with a certified datalog engine. Similarly, we will also formalize the syntax of datalog. After that, the paths will diverge as we are interested in the proof-theoretic semantics of datalog to check proof trees. Additionally, we will also formalize the model-theoretic semantics of datalog for completeness arguments and to have extra security that our formalization is correct by proving that both semantics are equivalent.
 
 \subsection{Syntax}
 
@@ -36,7 +36,7 @@ Another requirement was that the sets of constants and variables are distinct. T
     deriving DecidableEq, Hashable
 \end{lstlisting}
 
-For an atom we have fields for the symbol, the list of terms and a proof that the length of the list matches the arity of the symbol.
+For an atom we have fields for the symbol, the list of terms and a proof that the length of the list of terms matches the arity of the symbol.
 
 \begin{lstlisting}
 structure (.\atom.) where
@@ -46,13 +46,13 @@ structure (.\atom.) where
 deriving DecidableEq, Hashable
 \end{lstlisting}
 
-Two structures of the same type are equal if all their fields are equal. Due to proof irrelevance, we gain the following expected criteria for the equality of atoms.
+Two structures of the same type are equal iff all their fields are equal. Due to proof irrelevance, we gain the following expected criteria for the equality of atoms.
 
 \begin{lemma}[\atomEquality]\label{lem:atomEquality}
     For all $\tau$-atoms $a_1, a_2$, we have $a_1 = a_2$ iff their \lstinline|symbol|s and \lstinline|atom_term|s are equal.
 \end{lemma}
 
-Rules and programs can be transformed in straightforward way. Here we use lists to model the body as a fixed order of the atoms simplifies later algorithms.
+Rules and programs can be modelled in a straightforward way. Here we use lists to have the body in a fixed order because this simplifies later algorithms.
 
 \begin{lstlisting}
 structure (.\datalogrule.) where
@@ -93,7 +93,7 @@ The first variant on the other hand allows us to define functions that create gr
 
 The number of conversions is rather limited whereas an easier way to define functions may be useful more often. Therefore we chose the first variant. 
 
-We start by defining these conversions that we now have to do manually. We can convert a ground atom to an atom by mapping every constant to a term via \lstinline|term.constant|. The map operation does not change the length of a list of atoms so that the term length property stays true(\listMapPreservesTermLength).
+We start by defining these conversions that we now have to do manually. We can convert a ground atom to an atom by mapping every constant to a term via \lstinline|term.constant|. The map operation does not change the length of a list of atoms so that the term length property is preserved(\listMapPreservesTermLength).
 
 \begin{lstlisting}
     def (.\groundAtomtoAtom.) (ga: groundAtom τ): atom τ:= {
@@ -104,20 +104,20 @@ We start by defining these conversions that we now have to do manually. We can c
 
 For later proofs, it is interesting to know that this is an embedding of the ground atoms into the atoms, i.e. that if two ground atoms are different then the result of their toAtom functions is also different.
 
-For this, we need the following result (\listMapInjectiveEquality). If two lists are equal then mapping both lists by the same function $f$ results in the same list. If the function is injective also the back direction holds, which we prove by induction.
+For this, we need the following result (\listMapInjectiveEquality): If two lists are equal then mapping both lists by the same function $f$ results in the same list. If the function is injective also the back direction holds, which we can prove by induction.
 
 \begin{lemma}[\groundAtomToAtomEquality]
     Let $a_1, a_2$ be two ground atoms. Then $a_1$ is equal to $a_2$ iff the result of \lstinline|groundAtom.toAtom| of both is equal.
 \end{lemma}
 \begin{proof}
-    If $a_1$ = $a_2$, then also their result is the same.
+    If $a_1$ = $a_2$, then also the result of applying \lstinline|toAtom| to both of them is the same.
 
-    For the back direction, we know that the results of \lstinline|groundAtom.toAtom| are equal and want to show that they are equal. We use a similar lemma as \cref{lem:atomEquality} for ground atoms(\groundAtomEquality). Therefore we have to show that their symbols and terms are equal. As \lstinline|toAtom| does not change the symbol, the first claim follows. For the second claim we employ the fact the constructors of an inductive type like \lstinline|term.constant| are injective functions\footnote{This can be shown with the injection(s) tactic.} and \listMapInjectiveEquality to conclude that the terms are equal.
+    For the back direction, we know that the results of applying \lstinline|toAtom| to $a_1$ and $a_2$ are equal of and want to show that $a_1$ is equal to $a_2$. We use a similar lemma as \cref{lem:atomEquality} for ground atoms(\groundAtomEquality). Therefore we have to show that their symbols and terms are equal. As \lstinline|toAtom| does not change the symbol, the first claim follows. For the second claim that mapping every constant to a term of $a_1$ and $a_2$ yields the same list. Any inductive constructor such as \lstinline|term.constant| is injective \footnote{This can be shown with the \lstinline|injection| tactic} and hence we can use \listMapInjectiveEquality to see that the term lists of $a_1$ and $a_2$ are equal.
 \end{proof}
 
 We can therefore employ \lstinline|groundAtom.toAtom| safely as the type coercion from ground atom to atom.
 
-So that we can convert atoms to ground atoms, it would be enough to use a proposition that says that all elements are constants. In later uses such as the definition of safety for rules, it will be beneficial to have a function that computes all variables that occur in an atom. If this returns the empty set, this is the required proof to convert an atom into a ground atom. 
+In order to convert atoms to ground atoms, it would be enough to use a proposition that says that all elements are constants. In later uses such as the definition of safety for rules, it will be beneficial to have a function that computes all variables that occur in an atom. If this returns the empty set, this is the required proof to convert an atom into a ground atom. 
 
 We can define the variables occuring in a term as a finite set.
 
@@ -127,7 +127,7 @@ def (.\termVariables.): term τ → Finset τ.vars
 | (term.variableDL v) => {v}
 \end{lstlisting}
 
-The variables occuring in some atom are then the union of the term variables of its terms. This can be recursively expressed using \lstinline|List.foldl|.
+The variables occuring in some atom are then the union of the term variables of its terms. This can be recursively expressed using \lstinline|List.foldl|. We start with the empty set and return the union with this set and the term variables of every term occuring in the atom.
 
 \begin{lstlisting}
 def (.\Listfoldlunion.) {A B: Type} [DecidableEq B]  
@@ -138,7 +138,7 @@ def (.\atomVariables.) (a: atom τ) : Finset τ.vars :=
 List.foldl_union termVariables ∅ a.atom_terms
 \end{lstlisting}
 
-If the term variables are empty, we know that the term must be a constant. In the variable case, which is impossible to occur given the arguments, we use \lstinline|False.elim| which uses that anything follows from a false proposition to generate an object of the right type. This can never be returned and is only there for completeness.
+If the term variables are empty, we know that the term must be a constant. We can convert a term to constant with a function that takes a term and a proof that its term variables are empty. In the variable case, which is impossible to occur given the arguments as we have a proof that there are no term variables, we use \lstinline|False.elim| which uses that anything follows from a false proposition to generate an object of the right type. This can never be returned and is only there for completeness.
 
 \begin{lstlisting}
 def (.\termWithoutVariablesToConstant.) (t: term τ) (h: termVariables t = ∅): τ.constants :=
@@ -207,7 +207,7 @@ The ground program of a program $P$ is the set of all ground rules that are the 
 
 \subsection{Semantics}
 
-After finishing the definition of the syntax, we start formalizing the semantics. We discussed in the preliminaries two ways for the semantics. We decided to formalize the semantics with the database as this is more general. It is simpler to pass an empty database into the checker than to write every fact from the database into the rule file.
+After finishing the definition of the syntax, we start formalizing the semantics. We mentioned in the preliminaries that the semantics can be defined with or without a database. We decided to formalize the semantics with the database as this is more general. It is simpler to pass an empty database into the checker than to write every fact from the database into the rule file.
 
 In this section, we do not want to deviate too much from the path by implementing databases in a complicated way. For now, a database is simply something that has a contains function that returns true if an element is in the database. This class can be implemented in multiple ways in the algorithm later.
 
@@ -216,7 +216,7 @@ class (.\database.) (τ: signature) where
   (contains: groundAtom τ → Bool)
 \end{lstlisting}
 
-We call an interpretation a set of ground atoms as in the preliminaries.
+We call a set of ground atoms interpretation as in the preliminaries.
 \begin{lstlisting}
     abbrev (.\interpretation.) (τ: signature)
 := Set (groundAtom τ)
@@ -224,7 +224,7 @@ We call an interpretation a set of ground atoms as in the preliminaries.
 
 We start by defining the proof-theoretic semantics as proof trees are our certificates in the checker so this is the most important semantic for us.
 
-We require the notion of a tree to formalize the proof-theoretic semantics. In mathlib exists a definition of a tree\footnote{see at \protect\url{https://leanprover-community.github.io/mathlib4_docs/Mathlib/Data/Tree.html}}, but this is in spite of the name only a binary tree. Then we could only represent rules in the proof tree whose body has at most length two. While any datalog program can be transformed into an equivalent program that only contains rules whose body has a length of at most two, this is not desirable as rules in practice are often longer. We could require the user to just transform the rules into this form, but this seems to hinder the acceptance of this tool and may mask errors that only occur in optimizations for longer rules.
+We require the notion of a tree to formalize the proof-theoretic semantics. In mathlib exists a definition of a tree\footnote{see at \protect\url{https://leanprover-community.github.io/mathlib4_docs/Mathlib/Data/Tree.html}}, but this is in spite its name only a binary tree. Then we could only represent rules in the proof tree whose body has at most length two. While any datalog program can be transformed into an equivalent program that only contains rules whose body has a length of at most two, this is not desirable as rules in practice are often longer. We could require the user to just transform the rules into this form, but this seems to hinder the acceptance of this tool and may mask errors that only occur in optimizations for longer rules.
 
 Therefore we start by defining a tree as an element $t$ with as a vertex $a$ and a list of subtrees $l$. We call $a$ the root of $t$ and the root of the trees in $l$ as the children of $t$. A leaf is an element whose subtree list is empty.
 
@@ -239,7 +239,7 @@ def (.\children.): tree A → List A
 | tree.node _ l => List.map root l
 \end{lstlisting}
 
-An important measure for trees is the height defined as the longest path from the root to a leaf. An alternative recursive definition is that it is the maximum of the height of all subtrees plus one, which we can implement with the listMax function.
+An important measure for trees is the height defined as the longest path from the root to a leaf.  An alternative recursive definition is that it is the maximum of the height of all subtrees plus one, which we can implement with the listMax function.
 
 \begin{lstlisting}
 def (.\listMax.) {A: Type} (f: A → ℕ): List A → ℕ
@@ -291,14 +291,14 @@ We see from this definition that any element that is contained in the database h
 
 We do not consider input or export predicates so that the database elements are always part of the semantics. This also simplifies the definition for isValid in contrast if we only want elements that are the result of some rule to be in our semantics.
 
-The proof-theoretic semantics with respect to a program $P$ and database $d$ is the set of ground atoms that are the root of a valid proof tree. We avoided earlier defining the types of a signature as a finite type so that we cannot expect a finite set here. We will manage to prove the same results and have to avoid proving that there are only finitely many ground atoms.
+The proof-theoretic semantics with respect to a program $P$ and database $d$ is the set of ground atoms that are the root of a valid proof tree. We avoided earlier defining the types of a signature as a finite type so that we cannot expect a finite set here. We will manage to prove the same results and do not have to prove that there are only finitely many ground atoms.
 
 \begin{lstlisting}
     def (.\proofTheoreticSemantics.) (P: program τ) (d: database τ): interpretation τ:= 
     {a: groundAtom τ | ∃ (t: proofTree τ),root t = a ∧ isValid P d t}
 \end{lstlisting}
 
-The proof-theoretic semantics provides with proof trees a good explanation of why an element is part of the solution. We only have to verify that the proof tree is correct. This however tells us only that we have found a subset of the solution. It tells us not whether there are no derivations possible. For this, the other semantics are more equipped for. They describe the solution as the least element of some set. If we verify that the result is in this set (i.e. the set of models or the set of fixed points), then our result is a superset of the solution. If both criteria hold, then we have exactly the solution.
+The proof-theoretic semantics provides with proof trees a good explanation of why an element is part of the solution. We only have to verify that the proof tree is correct. This however tells us only that we have found a subset of the solution. It tells us not whether there are no derivations possible. Passing an empty list of proof tree would always be accepted but is in general not the complete solution. For this, the other semantics better equipped with. They describe the solution as the least element of some set. If we verify that the result is in this set (i.e. the set of models or the set of fixed points), then our result is a superset of the solution. If both criteria hold, then we have exactly the solution.
 
 Formalizing another semantics also strengthens our formalization because we might spot some wrong assumptions we did the definitions that way.
 
@@ -333,20 +333,20 @@ Now we are equipped with the necessary tools to formalize the model-theoretic se
 
 \[\bigcap_{\text{$M$ is model of $P$}} M\] 
 
-The corresponding operation to this intersection in Lean is called \lstinline|Set.iInter|. We would need to transform the set of interpretations to an indexed family to use this.
+This operation is called \lstinline|Set.iInter| in Lean. We would need to transform the set of interpretations to an indexed family to use it.
 
 \begin{lstlisting}
     def iInter (s : ι → Set α) : Set α
 \end{lstlisting}
 
-We can instead define it more directly. Sets are equal whenever they have the same members by the principle of extensionality. Therefore we also try to find a formula that is true for an element whenever it is in $\bigcap_{X: \phi(X) } X $. We know that an element is in $X \cap Y$ whenever it is in both $X$ and $Y$. We can generalize this to conclude that an element is in $\bigcap_{X: \phi(X) } X $ if it is in all sets $X$ that satisfy $\phi$. Therefore the model-theoretic semantics are atoms that are in all models.
+We can instead define it more directly. Sets are equal whenever they have the same members by the principle of extensionality. Therefore we also try to find a formula that is true for an element whenever it is in $\bigcap_{X: \phi(X) } X $ and can use the set comprehension to obtain the model-theoretic semantics. We know that an element is in $X \cap Y$ whenever it is in both $X$ and $Y$. We can generalize this to conclude that an element is in $\bigcap_{X: \phi(X) } X $ if it is in all sets $X$ that satisfy $\phi$. Therefore the model-theoretic semantics are the atoms that are in all models.
 
 \begin{lstlisting}
     def (.\modelTheoreticSemantics.) (P: program τ) (d: database τ): interpretation τ := 
     {a: groundAtom τ | ∀ (i: interpretation τ), model P d i → a ∈ i}
 \end{lstlisting}
 
-We now have to prove that this is actually the least model. We start by showing that it is a subset of every model. This follows basically from the definitions.
+We now have to prove that this is actually the least model. We start by showing that it is a subset of every model. This follows from the definitions.
 
 \begin{lemma}[\leastModel]\label{lem:leastModel}
     Let $P$ be a program and $d$ be a database. For all models $M$ of $P$ and $d$, the model-theoretic semantics of $P$ and $d$ is a subset of $M$
@@ -359,7 +359,7 @@ Proving that our definition is a model takes a bit more work.
 \end{lemma}
 \begin{proof}
     Let $M$ be the model-theoretic semantics of $P$ and $d$. We have to show that it fulfills both model criteria.
-    We start by showing that all rules are true in $M$. We assume for a contradiction that there is a rule $r$ that is not true, i.e. that the body set is a subset of $M$, but the head of $r$ is not in $M$. Then there must be a model $M'$ of $P$ and $d$ such that the head of $r$ is not in $M'$. By \cref{lem:leastModel} we know that all elements of $M$ must be in the model of $M'$. Therefore the body of $r$ is a subset of $M'$ and since $M'$ is a model the head of $r$ must be in $M'$ which violates our assumptions.
+    We start by showing that all rules are true in $M$. We assume for a contradiction that there is a rule $r$ that is not true, i.e. that the body set is a subset of $M$, but the head of $r$ is not in $M$. Then there must be a model $M'$ of $P$ and $d$ such that the head of $r$ is not in $M'$. By \cref{lem:leastModel} we know that all elements of $M$ must be in the model of $M'$. Therefore the body of $r$ is a subset of $M'$ and since $M'$ is a model the head of $r$ must be in $M'$ which violates our assumption that the head of $r$ is not in $M'$.
 
     Now we show that all elements in $d$ are in $M$ as well. The proof works in the same way as before but is simpler. Suppose that this does not hold. Then there is a database element $a$ which is not in $M$. By the definition of $M$ there must exist a model $M'$ such that $a$ is not in $M'$. But any model must contain all database elements which yields the contradiction and finishes the proof.
 \end{proof}
@@ -397,7 +397,7 @@ For the back direction, it suffices to show that the proof-theoretic semantics a
     We need to prove that all rules from $ground(P)$ are true in the proof-theoretic semantics. Let $r$ be such a rule and suppose that every element of $body(r)$ is in the proof-theoretic semantics. Therefore there exists a list of trees $t_1 \dots t_n$ such that all trees are valid and the list $root(t_1) \dots root(t_n)$ equals the body of $r$. Then we can build a new tree with the root $head(r)$ and the children $t_1 \dots t_n$. This tree is valid because all subtrees are valid and the root and its children are the instance of a ground rule of $P$. Therefore also $head(r)$ is in the proof-theoretic semantics and $r$ is true.
 \end{proof}
 
-We expand a bit on the proof above. The lemma we use to get the valid proof tree for $head(r)$ is called \createProofTreeForRule. We know that all elements in the body have valid proof trees and need a list of these proof trees. We show in the lemma \getTreeHelper a more general property from which this follows.
+We expand a bit on the proof above. The lemma we use to get the valid proof tree for $head(r)$ is called \createProofTreeForRule. We know that all elements in the body have valid proof trees and need to extract a list of these proof trees. We show in the lemma \getTreeHelper a more general property from which this follows.
 
 \begin{lemma}[\getTreeHelper]\label{lem:getTreeHelper}
     Let $A$ and $B$ be types. Let $l$ be a list of type $A$ and $S$ be a finite set of type $A$. Let $f$ be a function from $B$ to $A$ and $valid$ a property of elements of type $B$. If all elements from $l$ are in $S$ and for any element $a$ in $S$ there exists an element $b$ such that $f(b) = a $ and $b$ is valid, then there exists a list $l'$ such that mapping $l'$ with $f$ yields $l$ and all elements of $l'$ fulfill the isValid predicate.

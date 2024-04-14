@@ -17,7 +17,7 @@ In order to write datalog rules, we require the existence of three at most count
 In a more concrete example we have the variables $V= \{?x,?y,?z\}$ and constants $C= {1,...,7}$. The predicate symbols are the binary predicates (i.e. they have an arity of two) $R$ and $E$ and the nullary (i.e. arity zero) predicate $Q$.
 \end{example}
 
-In the language of first-order logic as in \cite{logic}, $C$ and $P$ build the signature of the language we are going to build. We note that this fragment of first-order logic does not use function terms.
+In the language of first-order logic as in \cite{logic}, $C$ and $P$ build the signature of the language we are going to construct. We note that this fragment of first-order logic does not use function terms.
 
 The following definitions are adapted from logic for the signature above.
 
@@ -38,7 +38,7 @@ An \textit{atom} is an expression of the form $A(t_1,...,t_n)$ for $n \in \mathb
     Another counterexample would be $R(E(2,3),4)$ because $ E(2,3)$ is not a term.
 \end{contexample}
 
-In the example, some atoms used only constants in their terms, while others included variables. This is expressed by $Vars(A(t_1,...,t_n)) = \{t_i \mid t_i \in C\}$. If for some atom $a$ $Vars(a)$ is empty, we call this a \textit{ground atom}.
+In the example, some atoms used only constants in their terms, while others included variables. This is expressed by $Vars(A(t_1,...,t_n)) = \{t_i \mid t_i \in V\}$. If for some atom $a$ $Vars(a)$ is empty, we call this a \textit{ground atom}.
 
 \begin{contexample}
     In the previous example $Q()$ and $E(2,3)$ are ground atoms. The first does not have any terms at all, whereas the other only uses constants.
@@ -46,7 +46,7 @@ In the example, some atoms used only constants in their terms, while others incl
     The other atoms all contain at least the variable $?x$ and are thus no ground atoms.
 \end{contexample}
 
-A \textit{rule} is an expression of the form $H \leftarrow B_1 \and ... B_n$ for atoms $H$ and $B_i$ for $n \in \mathbb{N}$. We call $H$ the \textit{head} of the rule and $B_1,..., B_n$ the \textit{body} of the rule and define the functions $head(r) = H$ and $body(r) = {B_i}$. We allow rules with an empty body. These rules are called \textit{facts}.
+A \textit{rule} is an expression of the form $H \leftarrow B_1 \and ... B_n$ for atoms $H$ and $B_i$ for $n \in \mathbb{N}$. We call $H$ the \textit{head} of the rule and $B_1,..., B_n$ the \textit{body} of the rule and define the functions $head(r) = H$ and $body(r) = \{B_i\}$. We allow rules with an empty body. These rules are called \textit{facts}.
 
 We can generalize the $Vars$ function to rules and use this to define \textit{ground rules}. For a rule $r = H \leftarrow B_1 \and ... B_n$, we define \[Vars(r) = Vars(H) \cup \bigcup_{i \in \{1,..., n\}} Vars(B_i)\] and call $r$ a ground rule if $Vars(r) = \emptyset$. This means that a rule is a ground rule if the head and every atom in the body is a ground atom.
 
