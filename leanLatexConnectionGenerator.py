@@ -4,6 +4,23 @@ import re
 splitSymbols= r'[(\s\:]'
 namespace_regex = r'namespace (.+)\n'
 
+# numbers are not allowed in latex_commands
+def replaceNumber(input_string):
+    number_text_mapping = {
+        '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four',
+        '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'
+    }
+    
+    output_string = ''
+    for char in input_string:
+        if char.isdigit():
+            output_string += number_text_mapping[char]
+        else:
+            output_string += char
+    
+    return output_string
+
+
 # Function to perform some action on files
 def process_file(root, file):
     file_path = os.path.join(root, file)
@@ -15,7 +32,6 @@ def process_file(root, file):
         for i,line in enumerate(lines):
             line = line.lstrip()
             if line.startswith("namespace"):
-                print(line)
                 namespace = re.match(namespace_regex, line).group(1)
                 continue
             if ''.join(line.split()) == "end" + namespace:
@@ -24,7 +40,8 @@ def process_file(root, file):
             if line.startswith("def") or line.startswith("lemma") or line.startswith ("theorem") or line.startswith("structure") or line.startswith("inductive") or line.startswith("abbrev") or line.startswith("class"): 
                 result = re.split(splitSymbols, line)
                 # allow string to be valid latex
-                resultName = result[1].replace("_", "").replace(".", "").replace("'", "2")
+                resultName = result[1].replace("_", "").replace(".", "").replace("'", "prime").replace("?", "")
+                resultName = replaceNumber(resultName)
                 textVersion =  result[1].replace("_", "\_").replace("'", "\\textsc{\char13}")
                 if "'" in result[1]:
                     continue

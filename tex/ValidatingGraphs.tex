@@ -658,7 +658,7 @@ Now we can show the proof of \cref{trm:dfssemantics}.
 
 \subsection{HashSets for depth-first search}
 
-In the previous section we implemented and proved the correctness of our depth-first search implementation. The proofs were independent of the underlying set implementation and also work with finite sets which even used first. A faster implementation was made possible by using hash-based datastructures such as hash maps and hash sets. Unfortunately, the almost have no lemmas proven already in mathlib in contrast to finite sets which already have many results proven about them. We will try to bridge the gap a bit and show some correctness results and present on which assumptions we assume as axioms. 
+In the previous section we implemented and proved the correctness of our depth-first search implementation. The proofs were independent of the underlying set implementation and also work with finite sets which even used first. A faster implementation was made possible by using hash-based datastructures such as hash maps and hash sets. Unfortunately, the almost have no lemmas proven already in mathlib in contrast to finite sets which already have many results proven about them. We will try to bridge the gap a bit and show some correctness results and present which assumptions we assume as axioms. As the main focus of thesis was not formally verifying hash sets we will only give a general overview of our results.
 
 Hash maps are defined in Lean's standard library. We define hash sets as a hashmap mapping elements to the unit type. This will allow us to reuse results we prove for hash sets in the hash map case which was our underlying graph model.
 
@@ -698,7 +698,7 @@ A hash map is then finally a well-formed hash map implementation. The hash map i
   def Std.HashMap (α : Type u) (β : Type v) [BEq α] [Hashable α] := {m : Imp α β // m.WF}
 \end{lstlisting}
 
-The contains functions uses the well-formedness of the hash map implementation to look in the bucket placed in the position of the hash value of the element. The function \lstinline|mkIdx| calculates the position and proves that we can safely access the bucket thereafter.
+The contains functions uses the well-formedness of the hash map implementation to look in the bucket placed in the position of the hash value of the element. The function \lstinline|mkIdx| calculates the position and proves that there is a bucket at this position.
 
 \begin{lstlisting}
 def contains [BEq α] [Hashable α] (m : Imp α β) (a : α) : Bool :=
@@ -729,11 +729,95 @@ def insert [BEq α] [Hashable α] (m : Imp α β) (a : α) (b : β) : Imp α β 
 The main result we want to prove is concerned with the correctness of the insertion with regards to the contains function.
 
 \begin{lemma}[\StdHashSetcontainsinsert]
-  Let $S$ be a hash set and $a$ an element. For any element $a'$, $a'$ is contained in the insertion of $a$ into $S$ iff $a'$ is contained in $S$ or $a'$ is $a$.
+  Let $S$ be a hash set and $a$ an element. For any element $a'$, $a'$ is contained in the insertion of $a$ into $S$ iff $a'$ is contained in $S$ or $a'$ and $a$ are equal.
 \end{lemma}
 
-The contains function is too complicated to use directly in the proof steps. We instead want something simpler and define the keys as the set of elements that occur somewhere in the buckets.
+As hash maps are not only used to serve as hash sets but also as the graph model we want a more general result to reuse. The contains function does not tells us something about the value that is contained with the key. In order to reason about the key-value pairs we introduce the key-value member \lstinline|kv_member| which is true whenever a key-value pair is in the bucket corresponding to the key.
 
 \begin{lstlisting}
-  def HashMap.Imp.Buckets.keys' (buckets: HashMap.Imp.Buckets A B): Finset A := Array.foldl (fun x y => x ∪ (y.toList.map Prod.fst).toFinset) ∅ buckets.val
+  def (.\StdHashMapImpkvmember.) (m: HashMap.Imp A B) (a: A) (b:B): Bool :=
+    let ⟨_, buckets⟩ := m
+    let ⟨i, h⟩ := mkIdx buckets.2 (hash a |>.toUSize)
+    let bkt := buckets.1[i]
+
+    (a,b) ∈ bkt.toList
 \end{lstlisting}
+
+An element $a$ is contained in $m$ iff there exists an element $b$ with $a$ and $b$ being a \StdHashMapImpkvmember as we look in the same bucket in both cases. Both functions use however the mkIdx function to access the elements. As we are only using hash maps, we can consider any only well-formed hash map implementations and collect all elements in the buckets in a single finite set, the key-value set \StdHashMapImpkv.
+
+\begin{lstlisting}
+  def (.\StdHashMapImpBucketskv.) (buckets: HashMap.Imp.Buckets A B): Finset (A × B) := Array.foldl (fun x y => x ∪ y.toList.toFinset) ∅ buckets.val
+
+  def (.\StdHashMapImpkv.) (m: HashMap.Imp A B): Finset (A × B) := m.2.kv
+\end{lstlisting}
+
+By induction on the size of the list, we manage to show that an element is in \StdHashMapImpkv iff it is in some bucket(\StdArrayfoldlunion). Additionally, we  
+show that \StdHashMapImpkv is equivalent to \StdHashMapImpkvmember.
+
+\begin{lemma}[\StdHashMapImpkvmemberiffinkv]
+  Let $m$ be a well-formed hash map implementation. Then for any elements $a$ and $b$, $a$ and $b$ are a key-value member of $m$ iff $a$ and $b$ are in $m.kv$.
+\end{lemma}
+\begin{proof}
+  Any $a$ and $b$ that are a key-value member of $m$ are in a bucket and hence in $m.kv$. For the reverse direction, we need the well-formedness. If $a$ and $b$ are in $m.kv$, they are in some bucket $bkt$ of $m$. Due to the well-formedness of $m$, this bucket is accessable by the hash value of $a$. Therefore $a$ and $b$ are also a key-value member of $m$.
+\end{proof}
+
+In the following proof for the insertion we can therefore use the key-value set and do not have to use the more complicated functions using the hash-value.
+
+\begin{lemma}[\StdHashMapImpinsertsemantics]
+  Let $m$ be a well-formed hash map implementation. Then for any keys $a$ and $a'$ and values $b$ and $b'$, we have that $a'$ and $b'$ are a key-value member of $m.insert a b$ iff $a'$ and $b'$ are a key-value member of $m$ and $a$ and $a'$ are different, or if $(a,b)$ and $(a',b')$ are equal.
+\end{lemma}
+\begin{proof}
+The first two cases are rather obvious as we only change a single bucket. If $a$ is already contained in $m$, we replace its value by $b$. Hence all key-value members of this hash map implementations are all the previous previous members of $m$ except for the replaced previous value for $a$ or the new pair $(a,b)$. The second case is where $a$ is not contained in $m$ and adding the new pair does not bring the hash map implementation over its maximum size. In this case we add the element to the front of the bucket. All previous key-value members are preserved and as $a$ is not contained, they is no other pair with the key $a$, so that the claim follows.
+
+In the last case, adding $(a,b)$ brings the hash map implementation over its maximum size. Hence a larger hash map implementation is created and every element reinserted. Until then we added $(a,b)$ as in the previous case, so that it only remains to show that all key-value members are preserved which we show by showing that the key-value set is equal (\StdHashMapImpexpandpreservesmem). This main work of this proof is done in \StdHashMapImpexpandgomem by induction, but is rather low-level and hence omitted here.
+\end{proof}
+
+This result is the main result of this section and we will use it to now formally verify the real operations that we use in the program. As the hash map is a pair of the implementation and a proof of the implementation's well-formedness, we can lift these results to hash maps as desired. We already noted that $a$ is contained in a hash map $m$ iff there exists a $b$ such that $a$ and $b$ are a key-value member of $m$. Hence we gain the desired result for the contains function.
+
+\begin{lemma}[\StdHashMapcontainsinsert]
+  Let $m$ be a hash map. Then for any elements $a$ and $a'$ and $b$, $a'$ is contained in $m.insert a b$ iff $a'$ is contained in $m$ or $a$ and $a'$ are equal.
+\end{lemma}
+
+A hash set of type $A$ was defined as a hash map mapping elements of type $A$ to the unit type. Hence, the result for hash sets follows as well.
+
+\begin{lemma}[\StdHashSetcontainsinsert]
+  Let $S$ be a hash set and $a$ an element. For any element $a'$, $a'$ is contained in the insertion of $a$ into $S$ iff $a'$ is contained in $S$ or $a'$ and $a$ are equal.
+\end{lemma}
+
+We additionally use the \lstinline|findD| function to look up values for a key $a$. This functions uses \lstinline|find?| to look for a key $a$ which returns an option. If this option contains an element it is returned else we return the given default element.
+
+\begin{lstlisting}
+def find? [BEq α] [Hashable α] (m : Imp α β) (a : α) : Option β :=
+  let ⟨_, buckets⟩ := m
+  let ⟨i, h⟩ := mkIdx buckets.2 (hash a |>.toUSize)
+  buckets.1[i].find? a
+
+def findD (self : HashMap α β) (a : α) (b₀ : β) : β := (self.find? a).getD b₀
+\end{lstlisting}
+
+An alternative characterization of findD that simplifies our later work is the following:
+
+\begin{lstlisting}
+  lemma (.\StdHashMapfindDeqfind.) (m: HashMap A B) (a:A) (b:B): m.findD a b = match m.find? a with
+                    | some b' => b'
+                    | none => b
+\end{lstlisting}
+
+In a well-formed hash-map implementation $m$, $b$ is the result of $m.find?\ a$ iff $a$ and $b$ are key-value members of $m$ as we look in the same bucket and every element in a well-formed bucket has a unique key. (\StdHashMapfindiffkv) Therefore we can reuse the insertion semantics in the $find?$ case:
+
+\begin{lemma}[\StdHashMapfindinsert]\label{lem:hmfindinsert}
+  Let $m$ be a hash map and $a$ and $b$ be a key-value pair. Then for any element $a'$, \lstinline|(m.insert a b).find? a'| yields \lstinline|some b| if $a$ and $a'$ are equal or else the result of $m.find?\ a'$.
+\end{lemma}
+
+In the graph we never use $find?$ as we do not want to deal with the option type. We instead use $findD$ and use the empty list as the default element. One requirement would be that the result of $findD$ stays the same after inserting an element $a$ for every other element $a'$.
+
+\begin{lemma}
+  Let $m$ be a hash map and $a$ and $b$ be a key-value pair. For any elements $b'$,\lstinline|(m.insert a b).findD a b'| yields $b$.
+\end{lemma}
+\begin{proof}
+  By \cref{lem:hmfindinsert} \lstinline|(m.insert a b).find? a| yields \lstinline|some b|. By the defintion of \lstinline|findD|, therefore \lstinline|findD| also returns $b$ and the claim is proven.
+\end{proof}
+
+The operations \lstinline|contains| and \lstinline|findD| are sufficiently verified for our purposes. These results can also be reused as long as the used equality is the equality of the type. 
+
+We did not manage to verify the \lstinline|ofList| operation that takes a list of pairs of the type $A \times B$ and converts it into a \lstinline|HashMap A B|
