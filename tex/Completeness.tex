@@ -219,7 +219,7 @@
     Before proving this theorem, we finish the proof of \cref{trm:modelChecker}.
 
     \begin{proof}[Proof of \cref{trm:modelChecker}]
-        The modelChecker returns ok iff exploreGrounding returns ok for the partial ground rule obtained from a rule $r$. The resulting partial ground rule is safe and active. From \cref{trm:exploreGrounding} we know that it returns ok iff the partial ground rule is true. From the definition we know that a partial ground rule is true, if the resulting rule from \lstinline|toRule| is true. By cref{lem:toRuleFromRuleInv} this is equal to $r$.
+        The modelChecker returns ok iff exploreGrounding returns ok for the partial ground rule obtained from a rule $r$. The resulting partial ground rule is safe and active. From \cref{trm:exploreGrounding} we know that it returns ok iff the partial ground rule is true. From the definition we know that a partial ground rule is true, if the resulting rule from \lstinline|toRule| is true. By \cref{lem:toRuleFromRuleInv} this is equal to $r$.
     \end{proof}
 
     The remainder of this section is now spent proving \cref{trm:exploreGrounding}. We do this by induction on the length of the ungrounded body for arbitrary partial ground rules $pgr$.

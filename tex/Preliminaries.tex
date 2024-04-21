@@ -8,20 +8,17 @@ In this section, we introduce concepts that we are going to use in future sectio
 Datalog is a logic programming language and can be syntactically considered as a subset of Prolog. An introduction to datalog and other query languages can be found in \cite{alice}, which we recall next. We assume the reader to be familar with first-order logic as introduced in e.g. \cite{logic}.
 
 In order to write datalog rules, we require the existence of three at most countable sets $V, C$ and $P$, where $V$ represents variables, $C$ represents constants and $P$ represents predicate symbols. Every predicate symbol $p$ in $P$ has an arity $ar(p) \in \mathbb{N}$. In this work we assume that zero is a natural number.
+We use the following conventions in this work: For $R$ we use strings that start with a capital letter, for $V$ strings that start with a question mark and for $C$ any other non-empty string.
 
 \begin{example}
-    In general, we consider in this work $R$ as strings that start with a capital letter, $V$ as strings that start with a question mark and $C$ as all other non-empty strings.
-\end{example}
-
-\begin{example}
-In a more concrete example we have the variables $V= \{?x,?y,?z\}$ and constants $C= {1,...,7}$. The predicate symbols are the binary predicates (i.e. they have an arity of two) $R$ and $E$ and the nullary (i.e. arity zero) predicate $Q$.
+In a more concrete example we have the variables $V= \{?x,?y,?z\}$ and constants $C= \{1,...,7\}$. The predicate symbols are the binary predicates (i.e. they have an arity of two) $R$ and $E$ and the nullary (i.e. arity zero) predicate $Q$.
 \end{example}
 
 In the language of first-order logic as in \cite{logic}, $C$ and $P$ build the signature of the language we are going to construct. We note that this fragment of first-order logic does not use function terms.
 
 The following definitions are adapted from logic for the signature above.
 
-A \textit{term} is either a variable or a constant. In order to differentiate meaningfully between them, we require that $C \cap V = \empty$ so that no symbol is both a variable and a constant. As long as both $C$ and $V$ are finite, we will only have a finite amount of terms. This is in contrast to general first-order logic or logic programming where function symbols can lead to an infinite amount of terms even if the signature is finite.
+A \textit{term} is either a variable or a constant. In order to differentiate meaningfully between them, we require that $C \cap V = \emptyset$ so that no symbol is both a variable and a constant. As long as both $C$ and $V$ are finite, we will only have a finite number of terms. This is in contrast to general first-order logic or logic programming where function symbols can lead to an infinite amount of terms even if the signature is finite.
 
 \begin{contexample}
     Examples of terms in our language are $?z$, $2$, $5$ or $?x$.
@@ -38,7 +35,7 @@ An \textit{atom} is an expression of the form $A(t_1,...,t_n)$ for $n \in \mathb
     Another counterexample would be $R(E(2,3),4)$ because $ E(2,3)$ is not a term.
 \end{contexample}
 
-In the example, some atoms used only constants in their terms, while others included variables. This is expressed by $Vars(A(t_1,...,t_n)) = \{t_i \mid t_i \in V\}$. If for some atom $a$ $Vars(a)$ is empty, we call this a \textit{ground atom}.
+In the example, some atoms used only constants in their terms, while others included variables. We call an atom a \textit{ground atom} if its variable-free. The variables used in an atom $A(t_1 \dots t_n)$ are formally the following set: $Vars(A(t_1,...,t_n)) = \{t_i \mid t_i \in V\}$.
 
 \begin{contexample}
     In the previous example $Q()$ and $E(2,3)$ are ground atoms. The first does not have any terms at all, whereas the other only uses constants.
@@ -46,17 +43,17 @@ In the example, some atoms used only constants in their terms, while others incl
     The other atoms all contain at least the variable $?x$ and are thus no ground atoms.
 \end{contexample}
 
-A \textit{rule} is an expression of the form $H \leftarrow B_1 \and ... B_n$ for atoms $H$ and $B_i$ for $n \in \mathbb{N}$. We call $H$ the \textit{head} of the rule and $B_1,..., B_n$ the \textit{body} of the rule and define the functions $head(r) = H$ and $body(r) = \{B_i\}$. We allow rules with an empty body. These rules are called \textit{facts}.
+A \textit{rule} is an expression of the form $H \leftarrow B_1 , ... , B_n$ for atoms $H$ and $B_i$ for $n \in \mathbb{N}$. We call $H$ the \textit{head} of the rule and $B_1,..., B_n$ the \textit{body} of the rule and define the functions $head(r) = H$ and $body(r) = \{B_i \mid i \in \{1,\dots n\}\}$. We allow rules with an empty body. These rules are called \textit{facts}.
 
-We can generalize the $Vars$ function to rules and use this to define \textit{ground rules}. For a rule $r = H \leftarrow B_1 \and ... B_n$, we define \[Vars(r) = Vars(H) \cup \bigcup_{i \in \{1,..., n\}} Vars(B_i)\] and call $r$ a ground rule if $Vars(r) = \emptyset$. This means that a rule is a ground rule if the head and every atom in the body is a ground atom.
+We can generalize the $Vars$ function to rules and use this to define \textit{ground rules}. For a rule $r = H \leftarrow B_1 , ... ,B_n$, we define $Vars(r)$ to be the union of the variables occuring in the head and the body: \[Vars(r) = Vars(H) \cup \bigcup_{i \in \{1,..., n\}} Vars(B_i)\] and call $r$ a ground rule if $Vars(r) = \emptyset$. This means that a rule is a ground rule if the head and every atom in the body is a ground atom.
 
 \begin{contexample}
-    Examples for rules are $E(1,2) \leftarrow $, $Q() \leftarrow E(?x,?y)$ or $T(?x,?z) :-E(?x, ?y), T(?y,?z)$.
+    Examples for rules are $E(1,2) \leftarrow $, $Q() \leftarrow E(?x,?y)$ or $T(?x,?z) \leftarrow E(?x, ?y), T(?y,?z)$.
 
     $E(1,2) \leftarrow $ is both a fact and a ground rule, but not every fact is a ground rule as for example $E(?x, ?x) \leftarrow$
 \end{contexample}
 
-A \textit{program} $P$ is a finite set of rules. We only consider finite sets as infinite sets are difficult to express in practice.
+A \textit{program} $P$ is a finite set of rules. 
 
 \begin{contexample}
     We consider the program $P = \{$
@@ -74,7 +71,7 @@ A \textit{program} $P$ is a finite set of rules. We only consider finite sets as
 
 With this, we have introduced all the needed elements for the syntax of datalog, but we have not yet spoken of the semantics of datalog. What is the program $P$ supposed to express?
 
-We have noted the similarities between datalog and first-order logic when defining the syntax of datalog. Semantically, we can view rules as elements of the universally quantified Horn-fragment of first-order logic. In the logic programming style the universal quantifiers are usually omitted and the implications written from right to left.
+We have noted the similarities between datalog and first-order logic when defining the syntax of datalog. Semantically, we can view rules as elements of the universally quantified Horn-fragment of first-order logic. In the logic programming style the universal quantifiers are usually omitted and the implications are written from right to left. As a theory is a set of formulae we can view the program as a theory consisting of its rules.
 
 
 \begin{contexample}
@@ -83,12 +80,12 @@ We have noted the similarities between datalog and first-order logic when defini
     \[E(1,2)\]
     
     
-    and for the rule $T(?x, ?z) \leftarrow T(?x,?y) \and T(?y, ?z)$ is 
+    and for the rule $T(?x, ?z) \leftarrow T(?x,?y), T(?y, ?z)$ is 
     
     \[\forall ?x,?y,?z. T(?x,?y) \land T(?y, ?z) \rightarrow T(?x, ?z)\]
 \end{contexample}
 
-The semantics of a first-order theory or sentence are its models. Unfortunately, a theory may have multiple models as the following example shows for the theory for $P$.
+The semantics of a first-order theory or sentence are its models. Unfortunately, a program may have multiple models as the following example shows for the theory for $P$.
 
 
 \begin{contexample}\label{prelim:models}
@@ -159,45 +156,45 @@ The semantics of a first-order theory or sentence are its models. Unfortunately,
         \caption{Second model}
     \end{subfigure}
     \caption{Models for the program depicted in \cref{prelim:Program}. The encoding is explained in \cref{prelim:models}}
-
+    \label{prelim:modelsPict}
     \end{figure}
     
-    The first model expresses $T$ as the reflexive transitive closure of the input $E$, whereas the second model expands the first model and adds more additional atoms to a model.
+    The first model expresses $T$ as the reflexive transitive closure of the input $E$, whereas the second model expands the first model and adds more additional atoms to the previous model.
 \end{contexample}
 
-Such an ambiguity is not ideal when we want to compute the query results of datalog. Some fragments of logic programming allow multiple models such as answer-set programming, but for datalog, we want a unique model. This is known as the least model. For this, we need to define what least means and show that it exists.
+There are multiple models but we already see in the example there one model is a subset of the other. Such a model always exists in datalog and is called the least model. This model is of interest as the atoms that a true in this model are true in every model
 
-We call a set of ground atoms an \textit{interpretation}. An interpretation represents all true atoms. We want to define the model property from first-order logic for this definition and show then that there exists a least model according to the subset relation.
+We call a finite set of ground atoms an \textit{interpretation}. An interpretation represents all true atoms. We want to define the model property from first-order logic for this definition and show then that there exists a least model according to the subset relation.
 
-Recall from first-order logic that $\forall x. \phi(x)$ holds in a structure $\mathcal{A}$ if any element $a \in \mathcal{A}$ we have that $\phi(a)$ holds. As we do not have any function symbols all elements in the universe are constants, so instead of using the universal quantifier we could just create rules by replacing variables with all possible constants.
-Formally, this is defined using \textit{groundings} or \textit{instantions} which are functions that map variables to constants. We can apply a grounding $g$ to an atom by replacing every variable $v$ in the terms by $g(v)$ and apply $g$ to a rule by applying it to the head and every atom in the body. At the end of this, we have replaced every variable by a constant and have gained a ground rule. 
-The ground program $ground(P)$ of a program $P$ is the set of all ground rules that are the result of applying some grounding to a rule from $P$
+Recall from first-order logic that $\forall x. \phi(x)$ holds in a structure $\mathcal{A}$ if for any element $a \in \mathcal{A}$ we have that $\phi(a)$ holds. Therefore we could just create ground rules by replacing variables with all possible constants.
+Formally, this is defined using \textit{groundings} or \textit{instantiations} which are functions that map variables to constants. We can apply a grounding $g$ to an atom by replacing every variable $v$ in the terms by $g(v)$ and apply $g$ to a rule by applying it to the head and every atom in the body. At the end of this, we have replaced every variable by a constant and have gained a ground rule. 
+The ground program $ground(P)$ of a program $P$ is the set of all ground rules that are the result of applying some grounding to a rule from $P$.
 
-We call a ground rule $r$ \textit{true} in an interpretation $I$ if whenever $Body(r)$ is a subset of $I$, then also $Head(r)$ is in $I$.  We call an interpretation $I$ a \textit{model} of a program $P$ if every rule of $ground(P)$ is true in $I$.
+We call a ground rule $r$ \textit{true} in an interpretation $I$ if whenever $body(r)$ is a subset of $I$, then also $head(r)$ is in $I$.  We call an interpretation $I$ a \textit{model} of a program $P$ if every rule of $ground(P)$ is true in $I$.
 
 So now we have defined models and can define the least model as well. We still need to show that the least model exists for which the following lemma is helpful.
 
-\begin{fact}\label{fact:ModelIntersection}
+\begin{lemma}\label{lem:ModelIntersection}
 Let $M_1, M_2$ be two models of a program $P$. Then also $M_1 \cap M_2$ is a model of $P$.
-\end{fact}
+\end{lemma}
 
 Therefore the intersection of all models is a model as well and due to the properties of the intersection it is least according to the subset relation. 
 
 In total, we call \[\bigcap_{\text{$M$ is model of $P$}} M\] the \textit{least model} of $P$ and refer to this characterization as the \textit{model-theoretic semantics} of $P$.
 
 \begin{contexample}
-    In this example, the first model is actually the least model and the second model is just some other model.
+    In this example, the first model of \cref{prelim:modelsPict} is actually the least model and the second model is just some other model.
 
-    Therefore the semantic of this program the reflexive-transitive closure of $E$ if $Q()$ is given.
+    Therefore the semantic of this program is the reflexive-transitive closure of $E$ if $Q()$ is given.
     If $Q()$ is not given then it is only the reflexive closure.
 
-    Additionally, we see that the rules for $T$ encode general rules whereas the other rules are more a specific input. We might want to reuse these rules for many different instances of $E$, but so far we also need to write a new program.
+    Additionally, we see that the rules for $T$ encode general rules whereas the other rules only encode a specific input. We might want to reuse these rules for many different instances of $E$, but so far we also need to write a new program.
 \end{contexample}
 
 The example raises questions about the reusability of a program. Additionally, we talked in the introduction about database queries but never talked about databases. 
 
-We consider a \textit{database} as a set of ground atoms similar to an interpretation. What is now the semantics of a program $P$ and a database $d$? We simply add every element of $d$ as a fact to $P$ and reuse the previous semantics. Additionally, we can also move all the specific facts from the program into the database and gain a reusable program.
-An alternative model definition for a pair of $P$ and $d$ is therefore: An interpretation $I$ is a model for $P$ and $d$ if every ground atom from $d$ is in $I$ and every rule from $ground(P)$ is true in $I$. \cref{fact:ModelIntersection} holds again and we reuse the definition for the database and program case.
+We consider a \textit{database} as a finite set of ground atoms similar to an interpretation. What is now the semantics of a program $P$ and a database $d$? We simply add every element of $d$ as a fact to $P$ and reuse the previous semantics. We can also move all the facts that are ground rules in the program into the database and gain a more reusable program.
+An alternative model definition for a pair of $P$ and $d$ is therefore: An interpretation $I$ is a model for $P$ and $d$ if every ground atom from $d$ is in $I$ and every rule from $ground(P)$ is true in $I$. Then \cref{lem:ModelIntersection} holds again and we reuse the definition for the database and program case.
 
 Both views are equivalent. We have shown how we can simulate a database by a program. We can simulate the program case with the program and database case by simply using an empty database.
 
@@ -205,16 +202,16 @@ We have now defined the semantics and shown a connection with databases. But thi
 
 We can define a function that computes the least model in a more direct way. For this, we consider the case where only the program $P$ is present.
 
-Consider an interpretation $I$. We call a ground atom $a$ an \textit{immediate consequence} of $I$ if there exists a ground rule $r$ in $ground(P)$ with the head $a$ and $Body(r) \subseteq I$.
+Consider an interpretation $I$. We call a ground atom $a$ an \textit{immediate consequence} of $I$ if there exists a ground rule $r$ in $ground(P)$ with the head $a$ and $body(r) \subseteq I$.
 
-The immediate consequence operator $T_P$ adds all immediate consequences to a model. 
+The immediate consequence operator $T_P$ computes all immediate consequences of an interpretation. 
 
 \[T_P(I) = \{ a \mid \text {$a$ is an immediate consequence of $I$}\} \]
 
 A fixed point of a function $f$ is an element $k$ such that $f(k) = k$. The repeated application of $T_P$ starting from $\emptyset$ yields a fixed point that is equal to the model-theoretic semantics of a program $P$. 
 
 \begin{contexample}
-    We consider again the program $P$. 
+    We consider again the program $P$ from \cref{prelim:Program}. 
 
     Due to the fact $E(1,3) \leftarrow$, $E(1,3)$ is an immediate consequence of $\emptyset$. Applying $T_P$ again, we have that $T(1,3)$ is an immediate consequence of $\{E(1,3)\}$ due to the rule $T(?x,?y) \leftarrow E(?x, ?y)$ with the grounding 
     
@@ -226,7 +223,7 @@ A fixed point of a function $f$ is an element $k$ such that $f(k) = k$. The repe
     \end{cases}
     \]
 
-    Applying this to every fact, we gain an interpretation $I$ that contains $T(1,3)$ and $T(3,5)$. Then $T(1,5)$ is an immediate consequence of $I$ due to the rule $T(?x, ?z) \leftarrow T(?x,?y) \and T(?y, ?z)$ and the grounding 
+    Applying this grounding to every fact, we gain an interpretation $I$ that contains $T(1,3)$ and $T(3,5)$. Then $T(1,5)$ is an immediate consequence of $I$ due to the rule $T(?x, ?z) \leftarrow T(?x,?y), T(?y, ?z)$ and the grounding 
 
     \[
     g'(v) =
@@ -236,20 +233,22 @@ A fixed point of a function $f$ is an element $k$ such that $f(k) = k$. The repe
         5 & \text{else}
     \end{cases}
     \]
+
+    We can continue this process until we find the fixed point.
 \end{contexample}
 
 The least fixed-point of $T_P$ is called the \textit{fixed-point semantics} of $P$ and is the basis for most implementations of datalog reasoners. 
 
-Our goal is to explain why an atom is in the datalog result. The third important semantic of datalog helps here. 
+Our goal is to explain why an atom is in the datalog result. The third important semantics of datalog helps here. 
 
-A tree $t$ of ground atoms is a proof tree for a ground atom $a$ in a program $P$ and database $d$ if the following three conditions hold:
+A tree $t$ of whose vertices are labeled with ground atoms is a valid proof tree for a ground atom $a$ in a program $P$ and database $d$ if the following conditions hold:
 
 \begin{enumerate}
-    \item the root of $t$ is $a$
-    \item for every node $n$ and its children $l$ in $t$ one of the following two conditions holds: 
+    \item The root of $t$ is labelled by $a$
+    \item For every node $n$ with the label $a$ and its children $l$ in $t$ one of the following two conditions holds: 
     \begin{enumerate}
-        \item $n \leftarrow l_1 \land ... l_n$ for $l_1,.., l_n \in l$ is a ground rule from $ground(P)$, or
-        \item $n$ is a leaf and $n$ is in the database.
+        \item $a \leftarrow l_1, \dots ,l_n$ for $l_1,.., l_n$ being the labels of the elements in $l$ is a ground rule from $ground(P)$, or
+        \item $n$ is a leaf and $a$ is in the database.
     \end{enumerate}
 \end{enumerate}
 
@@ -286,13 +285,13 @@ A tree $t$ of ground atoms is a proof tree for a ground atom $a$ in a program $P
 \begin{contexample}
     The tree in \cref{prelim:validTree} is valid. The leaves of this tree are facts and all other nodes represent ground rules from $ground(P)$ in the previous step.
 
-    The tree in \cref{prelim:invalidTree} is not valid. $E(6,7)$ is neither a fact nor in the database. Additionally there is no rule in $P$ that can result into $T(1,7) \leftarrow T(1,3) \land T(3,6) \land E(6,7)$.
+    The tree in \cref{prelim:invalidTree} is not valid. $E(6,7)$ is neither a fact nor in the database. Additionally there is no rule in $P$ where applying some grounding yields $T(1,7) \leftarrow T(1,3), T(3,6), E(6,7)$.
 \end{contexample}
 
-The proof-theoretic semantics of a program $P$ and database $d$ is the set of ground atoms that have a valid proof tree. Again this can be shown to be equal to the other semantic definitions. We will formally prove the equality of the proof-theoretic and the model-theoretic semantics of datalog in this work.
+The proof-theoretic semantics of a program $P$ and database $d$ is the set of ground atoms that have a valid proof tree for $P$ and $d$. Again this can be shown to be equal to the other definitions of semantics. We will formally prove the equality of the proof-theoretic and the model-theoretic semantics of datalog in this work.
 
 In the rules of the program $P$ we note a special rule of the form $T(?x, ?x) \leftarrow$. It is a fact, but not a ground rule and the only rule where this is the case. 
-We call a rule $H \leftarrow B_1 \land ... \land B_n$ \textit{safe}, if every variable that occurs in the head also occurs in the body, i.e. \[Vars(H) \subseteq \bigcup_{i \in \{1,..,n\} } Vars(B_i) \]
+We call a rule $H \leftarrow B_1, \dots , B_n$ \textit{safe}, if every variable that occurs in the head also occurs in the body, i.e. \[Vars(H) \subseteq \bigcup_{i \in \{1,..,n\} } Vars(B_i) \].
 
 We call a program safe if every rule in the program is safe. Most works only consider safe programs as their ground program does not depend on the set of constants $C$ which may not be given in practice.
 
@@ -308,7 +307,7 @@ We call a program safe if every rule in the program is safe. Most works only con
 
     The new predicate $N$ (for nodes) represents any elements that occur in the $E$ relation and is used in the body for the reflexive rule.
 
-    If some constants are desired that do not occur in any $E$ relation, one can also directly encode that into the database.
+    If some constants $c$ are desired that do not occur in any $E$ relation, one can also directly encode that into the database by adding $N(c)$.
 \end{contexample}
 
 What are the semantics of this newly created safe program $P'$? It turns out, that it is equal to the semantics for $P$ for all original predicates, i.e. if we remove all ground atoms that use $N$ we gain the same result. Therefore we state that any program can be transformed into an equivalent safe program.
@@ -360,7 +359,7 @@ What are the semantics of this newly created safe program $P'$? It turns out, th
 \end{figure}
 
 Most algorithms one encounters either in books like \cite{AlgorithmsBook} or in real programs are comparable to \cref{fig:programNormal}. We have an input, give this into an algorithm which is a black box for us and then we receive a result as an output. Without inspecting the implementation we have to trust that the results are correct.
-An alternative to this are \textit{Certifying algorithms} depicted in \cref{fig:certifyingAlgorithm}. They offer an explanation in addition to the result that can be checked independently by the checker or the user themselves. We follow the presentation in \cite{CertAlg} which offers information far beyond this section as well. 
+An alternative to this are \textit{Certifying algorithms} depicted in \cref{fig:certifyingAlgorithm}. They offer an explanation in addition to the result that can be checked independently by a checker or the user themselves. We follow the presentation in \cite{CertAlg} which offers information far beyond this section as well. 
 
 Recall a definition of the class NP from complexity theory:
 
@@ -374,19 +373,19 @@ Recall a definition of the class NP from complexity theory:
 
 We can generalize this and require an algorithm not only to give us an output $x$ but also a certificate $u$ as a reason why $x$ is the correct output. Then we can either check by ourselves that $x$ is a correct solution according to $u$ or use another program that checks this. As verifying a solution is never harder than computing it, the checker is usually simpler so that we either see directly that the checker is correct or we can formally verify it.
 
-The formal framework of \cite{CertAlg} defines certifying algorithms in the following way. We consider the set $X$ of input values and the set $Y$ of output values of a function $f$. A predicate $\phi: X \to \{true, false\}$ states a precondition for the inputs and another predicate the postcondition $\psi: X \times Y \to \{true, false\}$, $\phi$ allows us the algorithm to only accept part of the input space and $\psi(x,y)$ typically expresses that $y$ is a valid output for the input $x$. In cases where $x$ is not a valid input, we use the new symbol $\bot$ to denote that the algorithm does not return anything and denote by $Y^\bot = Y \cup \{\bot\}$.
+The formal framework of \cite{CertAlg} defines certifying algorithms in the following way. We consider the set $X$ of input values and the set $Y$ of output values of a function $f$. A predicate $\phi: X \to \{true, false\}$ states a precondition for the inputs and another predicate the postcondition $\psi: X \times Y \to \{true, false\}$, $\phi$ allows the algorithm to only accept part of the input space and $\psi(x,y)$ typically expresses that $y$ is a valid output for the input $x$. In cases where $x$ is not a valid input, we use the new symbol $\bot$ to denote that the algorithm does not return anything and use instead of $Y$ the following set of output values $Y^\bot = Y \cup \{\bot\}$.
 The certificate or \textit{witness} from a set $W$ and its correctness is expressed by the predicate $\mathcal{W}: X \times Y^\bot \times W$ with the following properties:
 
 \begin{enumerate}
-    \item \textbf{Strong witness property}: Consider a triple $(x,y,w)$ that satisfies the witness predicate $\mathcal{W}$. If $y=\bot$, i.e. the input is not valid, we want $w$ to be a proof of this fact. Else we have that $y\in Y$ and we want $w$ to be a proof that the postcondition is satisfied, i.e.
-    \[ \forall x,y,w (y = \bot \land \mathcal{W}(x,y,z) \rightarrow \neg \phi(x)) \land (y \in Y \land \mathcal{W}(x,y,z) \rightarrow \psi(x,y)) \]
-    \item \textbf{Simplicity}: This statement above has a simple proof
-    \item \textbf{Checkability}: It is possible to check efficiently if $\mathcal{W}(x,y,z)$ holds for a triple $(x,y,z)$
+    \item \textbf{Strong witness property}: Consider a triple $(x,y,w)$ that satisfies the witness predicate $\mathcal{W}$. If $y=\bot$, i.e. the input is not valid, we want $w$ to be a proof of this fact. Else we have that $y\in Y$ and we want $w$ to be a proof that the postcondition is satisfied. In total we have the following requirement:
+    \[ \forall x,y,w.\ (y = \bot \land \mathcal{W}(x,y,z) \rightarrow \neg \phi(x)) \land (y \in Y \land \mathcal{W}(x,y,z) \rightarrow \psi(x,y)) \]
+    \item \textbf{Simplicity}: The strong witness property has a simple proof
+    \item \textbf{Checkability}: It is possible to check efficiently if $\mathcal{W}(x,y,w)$ holds for a triple $(x,y,w)$
 \end{enumerate}
 
 A \textit{(strongly) certifying algorithm} is an algorithm that stops on all inputs $x \in X$ and returns a tuple $\langle y, w\rangle$ such that $\mathcal{W}(x,y,w)$ holds.
 
-This is explained in the following examples. We start with an example from graph theory.
+This is illustrated in the following examples. We start with an example from graph theory.
 
 \begin{example}[\cite{CertAlg}]
     Consider the problem of deciding whether a graph $G=(V;E)$ is bipartite, i.e. there exists a partition of $V$ into $V_1, V_2$ with $V = V_1 \cup V_2$ and $V_1 \cap V_2 = \emptyset$, such that for all edges $e \in E$ we have that $e \cap V_1 \neq \emptyset$ and $e \cap V_2 \neq \emptyset$, so that all edges are only between vertices that are in the different partitions.
@@ -398,7 +397,7 @@ This is explained in the following examples. We start with an example from graph
 
     \begin{enumerate}
         \item Check if $x$ encodes a binary graph. If not return $\bot$ and a witness that describes the problem in the encoding.
-        \item Explore the graph in depth-first search and color vertices along the path by alternating colors. If we want to color a vertex by a color $c$ and it already has the color $c'$, we continue exploring another path if $c=c'$, or stop if $c \neq c'$ and return $false$. If that is the case, we have a cycle of odd length in our current path and return this cycle as a witness.
+        \item Explore the graph in depth-first search and color vertices along the path by alternating two colors. If we want to color a vertex by a color $c$ and it already has the color $c'$, we continue exploring another path if $c=c'$, or stop if $c \neq c'$ and return $false$. If $c \neq c'$ is the case, we have found a cycle of odd length in our current path and return this cycle as a witness.
         \item If we reach this step, then all vertices are colored in a way that no neighboring vertices have the same color. Then we return $true$ and the two sets of colored vertices as the witness. 
     \end{enumerate}
 
@@ -407,16 +406,16 @@ This is explained in the following examples. We start with an example from graph
     For any value of $y$ a checker can efficiently check if the returned reason does indeed hold for $x$.
 \end{example}
 
-The above example illustrates the example well for a decision problem, but we want to decide whether a set of ground atoms is the semantics of a datalog program and database, i.e. a function problem. The next example illustrates a certifying algorithm for a function problem in number theory.
+The above example illustrates the concept well for a decision problem, but we want to verify whether a set of ground atoms is the semantics of a datalog program and database, i.e. a function problem. The next example illustrates a certifying algorithm for a function problem in number theory.
 
 \begin{example}[\cite{CertAlg}]
-    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not equal to zero, i.e. the largest $g \in \mathbb{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and $psi(\langle a, b\rangle, g)$ shall me to true, if $g$ is $gcd(a,b)$
+    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not equal to zero, i.e. the largest $g \in \mathbb{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and the post-condition is that$\psi(\langle a, b\rangle, g)$ shall be true, if $g$ is the greatest common divisor of $a$ and $b$.
 
-    The normal way of computing this involves the Euclidean algorithm, but this is not certifying. The extended Euclidean algorithm however returns in addition to the greatest common divisor $g$ two numbers $s$ and $t$ such that $g = gcd(a,b) = a \dot s + b \dot t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$, then $g$ is also the greatest common divisor of $a$ and $b$.
+    The normal way of computing this involves the Euclidean algorithm, but this is not a certifying algorithm. The extended Euclidean algorithm however returns in addition to the greatest common divisor $g$ two numbers $s$ and $t$ such that $g = gcd(a,b) = a \dot s + b \dot t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$ holds for two natural numbers $s$ and $t$, then $g$ is also the greatest common divisor of $a$ and $b$.
 
-    Therefore a certifying algorithm in order to compute the $gcd$ is the extended euclidean algorithm, that returns as $y$ $gcd(a,b)$ and as the certificate the pair $\langle s, t\rangle$
+    Therefore a certifying algorithm to compute the $gcd$ is the extended euclidean algorithm, that returns as $y$ $gcd(a,b)$ and as the certificate the pair $\langle s, t\rangle$
 
-    A checker then only has to check that $g=a s + b t$ hold and that $g$ divides both $a$ and $b$. 
+    A checker then only has to check that $g=a s + b t$ holds and that $g$ divides both $a$ and $b$. 
 \end{example}
 
 For decision problems, we require an explanation when the input is in a language as well as an explanation when the input is not in the language. A common misconception is that therefore certifying algorithms are only possible for problems that are known to be in $NP \cap coNP$, which is presumed to not include the interesting $NP$-complete problems. This is not the case as we do not require the certificate to be polynomial in the size of the input. Indeed, SAT-solvers that decide the NP-complete satisfiability problem of propositional logic offer certificates in the DRAT proof format as a model or a proof of unsatisfiability\cite{DRAT}.
@@ -535,13 +534,13 @@ We can also use \lstinline|def| to define new types. Sets of type \lstinline|A| 
     def Set (α : Type) := α → Prop
 \end{lstlisting}
 
-This introduces a new type. If we want to just use functions that accept contain elements of type \lstinline|Set|, using \lstinline|def| would create a new type for which we would have to define again the set operations $\cup$ or $\cap$. In this case, one can use the \lstinline|abbrev| command which provides a simple alias.
+This introduces a new type. If we want to just use functions that accept certain elements of type \lstinline|Set|, using \lstinline|def| would create a new type for which we would have to define again the set operations $\cup$ or $\cap$. In this case, one can use the \lstinline|abbrev| command which provides a simple alias.
 
 \begin{lstlisting}
     abbrev NatSet := Set $\mathbb{N}$
 \end{lstlisting}
 
-The CIC and Lean allow the creation of types by induction. We can create our own implementation of the natural numbers with the \lstinline|inductive| keyword. After that, we list the constructors. These can be constant constructors such as \lstinline|zero| or function creators like \lstinline|succ|
+The CIC and Lean allow the creation of types by induction. We can create our own implementation of the natural numbers with the \lstinline|inductive| keyword. After that, we list the constructors. These can be constant constructors such as \lstinline|zero| or function constructors like \lstinline|succ|.
 An inductive type may have many constructors of both types or even none as the empty type.
 
 \begin{lstlisting}
@@ -552,7 +551,7 @@ An inductive type may have many constructors of both types or even none as the e
 
 Our definition states that an element of \lstinline|myNat| is either \lstinline|zero| or the result of applying \lstinline|succ| to some other element of \lstinline|myNat|. Any element of \lstinline|myNat| is only the result of one of these constructors and all elements of \lstinline|myNat| are distinct.
 
-A typical mathematical definition for this would be: myNat is the smallest set $S$ of elements such that it contains $zero$ and whenever an element $a$ is in $S$, then also $succ(a)$ is in $S$.
+A typical mathematical definition for this would be: myNat is the smallest set $S$ of elements such that it contains $zero$ and whenever an element $a$ is in $S$, then also $succ\ a$ is in $S$.
 
 We can define for inductive types functions recursively like the add function.
 
@@ -651,7 +650,7 @@ Lean will not accept this function and instead complain in the line of the if th
 
 \end{lstlisting}
 
-Now the error will disappear, but a new one will be introduced. Lean does not recognize the termination of \lstinline|myNat.Euclid|. We have already defined recursive functions before and we did not encounter this problem. In \lstinline|myNat.add| we however used the inductive schema and only did the recursion on $n$ in the case of $succ n$. This allowed Lean to conclude that we only call the function on smaller elements so that the function will terminate.
+Now the error will disappear, but a new one will be introduced. Lean does not recognize the termination of \lstinline|myNat.Euclid|. We have already defined recursive functions before and we did not encounter this problem. In \lstinline|myNat.add| we however used the inductive schema and only did the recursion on $n$ in the case of $succ\ n$. This allowed Lean to conclude that we only call the function on smaller elements so that the function will terminate.
 
 To show termination, one is required to define some \textit{well-founded relation}, i.e. a relation that does not have any infinite descending chains. Such a relation would be the less-than relation of the natural numbers so it is often convenient to define some size measure that measures the size of our elements in the natural numbers and use this. Such a function exists automatically for any inductive type and is called \lstinline|sizeOf|. We can provide this and are only left to prove that \lstinline|sizeOf (mod a b) < sizeOf b|, which we will leave open here.
 
@@ -684,9 +683,9 @@ We want to take a look at another example of an inductive type, that we will oft
     | cons hd _ => hd
 \end{lstlisting}
 
-We see in this definition a new type of argument. We want to return an element of the list. If the list is empty, this proves to be difficult. In that case, we return the default element that exists because $A$ is an instance of \lstinline|Inhabited|. Such a type-class parameter is given in brackets and Lean will look for the instance when using this function.
+We see in this definition a new type of argument. We want to return an element of the list. If the list is empty, this proves to be difficult. In that case, we return the default element that exists because $A$ is an instance of \lstinline|Inhabited|. Such a type-class parameter is given in brackets and Lean will look for the instance that shows the implementation of the typeclass for this type when using this function.
 
-This may not always be the desired behaviour and maybe we want to return nothing if the list is empty. In this case, we can use the \lstinline|Option| Type. It has two constructors, one that contains the element and the other symbolizes that there is nothing. Here $\alpha$ has the type \lstinline|Type u| that symbolizes it works for any type universe.
+This may not always be the desired behaviour and maybe we want to return nothing if the list is empty. In this case, we can use the \lstinline|Option| Type. It has two constructors, one that contains the element and the other symbolizes that there is nothing. Here $\alpha$ has the type \lstinline|Type u| that symbolizes it works for types from any type universe.
 
 \begin{lstlisting}
     inductive Option (α : Type u) where
@@ -694,7 +693,8 @@ This may not always be the desired behaviour and maybe we want to return nothing
     | some (val : α) : Option α
 \end{lstlisting}
 
-We will also often use the Exception type. This is uses two types and returns one in the error case and the other in the normal case.
+We will also often use the Exception type. This uses two types $\epsilon$ and $\alpha$. The type $\epsilon$ is the error we report and $\alpha$ are the elements we return if no error occurs.
+
 
 \begin{lstlisting}
     inductive Except (ε : Type u) (α : Type v) where

@@ -5,17 +5,15 @@ In the previous section, we described an algorithm to verify proof trees. Proofs
 \begin{example}\label{ex:treeGraph}
     Consider the following program that computes the transitive closure in a different way.
 
-    \begin{equation}
-        \begin{split}
-            T(?x,?y) &\leftarrow E(?x,?y). \\
-            T(?x,?z) &\leftarrow T(?x, ?y), T(?x, ?y), E(?y, ?z). \\
-        \end{split}
-    \end{equation}
+    \begin{align}
+            T(?x,?y) &\leftarrow E(?x,?y). \label{ex:treeGraph:ruleBase}\\
+            T(?x,?z) &\leftarrow T(?x, ?y), T(?x, ?y), E(?y, ?z). \label{ex:treeGraph:ruleTrans}
+    \end{align}
 
-    The database shall encode the elements of a chain $E(i, i+1)$ for $i \in \{0, n\}$. In the proof tree representation we need the same proof tree twice for $T(?y, ?z)$ in the second rule and will need copies for it later, which results in large trees. The proof tree for $T(0, i+1)$ needs a node for this fact, one for the $E$ fact $E(i, i+1)$ and two proof trees for $T(0, i)$. Therefore the size of $T(0, i+1)$ in the number of nodes is more than double the size of $T(0, i)$ which leads to an exponential growth.
+    The database shall encode the elements of a chain $E(i, i+1)$ for $i \in \{0, n\}$. In the proof tree representation we need the same proof tree twice for $T(?y, ?z)$ in the second rule and will need copies for it later, which results in large trees. The proof tree for $T(0, i+1)$ needs a vertex representing the head of \cref{ex:treeGraph:ruleTrans}, one vertex for the $E$ fact $E(i, i+1)$ and two proof trees for $T(0, i)$. Therefore the size of $T(0, i+1)$ in the number of nodes is more than double the size of $T(0, i)$ which leads to an exponential growth.
 \end{example}
 
-Proof trees offer no reusability as they need to stay in the tree shape. Formally we can view the proof tree as a tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices can have the same label in a proof tree as in the example above.
+Proof trees offer no reusability as they need to stay in the tree shape. Formally we can view the proof tree as a directed tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices can have the same label in a proof tree as in the example above. We need this as a ground atom $a$ can be used in multiple ground rules used in the derivation but cannot have connections from multiple vertices to the vertex representing $a$ if we are in a directed tree.
 
 A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  with $V_G = \{a \mid \exists v \in V_T, label(v)=a\}$ and $E_G = \{ (a_1, a_2) \mid \exists v_1, v_2 \in V_T,  label(v_i) = a_i \land (v_1, v_2) \in E_T\}$. Then a vertice can be considered equal to its label as no label occurs multiple times anymore. Examples for a proof tree and the corresponding graph are in \cref{fig:treeGraph}.
 
@@ -87,7 +85,7 @@ A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  w
 
 Another advantage occurs when we want to validate multiple trees or even a complete result. Multiple trees will often share labels as well and combining them into a graph, i.e. the union of $G_{T_i}$ for trees $T_i$ will again include every label just once. In the previous section, we introduced the possibility of not having to check every proof tree as they occur in other proof trees as well. Selecting a minimal amount of proof trees to check a complete result is however still an instance of the NP-hard subset cover problem.
 
-We require for this that if the successors of a ground atom are the same elements  in every tree if the ground atom occured in this tree. If not an atom would have more successors then previously in the tree and probably no matching ground rule. In practice, this requirement was always fulfilled.
+We require for this that the successors of a ground atom are the same elements in every tree if the ground atom occured in this tree. If not an atom would have more successors then previously in the trees and there will probably exists no matching ground rule. In practice, this requirement was always fulfilled.
 
 Another requirement is acyclicity. We cannot use an atom to explain itself. Either we could have used it directly before or it cannot be explained by a proof tree at all. 
 \subsection{Graph model}
@@ -102,9 +100,9 @@ structure SimpleGraph (V : Type u) where
   loopless : Irreflexive Adj
 \end{lstlisting}
 
-This graph representation is unfortunately not what we need in an algorithm. Firstly, the adjacency relation of this graph is always symmetric so that it does not encode the directed graphs we need. The direction of the edges allows us to differentiate between the ground atoms that were used to derive a ground atom and the ground atoms that were derived from a ground atom. Secondly, the adjacency relation is a function to \lstinline|Prop| and thus in general not computable but we want to use it in an algorithm. Finally, we need for the validation the successors of a vertex as they are supposed to represent the body of a ground rule. When we want to get them in this model we would have to ask the adjacency relation for every vertex if it would be computable.
+This graph representation is unfortunately not what we need in an algorithm. Firstly, the adjacency relation of this graph is always symmetric so that it does not encode the directed graphs we need. The direction of the edges allows us to differentiate between the ground atoms that were used to derive a ground atom and the ground atoms that were derived from a ground atom. Secondly, the adjacency relation is a function to \lstinline|Prop| and thus in general not computable but we want to use it in an algorithm. Finally, we need for the validation the successors of a vertex as they are supposed to represent the body of a ground rule. When we want to get them in this model we would have to query the adjacency relation for every vertex assuming it would be computable.
 
-Therefore we design our own implementation of a graph. We use an adjacency list approach so that we can quickly get all the successors of a vertex. This represented by a hash map whose keys are the vertices. Each vertex is mapped via the hash map towards its successors.
+Therefore we design our own implementation of a graph. We use an adjacency list approach so that we can quickly get all the successors of a vertex. The graph is represented by a hash map whose keys are the vertices. Each vertex is mapped via the hash map towards its successors.
 
 \begin{lstlisting}
     abbrev (.\PreGraph.) (A: Type) [DecidableEq A] [Hashable A] := 
@@ -114,13 +112,13 @@ Therefore we design our own implementation of a graph. We use an adjacency list 
     def (.\PreGraphsuccessors.) (g : PreGraph A) (a : A) : List A := g.findD a []
 \end{lstlisting}
 
-\lstinline|Std.HashMap.toList| returns here a list of pairs of the type $(A, List\ A)$, i.e. a vertex and its successors. Using \lstinline|Prod.fst| we obtain the first element of every pair in the list, which are all vertices. \lstinline|Std.HashMap.findD a []| returns the value saved with $a$ in the hash map which are the successors of $a$. If a vertex is not present (the value is not in the hash map), then $[]$ is returned which is the fall back option provided to  \lstinline|Std.HashMap.findD|.
+\lstinline|Std.HashMap.toList| returns here a list of pairs of the type $(A, List\ A)$, i.e. a vertex and its successors. Using \lstinline|Prod.fst| we obtain the first element of every pair in the list, which are all vertices. \lstinline|Std.HashMap.findD a []| returns the value saved with $a$ in the hash map which are the successors of $a$. If a vertex is not present (the key is not in the hash map), then $[]$ is returned which is the fall back option provided to  \lstinline|Std.HashMap.findD|.
 
 This approach contains all important elements in a graph, but there is a small technical problem with it. 
 
 \begin{example}\label{ex:incompletePregraph}
     
-    Consider the graph depicted in \cref{ex:counterexampleGraph}. An element is colored, if it is in the list of vertices. The successors of a vertice are all elements that 
+    Consider the graph depicted in \cref{ex:counterexampleGraph}. An element is colored, if it is in the list of vertices. Hence, the vertices are the list $[1,2,3]$. The vertex 3 has the element 4 as a successor, but 4 is not a vertex of the graph. Such a behaviour is undesireable as searching for vertices that satisfy some criteria may lead outside of the graph.
 
 \begin{figure}
     \centering
@@ -145,7 +143,7 @@ This approach contains all important elements in a graph, but there is a small t
     \label{ex:counterexampleGraph}
 
 \end{figure}
-    We can view the type \lstinline|Fin 5|, i.e. the natural numbers $n$ with the property that $n<5$. The vertices are the list $[1,2,3]$. The vertex 3 has the element 4 as a successor, but 4 is not a vertex of the graph. Such a behaviour is undesireable as searching for vertices that satisfy some criteria may lead outside of the graph.
+    
 \end{example}
 
 We define a pregraph to be complete, if every successor of a vertex is a vertex itself and can then avoid the problem.
@@ -161,7 +159,7 @@ abbrev (.\Graph.) (A: Type) [DecidableEq A] [Hashable A] :=
     { pg : PreGraph A // pg.complete }
 \end{lstlisting}
 
-The completeness predicate was necessary, because our type is a superset than the vertices that occur in the graph. We do not expect every ground atom to be in the graph. An alternative would be to create a subtype of those ground atoms that occur in a list but this requires many types conversions when creating a graph from scratch as the list of vertices will change. Here we can add vertices to the graph and only have to prove that the completeness property still holds at the end.
+The completeness predicate was necessary, because our type is a superset than the vertices that occur in the graph. We do not expect every ground atom to be in the graph. An alternative would be to create a subtype of those ground atoms that occur in the list of vertices but this may require many types conversions when adding vertices to a graph in the parsing. Here we can add vertices to the graph and only have to prove that the completeness property still holds at the end.
 
 We start by formalizing walks in a graph. Walks allow the repitition of vertices in itself in contrast to paths which suffices our needs. 
 
@@ -173,11 +171,11 @@ def (.\isWalk.) (l: List A) (G: Graph A): Prop :=
     ∀ (i: ℕ), i > 0 → ∀ (g: i < l.length), l.get (Fin.mk i.pred (pred_lt i l.length g)) ∈ G.successors (l.get (Fin.mk i g) )
 \end{lstlisting}
 
-The \lstinline|pred| function returns the predecessor of any natural number that is not zero and zero otherwise. Because we use the \lstinline|List.get| function we not only have to specify a position but also a proof that this position is smaller than the length of the list to not get an error. These two elements are combined into a Fin type. In the future we usually omit these proofs in this work because of the length.
+The \lstinline|pred| function returns the predecessor of any natural number that is not zero and zero otherwise. Because we use the \lstinline|List.get| function we not only have to specify a position but also a proof that this position is smaller than the length of the list to not get an error. These two elements are combined into a Fin type. In the future we usually omit these proofs in this work because of the length. The proofs can however be found in the actual formalization.
 
 Due to the completeness predicate it would suffice to require that the starting vertex is in $G$ but this variant is simpler to state. We also allow the empty walk $[]$ as this will be beneficial in later applications.
 
-Lists are better in this use case in contrast to arrays because they can easily be extended at the front which we will use when explore a graph algorithmically. We can always extend a walk by a successor of the leading element.
+Lists are better in this use case in contrast to arrays because they can easily be extended at the front which we will use when exploring a graph algorithmically. We can always extend a walk by a successor of the leading element.
 
 \begin{lemma}[\isWalkextendssuccessors]
     Let $w$ be a list of vertices and $a$ and $b$ be vertices.
@@ -820,4 +818,4 @@ In the graph we never use $find?$ as we do not want to deal with the option type
 
 The operations \lstinline|contains| and \lstinline|findD| are sufficiently verified for our purposes. These results can also be reused as long as the used equality is the equality of the type. 
 
-We did not manage to verify the \lstinline|ofList| operation that takes a list of pairs of the type $A \times B$ and converts it into a \lstinline|HashMap A B|
+We did not manage to verify the \lstinline|ofList| operation that takes a list of pairs of the type $A \times B$ and converts it into a \lstinline|HashMap A B|. We use it to create the initial graph . We want each element 

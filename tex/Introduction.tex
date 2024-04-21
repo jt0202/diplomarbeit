@@ -9,7 +9,7 @@ Firstly, we can prove the correctness of a program, which is done in the field o
 
 In practice, software developers mostly employ a test-driven approach to software correctness. They design specific use cases and specify what the program is supposed to do in this case. Designing such cases is difficult and cannot cover every scenario so we can only see that some scenarios are bug-free.
 
-An interesting development in algorithms research are certifying algorithms \cite{CertAlg}. These algorithms do not only return a solution but also a certificate as an explanation why the returned value is the correct answer. In the case of SAT-solving, they would for example return a possible model as well as stating that a formula is satisfiable. The user can then verify on their own that the result is correct without inspecting the code's inner workings. This can also be done by programs called checkers. These are usually smaller and simpler so that they can be formally verified. 
+An interesting development in algorithms research are certifying algorithms \cite{CertAlg}. These algorithms do not only return a solution but also a certificate as an explanation why the returned value is the correct answer. In the case of SAT-solving, they would return a possible model as well as stating that a formula is satisfiable. The user can then verify on their own that the result is correct without inspecting the code's inner workings. This can also be done by programs called checkers. These are usually smaller and simpler so that they can be formally verified. 
 
 Our interest concerns computing the results of datalog programs. Datalog is a logic programming and query language that allows to write rules in the following way
 
