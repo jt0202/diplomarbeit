@@ -3,7 +3,7 @@
 After introducing the problem and modeling datalog in Lean, we now describe the algorithm to verify a solution partially. We focus in this section on the soundness by verifying a given proof tree. In the previous section, we introduced the following characterization for valid proof trees:
 
 \begin{lstlisting}
-    def isValid(P: program τ) (d: database τ) (t: proofTree τ): 
+    def (.\isValid.)(P: program τ) (d: database τ) (t: proofTree τ): 
     Prop :=
     match t with
     | proofTree.node a l => 
@@ -17,7 +17,7 @@ After introducing the problem and modeling datalog in Lean, we now describe the 
 This is a disjunction so we need procedures to decide for both disjuncts if they are true.
 The second disjunct consists of a database check and a check of list emptiness. Both can be done in a straightforward way.
 
-The first part is more interesting. Since we use there existential quantifiers, this is not computable and we have to implement a function for this. While we can simply iterate over the program to check for the existence of an $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use some more sophisticated to check this which we introduce next.
+The first part is more interesting. Since we use there existential quantifiers, this is not computable and we have to implement a function for this. While we can simply iterate over the program to check for the existence of a rule $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use something more sophisticated to check this which we introduce next.
 
 
 \subsection{Substitutions}
@@ -95,7 +95,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
     For the back direction, we need an additional property illustrated by the following example.
     \begin{example}
-        Consider the program $\mathcal{P} = \{P \leftarrow, Q \leftarrow P\}$ and the signature $C = \emptyset$, $V = \{?x,?y,?z \}$ and $P = \{p,q\}$
+        Consider the program $\mathcal{P} = \{P \leftarrow, Q \leftarrow P\}$ and the signature $C = \emptyset$, $V = \{?x,?y,?z \}$ and $P = \{P,Q\}$
 
         Any rule in $\mathcal{P}$ is already a ground rule and there exists a substitution, the empty substitution that maps all variables to none, so that the rule is equal to itself as a ground rule.
         
@@ -119,7 +119,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
     This is similar to the Herbrand base where we also add a constant symbol if no constant is present.
 
-    For the back direction, we prove again that it is equivalent on terms and then the atom and rule case easily follow. As applying a substitution to a term does not always yield a constant, we require that all variables of the term are mapped to a constant by the substitution. We formalize this requirement using the substitution domain as the set of defined variables.
+    For the back direction, we prove again that it is equivalent on terms and then the atom and rule case easily follow. As applying a substitution to a term does not always yield a constant, we require that all variables of the term are mapped to a constant by the substitution. We formalize this requirement using the substitution domain as the set of defined variables of a substitution.
 
     \begin{lstlisting}
         def (.\substitutiondomain.) (s: substitution τ): Set (τ.vars) := 
