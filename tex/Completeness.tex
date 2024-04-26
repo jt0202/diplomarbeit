@@ -4,7 +4,7 @@
 
     \[ S \subseteq \mathtt{proofTheoreticSemantics\ P\ d} = \mathtt{modelTheoreticSemantics\ P\ d} \subseteq S \]
 
-    We only accept safe rules for the model checker which we define using the \atomVariables. A rule is safe if every variable in the head occurs already in the body. Then we can ground a rule only using the atoms in the model. Unsafe rules would require us to replace a variable that does not occur in the body with every constant symbol which is depending on the constant type not possible.
+    We only accept safe rules for the model checker which we define using \atomVariables. A rule is safe if every variable in the head occurs already in the body. Safe rules allows us to ground a rule using only the atoms in the given interpretation we want to test. Unsafe rules would require us to replace a variable that does not occur in the body with every constant symbol which is depending on the constant type not possible. As many practical datalog reasoners also only accept safe rules, this restriction seems acceptable to us.
 
     \begin{lstlisting}
         def (.\ruleisSafe.) (r: rule τ): Prop := 
@@ -34,7 +34,7 @@
                 }
             \end{lstlisting}
             
-            This representation does not look any different from the rule itself as we do not use the grounded body at all. We can however move ground atoms from the ungrounded body into the grounded body. The order of the atoms in the body does not matter semantically as we use a set definition when defining the criteria for a rule being true so that we can simply move all ground atoms in the grounded body.
+            This representation does not look any different from the rule itself as we do not use the grounded body at all. We can however move ground atoms from the ungrounded body into the grounded body. The order of the atoms in the body does not matter semantically as we use a set definition when defining the criteria for a rule being true so that we can simply move all ground atoms in the grounded body. Another representation of the same rule as a partial ground is therefore $pgr_2=$
 
             \begin{lstlisting}
                 {
@@ -46,7 +46,7 @@
 
         \end{example}
 
-        We can transform any rule into a partial ground rule by setting the head as the head, the body as the ungrounded body and setting the grounded body to be empty.
+        We can transform any rule into a partial ground rule by setting the head as the head, the body as the ungrounded body and setting the grounded body to be empty. We have done this in the previous example when creating $pgr_1$.
 
         \begin{lstlisting}
             def (.\partialGroundRulefromRule.) (r: rule τ): partialGroundRule τ :=
@@ -56,10 +56,6 @@
                 ungroundedBody := r.body
             }
         \end{lstlisting}
-
-        \begin{example}
-            $pgr_1$ is exactly the result of \texttt{partialGroundRuleFromRule $r$}.
-        \end{example}
 
         We choose this representation instead of the approach used for $pgr_2$ as this does not require iterating over the whole body to find ground atoms. As we will apply multiple substitutions in the grounding process, we will create ground atoms in different places anyway.
 
@@ -87,7 +83,7 @@
         \begin{example}
             The application of \texttt{partialGroundRule.toRule} on $pgr_1$ yields $r$ as predicted by the lemma.
 
-            If we swap both functions and first apply \texttt{partialGroundRule.toRule} to a partial ground rule and then convert the resulting rule back to a partial ground rule, we see that this is no longer equal. Applying {partialGroundRule.toRule} to $pgr_2$ results in the rule $ q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . $. Converting this back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
+            If we swap both functions and first apply \texttt{partialGroundRule.toRule} to a partial ground rule and then convert the resulting rule back to a partial ground rule, we will not receive the original partial ground rule in most cases. Applying {partialGroundRule.toRule} to $pgr_2$ results in the rule $ q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . $. Converting this back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
 
             \begin{lstlisting}
                 {
@@ -96,7 +92,7 @@
                     ungroundedBody := [r(a, b), s(c, d), t(X, c),  u(d, X)]
                 }
             \end{lstlisting}
-            which is different from $pgr_2$
+            which is different from $pgr_2$.
         \end{example}
 
         Using the transformation to rules we can lift a rule being true to the partial ground rules.
@@ -113,7 +109,7 @@
         \end{lstlisting}
 
         So far we only split the body into two parts and have the goal of applying substitutions to move everything into the grounded body. This is not too different from just applying groundings directly. 
-        This process allows us to potentially stop early. If the substitutions we applied so far resulted in a ground atom that is not part of the interpretation $i$ we already know that the rule is true. No matter how the remaining variables are mapped, the body will never be a subset of $i$ and therefore the antecedent is false and the rule is therefore true. We call a partial ground rule \textit{active in an interpretation} $i$ where all ground atoms in the grounded body are in $i$
+        Splitting the grounding into multiple substitutions allows us to potentially stop early. If the substitutions we applied so far resulted in a ground atom in the body that is not part of the interpretation $i$ we already know that the rule is true in $i$. No matter how the remaining variables are mapped, the body will never be a subset of $i$ and therefore the antecedent is false and the rule is therefore true. We call a partial ground rule \textit{active in an interpretation} $i$ when all ground atoms in the grounded body are in $i$.
 
         \begin{lstlisting}
             def (.\partialGroundRuleisActive.) (pgr: partialGroundRule τ) (i: interpretation τ):=
@@ -124,15 +120,15 @@
             Let $pgr$ be a partial ground rule. If $pgr$ is not active in an interpretation $i$, then it is true in $i$.
         \end{lemma}
 
-        Any partial ground rule that is created from a rule $r$ is active in any interpretation $i$, since the grounded body is empty
+        Any partial ground rule that is created from a rule $r$ is active in any interpretation $i$, since the grounded body is empty.
         
         (\partialGroundRulefromRuleIsActive).
 
     \subsection{Explore grounding}
 
-    Now we want to present an algorithm that checks whether a list of rules is true in an interpretation given as a list of ground rules using partial ground rules.
+    Now we want to present an algorithm that checks whether a list of rules is true in an interpretation that is given as a list of ground atoms using partial ground rules.
     
-    This is done by \modelChecker which calls \exploreGrounding on the partial ground rule created from every rule and accepts if no rule raises an error. We require proof that every rule in the program $P$ is a safe rule and derive from this that any partial ground rule created from a rule in $P$ is safe.
+    This is done by \modelChecker which calls \exploreGrounding on the partial ground rule created from every rule and accepts if no rule raises an error. We require a proof that every rule in the program $P$ is a safe rule and derive from this that any partial ground rule created from a rule in $P$ is safe.
 
     \begin{lstlisting}
     def (.\modelChecker.) (i: List (groundAtom τ)) (P: List (rule τ)) (safe: ∀ (r: rule τ), r ∈ P → r.isSafe): Except String Unit :=
@@ -143,13 +139,13 @@
     List.map_except_unit P.attach (fun ⟨x, _h⟩ => exploreGrounding (partialGroundRule.fromRule x ) i (safe' x _h) )
     \end{lstlisting}
     
-    This function returns ok iff all rules in $P$ are true in $i$ converted to a set.
+    This function returns ok iff all rules in $P$ are true in the interpretation $i$ viewed as a list.
 
     \begin{theorem}\label{trm:modelChecker}[\modelCheckerUnitIffAllRulesTrue]
         Let $i$ be a list of ground atoms and $P$ be a list of rules that are all safe. Then \modelChecker returns ok for $P$ and $i$ iff all rules in $P$ are true in $i$.
     \end{theorem}
 
-    The main work is done in \exploreGrounding which takes a partial ground rule, an interpretation as a list and a proof that the partial ground rule is safe.
+    The main work is done in \exploreGrounding which takes a partial ground rule, an interpretation as a list and a proof that the given partial ground rule is safe.
 
     \begin{lstlisting}
     def (.\exploreGrounding.) (pgr: partialGroundRule τ) (i: List (groundAtom τ)) (safe: pgr.isSafe): Except String Unit :=
@@ -173,35 +169,36 @@
         )
     \end{lstlisting}
 
-    This function works recursively on the list of ungrounded atoms in the body. If this list is empty, then there are no variables in the head since $pgr$ is a safe rule. We can convert it into a ground atom and check whether it is in $i$. If this is the case, we accept, else we re raise an error.
+    This function works recursively on the list of ungrounded atoms in the body. If this list is empty, then there are no variables in the head since $pgr$ is a safe partial ground rule. We can convert the head into a ground atom and check whether it is in $i$. If this is the case, we accept, else we raise an error.
 
-    If there is at least one element $hd$ in the ungrounded body we consider two cases. If there are no variables in $hd$, we do not have to do any grounding and can move it directly into the grounded body. We can however stop earlier if the resulting element is not in $i$ as then the resulting rule is not active anymore.
+    If there is at least one element $hd$ in the ungrounded body we consider two cases. If there are no variables in $hd$, we do not have to do any grounding and can move $hd$ directly into the grounded body. We can however stop earlier if the resulting element is not in $i$ as then the resulting rule is not active anymore and thus true in $i$.
 
     \begin{lstlisting}
     def moveAtomWithoutVariables (pgr: partialGroundRule τ) (hd: atom τ) (tl: List (atom τ)) (noVars: atomVariables hd = ∅): partialGroundRule τ :=
     {
-    head := pgr.head,
-    groundedBody := pgr.groundedBody ++ [atomWithoutVariablesToGroundAtom hd noVars]
-    ungroundedBody := tl
+        head := pgr.head,
+        groundedBody := pgr.groundedBody ++ [atomWithoutVariablesToGroundAtom hd noVars]
+        ungroundedBody := tl
     }
     \end{lstlisting}
 
-    As long as the ungrounded body was $hd::tl$, then moveAtomWithoutVariables preserves the safety of $pgr$ since we only removed $hd$ from the ungrounded body which has no variables at all (\moveAtomWithoutVariablesPreservesSafety). Therefore we can call \exploreGrounding again on the resulting partial ground rule.
+    The safety of $pgr$ is preserved by \moveAtomWithoutVariables if the ungrounded body was $hd::tl$, since we only removed $hd$ from the ungrounded body which has no variables at all (\moveAtomWithoutVariablesPreservesSafety).
+    Therefore we can call \exploreGrounding again on the resulting partial ground rule.
 
-    If $hd$ has variables we need to apply a substitution to transform $hd$ into a ground atom occurring in $i$. If no such atom exists, then we can stop as the rule will not be active. For this, we reuse \matchAtom we defined in \cref{sec:valTree} and check this with every atom in $i$. This may return none for some atoms which are filtered out using \lstinline|List.filterMap|.
+    If $hd$ has variables we need to apply a substitution to transform $hd$ into a ground atom occurring in $i$. If no such atom exists, then we can stop as the rule will not be active. For this, we reuse \matchAtom we defined in \cref{sec:valTree} and check for every atom $a$ in $i$ if there is a substitution $s$ that maps $hd$ to $a$. This may return none for some atoms if no such $s$ exists. The none values are filtered out using \lstinline|List.filterMap|.
 
     \begin{lstlisting}
         def (.\getSubstitutions.) (i: List (groundAtom τ))(a: atom τ): List (substitution τ) := List.filterMap (fun x => matchAtom emptySubstitution a x) i
     \end{lstlisting}
 
-    After applying a substitution from this list to $hd$ it has no further variables as it is equivalent to a ground atom (\inGetSubstitutionsImplNoVars). Therefore we can move it into the grounded body. We apply this to every atom that is not a ground atom so that a variable does not get mapped to different constants later. For the correctness of this transformation, we require that $hd::tl$ is the ungrounded body of $pgr$.
+    After applying a substitution from \getSubstitutions to $hd$ it has no further variables as it is equal to a ground atom (\inGetSubstitutionsImplNoVars). Therefore we can move it into the grounded body. We apply this to every atom that is not a ground atom so that a variable does not get mapped to different constants later. For the correctness of this transformation, we require that $hd::tl$ is the ungrounded body of $pgr$.
 
     \begin{lstlisting}
     def (.\groundingStep.) (pgr: partialGroundRule τ) (hd: atom τ) (tl: List (atom τ)) (s: substitution τ) (noVars: atomVariables (applySubstitutionAtom s hd) = ∅ ): partialGroundRule τ :=
     {
-    head := applySubstitutionAtom s pgr.head,
-    groundedBody := pgr.groundedBody ++ [atomWithoutVariablesToGroundAtom (applySubstitutionAtom s hd) noVars],
-    ungroundedBody := List.map (applySubstitutionAtom s) tl
+        head := applySubstitutionAtom s pgr.head,
+        groundedBody := pgr.groundedBody ++ [atomWithoutVariablesToGroundAtom (applySubstitutionAtom s hd) noVars],
+        ungroundedBody := List.map (applySubstitutionAtom s) tl
     }
 
     \end{lstlisting}
@@ -213,26 +210,30 @@
     The desired property of \exploreGrounding is the following.
 
     \begin{theorem}\label{trm:exploreGrounding}[\exploreGroundingSemantics]
-        Let $pgr$ be an active and safe partial ground rule and $i$ a list of ground atoms. Then \exploreGrounding returns ok iff $pgr$ is true in $i$.
+        Let $pgr$ be an active and safe partial ground rule and $i$ be a list of ground atoms. Then \exploreGrounding returns ok for $pgr$ and $i$ iff $pgr$ is true in $i$.
     \end{theorem}
 
     Before proving this theorem, we finish the proof of \cref{trm:modelChecker}.
 
     \begin{proof}[Proof of \cref{trm:modelChecker}]
-        The modelChecker returns ok iff exploreGrounding returns ok for the partial ground rule obtained from a rule $r$. The resulting partial ground rule is safe and active. From \cref{trm:exploreGrounding} we know that it returns ok iff the partial ground rule is true. From the definition we know that a partial ground rule is true, if the resulting rule from \lstinline|toRule| is true. By \cref{lem:toRuleFromRuleInv} this is equal to $r$.
+        The modelChecker returns ok iff exploreGrounding returns ok for the partial ground rule obtained from a rule $r$. The resulting partial ground rule is safe and active. From \cref{trm:exploreGrounding} we know that it returns ok iff the partial ground rule is true. From the definition of \partialGroundRuleisTrue we know that a partial ground rule is true, if the resulting rule from \lstinline|toRule| is true. By \cref{lem:toRuleFromRuleInv} this is equal to $r$.
     \end{proof}
 
     The remainder of this section is now spent proving \cref{trm:exploreGrounding}. We do this by induction on the length of the ungrounded body for arbitrary partial ground rules $pgr$.
 
     If the ungrounded body $pgr$ has the length zero, then it is the empty list. As $pgr$ is active, we have that all elements in the grounded body are in the interpretation $i$. As the ungrounded body is empty, the body of the rule $r$ resulting from $pgr$ is a subset of $i$. Then $r$ is true iff the head of $pgr$ is in $i$ which is exactly the case when \exploreGrounding returns ok.
 
-    In the induction step, we assume that for all partial ground rules whose ungrounded body has the length $n$ \exploreGrounding returns ok iff the partial ground rule is ok.
+    In the induction step, we assume that for all partial ground rules whose ungrounded body has the length $n$ \exploreGrounding returns ok iff the partial ground rule is true.
 
-    Let $pgr$ be a partial ground rule whose ungrounded body has the length $n+1$. If the leading element has no variables we check whether it is in $i$. If it is not in $i$, explore grounding returns ok. The resulting rule $r$ of $pgr$ is always true since $hd$ is in the body and grounding an atom without variables yields the same atom(\groundingAtomWithoutVariablesYieldsSelf). Therefore the body will never be a subset of $i$ and is always true.
+    Let $pgr$ be a partial ground rule whose ungrounded body has the length $n+1$. If the leading element $hd$ has no variables we check whether it is in $i$. If it is not in $i$, explore grounding returns ok. The resulting rule $r$ of $pgr$ is always true since $hd$ is in the body and grounding an atom without variables yields the same atom(\groundingAtomWithoutVariablesYieldsSelf). Therefore the body will never be a subset of $i$ and is always true.
 
-    If $hd$ is in $i$, then we apply \moveAtomWithoutVariables to $pgr$. Since $pgr$ was active and $hd$ is in $i$ also the resulting partial ground rule is active and its ungrounded body is shorter so that we can apply the induction hypothesis. What remains to show is that \moveAtomWithoutVariables $pgr$ $hd$ $tl$ $atomVariables\ hd = \emptyset$ is true in $i$ iff $pgr$ is true in $i$. We note from the definitions that a partial ground rule is true if the resulting rule is true. Hence it suffices to show that \moveAtomWithoutVariables $pgr$ $hd$ $tl$ $atomVariables\ hd = \emptyset$ and $pgr$ result in the same rules(\partialGroundRuleisTrueofequaltoRule), which is the case we only move $hd$ from the start of the ungrounded body to the end of the grounded body which results in the same rule body and since converting an atom into a ground atom if it has no variables results in an equal atom (\groundAtomToAtomOfAtomWithoutVariablesToGroundAtomIsSelf).
+    If $hd$ is in $i$, then we apply \moveAtomWithoutVariables to $pgr$. Since $pgr$ was active and $hd$ is in $i$ also the resulting partial ground rule is active and its ungrounded body is shorter so that we can apply the induction hypothesis. What remains to show is that \moveAtomWithoutVariables $pgr$ $hd$ $tl$ $(p: atomVariables\ hd = \emptyset)$ is true in $i$ iff $pgr$ is true in $i$. We note from the definitions that a partial ground rule is true if the resulting rule is true. Hence it suffices to show that \moveAtomWithoutVariables $pgr$ $hd$ $tl$ $(p: atomVariables\ hd = \emptyset)$ and $pgr$ result in the same rules.
+    
+    (\partialGroundRuleisTrueofequaltoRule)
+    
+    This is the case as we only move $hd$ from the start of the ungrounded body to the end of the grounded body which results in the same rule body and since converting an atom into a ground atom if it has no variables results in the same atom (\groundAtomToAtomOfAtomWithoutVariablesToGroundAtomIsSelf).
 
-    Now we only have to consider the case that $hd$ has variables. Then we apply all substitutions of \getSubstitutions to $pgr$ and recursively call \exploreGrounding on every resulting partial ground rule. Using the properties of \matchAtom we know that a substitution $s$ is in \getSubstitutions $i$ $hd$ iff it is the minimal substitution that matches $hd$ to some ground atom in $i$ 
+    Now we only have to consider the case that $hd$ has variables. Then we apply all substitutions of \getSubstitutions to $pgr$ and call \exploreGrounding recursively on every resulting partial ground rule. Using the properties of \matchAtom we know that a substitution $s$ is in \getSubstitutions $i$ $hd$ iff it is the minimal substitution that matches $hd$ to some ground atom in $i$ 
     
     (\inGetSubstitutionsIffMinimalSolutionAndInInterpretation).
 
@@ -246,21 +247,21 @@
         }
     \end{lstlisting}
 
-    Since applying substitutions to ground atoms does not change the atom, we can first convert the partial ground rule to a rule and then apply the substitution (\swapPgrApplySubstitution). We then only have to show that for any substitution $s$ from \getSubstitutions $i$ $hd$ \applySubstitutionRule $s$ $pgr.toRule$ is true iff $pgr$ is true, which follows from the following lemma.
+    Since applying substitutions to ground atoms does not change a ground atom, we can first convert the partial ground rule to a rule and then apply the substitution (\swapPgrApplySubstitution) to gain the equivalent rule. We then only have to show that for any substitution $s$ from \getSubstitutions $i$ $hd$ \applySubstitutionRule $s$ $pgr.toRule$ is true iff $pgr$ is true, which follows from the following lemma. In this lemma we call a rule $r$ true in an interpretation $i$ if grounding $r$ with any $g$ yields a ground rule that is true in $i$. Recall the definition of minimal solutions in \cref{sec:valTree}. We call a substitution 
 
     \begin{lemma}[\replaceGroundingWithSubstitutionAndGrounding]
-        Let $r$ be a rule, $a$ an atom from the body of $r$ and $i$ an interpretation. Then for any grounding $g$, the rule grounding of $r$ with $g$ is true in $i$ iff for any substitution $s$ such that applying $s$ to $a$ yields a ground atom from $i$ and that $s$ is a minimal substitution that does this and for any grounding $g$ the grounding of the rule that is the result of applying $s$ to $r$ is true in $i$. 
+        Let $r$ be a rule, $a$ an atom from the body of $r$ and $i$ an interpretation. Then applying any grounding $g$ to $r$ is true in $i$ iff applying any minimal substitution $s$ that maps $a$ to a ground atom in $i$ yields a rule that is true in $i$. 
     \end{lemma}
     \begin{proof}
-        For the forward direction, we know that grounding $r$ with any grounding $g$ results in a true ground rule and have to show this for any substitution $s$ and grounding $g$. We can combine the substitution and the grounding into a single grounding by applying $s$ if possible and else $g$
+        For the forward direction, we know that grounding $r$ with any grounding $g$ results in a true ground rule in $i$. Let $s$ be some minimal substitution that maps $a$ to some atom in $i$ and $r'$ be the rule that is the result of applying $s$ to $r$. We want to show that $r'$ is true in $i$ by showing that grounding $r'$ by any grounding $g$ yields a true ground rule $gr$ in $i$. We obtained $gr$ from $r$ by first applying $s$ and then $g$. We can combine $s$ and $g$ into a grounding by using the result of $s$ for a variable when defined and else the result of $g$.
 
         \begin{lstlisting}
             def (.\combineSubstitutionGrounding.) (s: substitution τ) (g: grounding τ): grounding τ := fun x => if h: Option.isSome (s x) then Option.get (s x) h else g x
         \end{lstlisting}
 
-        Grounding a rule with \combineSubstitutionGrounding $s$ $g$ is equivalent to first applying $s$ and then grounding with $g$ for terms, atoms and rules (\combineSubstitutionGroundingEquivRule). Hence we can use \combineSubstitutionGrounding with our assumption and conclude the forward direction.
+        Grounding a rule with \combineSubstitutionGrounding $s$ $g$ is equivalent to first applying $s$ and then grounding with $g$ for terms, atoms and rules (\combineSubstitutionGroundingEquivRule). Hence we can combine $g$ and $s$ into the grounding \combineSubstitutionGrounding and use the assumption to conclude the forward direction.
 
-        For the back direction, we know that the claim holds for any substitution $s$ and grounding $g$ and have to show that then we can also apply any grounding $g'$ to $r$ and get a true rule in $i$. If $g'$ grounds $a$ to an atom that is not in $i$, then the rule is true since the antecedent is false.
+        For the back direction, we know that the claim holds for any minimal substitution $s$ that maps $a$ to some atom in $i$ and grounding $g$ and have to show that then we can also apply any grounding $g'$ to $r$ and get a true rule in $i$. If $g'$ grounds $a$ to an atom that is not in $i$, then the rule is true since the antecedent is false.
 
         If $g'$ grounds $a$ to an atom in $i$, we can convert $g'$ into a minimal substitution for $g'(a)$ using \atomSubOfGrounding by only mapping the variables of $a$ to $g'(a)$.
 
@@ -268,6 +269,7 @@
             def (.\atomSubOfGrounding.) (a: atom τ) (g: grounding τ): substitution τ := fun x => if x ∈ atomVariables a then some (g x) else none
         \end{lstlisting}
 
-        Applying first \atomSubOfGrounding $a$ $g'$ and then grounding using $g'$ is equivalent to just grounding with $g'$(\atomSubOfGroundingGroundingEqGroundingOnRule). Hence we can use the assumption and have proven also the back direction.
+        Applying first \atomSubOfGrounding $a$ $g'$ and then grounding using $g'$ is equivalent to just grounding with $g'$, because any variable $v$ is mapped to the result of $g(v)$
+        (\atomSubOfGroundingGroundingEqGroundingOnRule). Hence we can use the assumption and have proven also the back direction.
     \end{proof}
 

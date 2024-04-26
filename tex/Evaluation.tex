@@ -79,7 +79,7 @@ Mock atoms form mock rules similarly as atoms form rules and a program is simply
     \end{lstlisting}
 \end{example}
 
-Afterwards we go twice through the program. In the first run, we collect all the predicate symbols and their arities (\parsingArityHelper) and report an error if a predicate symbol is used in multiple atoms with different amounts of terms. Using such a list we can construct a signature (\parsingSignature). We use for constants and variables simply the set of string as types and for predicate symbols the subset of strings that occured as symbols. This choices allows us to directly inherit the requirements for the signature elements such as decidable equality or hashability. 
+Afterwards we go twice through the program. In the first run, we collect all the predicate symbols and their arities (\parsingArityHelper) into a list and report an error if a predicate symbol is used in multiple atoms with different amounts of terms. Using such the list we can construct a signature (\parsingSignature). We use for constants and variables simply the set of string as types and for predicate symbols the subset of strings that occured as symbols. This choices allows us to directly inherit the requirements for the signature elements such as decidable equality or hashability. 
 
 In the second run, we then transform every mock object into the corresponding datalog object of the previously created signature. 
 
@@ -130,13 +130,21 @@ We will use three kinds of datalog programs to test our approach:
 
 We will use the datalog engine Nemo\cite{Nemo} to evaluate these examples. Nemo allows us to specify multiple facts as a file and ask for their derivations. This is returned in a machine-readable json format which allows us to transform this and the program into the input file format described in the previous section.
 
-Any other datalog engine that returns proof trees or graphs can also be used as long as such a program exists to convert it into the input format. This would also be possible with Soufflé\cite{Souffle} but the proof trees are only given in some kind of ASCII art style with complicates the parsing.
+Any other datalog engine that returns proof trees or graphs can also be used as long as such a program exists to convert it into the input format. This would also be possible with Soufflé\cite{Souffle} but the proof trees there are only given in an ASCII art style which complicates the parsing.
 
-The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RAM using Ubuntu in the Windows subsystem for Linux. We will also display the time used by Nemo for each tasks as a comparision. We believe that it is fine if the verification takes a bit longer than the computation but it should not takes hours for a task that Nemo can solve in seconds. As there is currently no alternative program capable of verifying datalog reasoning results this is the only other available for comparision.
+The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RAM using Ubuntu in the Windows subsystem for Linux. We will also display the time used by Nemo for each tasks as a comparision. We believe that it is fine if the verification takes a bit longer than the computation but it should not takes hours for a task that Nemo can solve in seconds. As there is currently no alternative program capable of verifying datalog reasoning results this is the only other time available for comparision.
 
-In the scenario (1), we randomly select a graph with 100 nodes and the given density and compare the time for checking the trees for 
-
-
-In the scenario (2), we only verify the result for $t(0,n)$. Here we clearly see the advantage of the graphs. 
-
-In scenario (3), we selected 1000
+\begin{figure}
+\begin{tabular}{llrrrrrrr}
+    &  & Number of nodes & \multicolumn{2}{r}{Nemo time} & \multicolumn{2}{r}{Preparation time} & \multicolumn{2}{r}{Validation time} \\
+    &  & mean & mean & std & mean & std & mean & std \\
+   Type & Size &  &  &  &  &  &  &  \\
+   \multirow[c]{3}{*}{graph} & 10 & 18.00 & 0.03 & 0.01 & 0.03 & 0.01 & 0.05 & 0.06 \\
+    & 15 & 28.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.02 & 0.00 \\
+    & 20 & 38.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.03 & 0.00 \\
+   \multirow[c]{3}{*}{tree} & 10 & 1022.00 & 0.03 & 0.01 & 0.07 & 0.01 & 0.03 & 0.00 \\
+    & 15 & 32766.00 & 0.02 & 0.00 & 2.71 & 0.09 & 0.16 & 0.00 \\
+    & 20 & 1048574.00 & 0.02 & 0.00 & 207.66 & 3.98 & 4.38 & 0.20 \\
+\end{tabular}
+\caption{Results for scenario 2}
+\end{figure}
