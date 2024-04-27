@@ -1,4 +1,4 @@
-\section{Validating graphs}\label{sec:valGraph}
+\chapter{Validating graphs}\label{sec:valGraph}
 
 In the previous section, we described an algorithm to verify proof trees. Proofs trees are a very natural way to encode certificates for datalog results but have some drawbacks. 
 
@@ -13,7 +13,7 @@ In the previous section, we described an algorithm to verify proof trees. Proofs
     The database shall encode the elements of a chain $E(i, i+1)$ for $i \in \{0, n\}$. In the proof tree representation we need the same proof tree twice for $T(?y, ?z)$ in the second rule and will need copies for it later, which results in large trees. The proof tree for $T(0, i+1)$ needs a vertex representing the head of \cref{ex:treeGraph:ruleTrans}, one vertex for the $E$ fact $E(i, i+1)$ and two proof trees for $T(0, i)$. Therefore the size of $T(0, i+1)$ in the number of nodes is more than double the size of $T(0, i)$ which leads to an exponential growth.
 \end{example}
 
-Proof trees offer no reusability as they need to stay in the tree shape. Formally we can view the proof tree as a directed tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices can have the same label in a proof tree as in the example above. We need this as a ground atom $a$ can be used in multiple ground rules used in the derivation but cannot have connections from multiple vertices to the vertex representing $a$ if we are in a directed tree.
+Proof trees offer no reusability of atoms as they need to stay in the tree shape. If an atom is used multiple times in the derivation we need for each usage a new vertex that is labeled by this atom. Formally we can view the proof tree as a directed tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices can have the same label in a proof tree as in the example above. We need this as a ground atom $a$ can be used in multiple ground rules used in the derivation but cannot have connections from multiple vertices to the vertex representing $a$ if we are in a directed tree.
 
 A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  with $V_G = \{a \mid \exists v \in V_T, label(v)=a\}$ and $E_G = \{ (a_1, a_2) \mid \exists v_1, v_2 \in V_T,  label(v_i) = a_i \land (v_1, v_2) \in E_T\}$. Then a vertice can be considered equal to its label as no label occurs multiple times anymore. Examples for a proof tree and the corresponding graph are in \cref{fig:treeGraph}.
 
@@ -88,7 +88,7 @@ Another advantage occurs when we want to validate multiple trees or even a compl
 We require for this that the successors of a ground atom are the same elements in every tree if the ground atom occured in this tree. If not an atom would have more successors then previously in the trees and there will probably exists no matching ground rule. In practice, this requirement was always fulfilled.
 
 Another requirement is acyclicity. We cannot use an atom to explain itself. Either we could have used it directly before or it cannot be explained by a proof tree at all. 
-\subsection{Graph model}
+\section{Graph model}
 
 As a number of different results from mathematics are already formalized in mathlib, it is no surprise that graphs are already modelled in mathlib as depicted below:
 
@@ -159,7 +159,8 @@ abbrev (.\Graph.) (A: Type) [DecidableEq A] [Hashable A] :=
     { pg : PreGraph A // pg.complete }
 \end{lstlisting}
 
-The completeness predicate was necessary, because our type is a superset than the vertices that occur in the graph. We do not expect every ground atom to be in the graph. An alternative would be to create a subtype of those ground atoms that occur in the list of vertices but this may require many types conversions when adding vertices to a graph in the parsing. Here we can add vertices to the graph and only have to prove that the completeness property still holds at the end.
+\todo{rewrite}
+The completeness predicate was necessary, because . We do not expect every ground atom to be in the graph. An alternative would be to create a subtype of those ground atoms that occur in the list of vertices but this may require many types conversions when adding vertices to a graph in the parsing. Here we can add vertices to the graph and only have to prove that the completeness property still holds at the end.
 
 We start by formalizing walks in a graph. Walks allow the repitition of vertices in itself in contrast to paths which suffices our needs. 
 
@@ -195,7 +196,7 @@ def (.\isCycle.) (l: List A) (G: Graph A): Prop :=
 def (.\isAcyclic.) (G: Graph A) := ∀ (l: List A), ¬ isCycle l G
 \end{lstlisting}
 
-\subsection{Validation of a graph}
+\section{Validation of a graph}
 
 After defining the graph model, we want to specify how the graph validation takes place. For these we defined the recursive predicate \isValid and implemented it using \treeValidator. As the graph we receive may not even be acyclic we cannot simply define a recursive predicate as this will then not terminate. Instead we define a local predicate for each vertex and its successor. Then we can check every vertex individually.
 
@@ -329,7 +330,7 @@ It remains to be shown this leads to a valid proof tree.
 
 Using this result the vertices of an acyclic graph whose vertices are all locally valid with respect to $P$ and $d$ are a subset of the proof-theoretic semantics of $P$ and $d$.
 
-\subsection{Depth-first search}
+\section{Depth-first search}
 
 By the results of the previous result we know that in order to verify a graph we have to call the \localValidityCheck on every vertex and its successors and determine whether the graph is acyclic. A typical solution to answer the second question is depth-first search, which we will implement and verify in this section. During depth-first search the algorithm has to visit every vertex. With the aim of reducing the iterations of the vertex list, we combine this with executing \localValidityCheck on every vertex and its successors.
 
@@ -654,9 +655,9 @@ Now we can show the proof of \cref{trm:dfssemantics}.
 \end{proof}
 
 
-\subsection{HashSets for depth-first search}
+\section{HashSets for depth-first search}
 
-In the previous section we implemented and proved the correctness of our depth-first search implementation. The proofs were independent of the underlying set implementation and also work with finite sets which even used first. A faster implementation was made possible by using hash-based datastructures such as hash maps and hash sets. Unfortunately, the almost have no lemmas proven already in mathlib in contrast to finite sets which already have many results proven about them. We will try to bridge the gap a bit and show some correctness results and present which assumptions we assume as axioms. As the main focus of thesis was not formally verifying hash sets we will only give a general overview of our results.
+In the previous section we implement and prove the correctness of our depth-first search implementation. The proofs are independent of the underlying set implementation and also work with finite sets which we used first. A faster implementation is done possible by using hash-based data structures such as hash maps and hash sets. Unfortunately, hash maps and hash sets almost have no lemmas proven about them already in mathlib. Finite sets have in contrast already have many results proven about them. We try to bridge the gap and show some correctness results and present which assumptions we use as axioms. As the main focus of thesis is not to formally verify hash sets we will only give a general overview of our results.
 
 Hash maps are defined in Lean's standard library. We define hash sets as a hashmap mapping elements to the unit type. This will allow us to reuse results we prove for hash sets in the hash map case which was our underlying graph model.
 
@@ -696,7 +697,7 @@ A hash map is then finally a well-formed hash map implementation. The hash map i
   def Std.HashMap (α : Type u) (β : Type v) [BEq α] [Hashable α] := {m : Imp α β // m.WF}
 \end{lstlisting}
 
-The contains functions uses the well-formedness of the hash map implementation to look in the bucket placed in the position of the hash value of the element. The function \lstinline|mkIdx| calculates the position and proves that there is a bucket at this position.
+The contains functions uses the well-formedness of the hash map implementation to look in the bucket placed in the position of the hash value of the element. The function \lstinline|mkIdx| calculates the position and provides a proof that there is a bucket at this position.
 
 \begin{lstlisting}
 def contains [BEq α] [Hashable α] (m : Imp α β) (a : α) : Bool :=
@@ -705,7 +706,7 @@ def contains [BEq α] [Hashable α] (m : Imp α β) (a : α) : Bool :=
   buckets.1[i].contains a
 \end{lstlisting}
 
-In the depth-first search implementation we only needed the insertion and contains function as we only add the visited vertices. We never unvisit an element and therefore focus on the insertion function. We are given two elements $a$ and $b$. If $a$ is already present in the bucket of its hash value we simply replace the old value of $a$ by $b$ in $a$'s bucket. If not the we add the element at the front of the corresponding bucket. This might increase the size to a value that is larger than the capacity. In this case expand creates a new larger empty bucket and reinsert all the previous elements.
+In the depth-first search implementation we only need the insertion and contains function as we only add the visited vertices. We never unvisit an element and therefore focus on the insertion function. We are given two elements $a$ and $b$. If $a$ is already present in the bucket of its hash value we simply replace the old value of $a$ by $b$ in $a$'s bucket. If not the we add the element at the front of the corresponding bucket. This might increase the size to a value that is larger than the capacity. In this case expand creates a new larger empty bucket and reinsert all the previous elements.
 
 \begin{lstlisting}
 def insert [BEq α] [Hashable α] (m : Imp α β) (a : α) (b : β) : Imp α β :=
@@ -816,6 +817,6 @@ In the graph we never use $find?$ as we do not want to deal with the option type
   By \cref{lem:hmfindinsert} \lstinline|(m.insert a b).find? a| yields \lstinline|some b|. By the defintion of \lstinline|findD|, therefore \lstinline|findD| also returns $b$ and the claim is proven.
 \end{proof}
 
-The operations \lstinline|contains| and \lstinline|findD| are sufficiently verified for our purposes. These results can also be reused as long as the used equality is the equality of the type. 
+The operations \lstinline|contains| and \lstinline|findD| are sufficiently verified for our purposes. These results can also be reused as long as the used equality is the equality of the type and not a user-defined \lstinline|BEq|.
 
-We did not manage to verify the \lstinline|ofList| operation that takes a list of pairs of the type $A \times B$ and converts it into a \lstinline|HashMap A B|. We use it to create the initial graph . We want each element 
+We did not manage to verify the \lstinline|ofList| operation that takes a list $l$ of pairs of the type $A \times B$ and converts it into a \lstinline|HashMap A B| $m$. We use it to create the initial graph and desire that the result of findD is the same on $l$ and $m$ so that the graph is exactly the given input (\StdHashMapfindDofListislistfindgetD). 

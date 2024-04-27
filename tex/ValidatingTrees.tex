@@ -1,4 +1,4 @@
-\section{Validating proof trees}\label{sec:valTree}
+\chapter{Validating proof trees}\label{sec:valTree}
 
 After introducing the problem and modeling datalog in Lean, we now describe the algorithm to verify a solution partially. We focus in this section on the soundness by verifying a given proof tree. In the previous section, we introduced the following characterization for valid proof trees:
 
@@ -17,10 +17,10 @@ After introducing the problem and modeling datalog in Lean, we now describe the 
 This is a disjunction so we need procedures to decide for both disjuncts if they are true.
 The second disjunct consists of a database check and a check of list emptiness. Both can be done in a straightforward way.
 
-The first part is more interesting. Since we use there existential quantifiers, this is not computable and we have to implement a function for this. While we can simply iterate over the program to check for the existence of a rule $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use something more sophisticated to check this which we introduce next.
+The first part is more interesting. Since we use there existential quantifiers, this is not computable and we have to implement a function for this. While we can simply iterate over the program to check for the existence of a rule $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use substitutions that we introduce in the next section.
 
 
-\subsection{Substitutions}
+\section{Substitutions}
     A grounding is a function from variables to constants. This means we always need to specify for every variable a constant that it is mapped to. This was good in the definitions to ensure that we always get a ground atom, but raises problems in the unification case as the following example demonstrates.
 
     \begin{example}\label{ex:subsGroun}
@@ -157,7 +157,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
     Lastly, it is also transitive (\substitutionsubstrans), so it is an instance of a partial order.
 
-\subsection{Unification}
+\section{Unification}
 
 We know that instead of finding a grounding, it suffices to find a substitution. Now we want to describe an algorithm that tells us whether the ground rule that is formed from a vertex of the proof tree and its children is in the ground program. For this, we take inspiration from the unification problem of first-order logic.
 
@@ -375,7 +375,7 @@ Let $r$  be a rule and $gr$ be a ground rule. Then there exists a substitution $
 
 We now have a method to replace this quantifier with a computable function and can finally devise the check for tree validation.
 
-\subsection{Tree validation}
+\section{Tree validation}
 
 We have so far introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step, we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or by \cref{trm:groundingSubstitutionEquivalence} a substitution $s$) and a rule $r$ from the program $P$ so that applying $g$ to $r$ yields $gr$. We want to use the \matchRule function defined earlier for this. 
 We can simply pass each rule of the program given as a list of rules into this function and stop when \matchRule returns a some object. This works but requires in the worst case to match every rule in the program with a given ground rule. Suppose that the predicate symbol of the head of the given ground rule is $T$. We can safely discard any rule whose head is not an atom with the predicate symbol $T$. This can be generalized into the symbol sequence which is a list of predicate symbols that starts with the predicate symbol of the head and then the predicate symbols of the body atoms in the order the atoms occur in the body.

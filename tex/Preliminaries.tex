@@ -1,17 +1,17 @@
-\section{Preliminaries}\label{sec:prelim}
+\chapter{Preliminaries}\label{sec:prelim}
 
 
 In this section, we introduce concepts that we are going to use in future sections. We start by defining datalog, which we will formalize later. After that, we review the concept of certifying algorithms and finally, we introduce Lean.
 
 
-\subsection{Datalog}
+\section{Datalog}
 Datalog is a logic programming language and can be syntactically considered as a subset of Prolog. An introduction to datalog and other query languages can be found in \cite{alice}, which we recall next. We assume the reader to be familar with first-order logic as introduced in e.g. \cite{logic}.
 
-In order to write datalog rules, we require the existence of three at most countable sets $V, C$ and $P$, where $V$ represents variables, $C$ represents constants and $P$ represents predicate symbols. Every predicate symbol $p$ in $P$ has an arity $ar(p) \in \mathbb{N}$. In this work we assume that zero is a natural number.
+In order to write datalog rules, we require the existence of three at countable, possibly infinite sets $V, C$ and $R$, where $V$ represents variables, $C$ represents constants and $R$ represents relation symbols. Every relation symbol $r$ in $R$ has an arity $ar(r) \in \mathbb{N}$. In this work we assume that zero is a natural number.
 We use the following conventions in this work: For $R$ we use strings that start with a capital letter, for $V$ strings that start with a question mark and for $C$ any other non-empty string.
 
-\begin{example}
-In a more concrete example we have the variables $V= \{?x,?y,?z\}$ and constants $C= \{1,...,7\}$. The predicate symbols are the binary predicates (i.e. they have an arity of two) $R$ and $E$ and the nullary (i.e. arity zero) predicate $Q$.
+\begin{example}\label{ex:basicSets}
+We consider have the variables $V= \{?x,?y,?z\}$ and constants $C= \{1,...,7\}$. The predicate symbols are the binary predicates (i.e. they have an arity of two) $S$ and $E$ and the nullary (i.e. arity zero) predicate $Q$.
 \end{example}
 
 In the language of first-order logic as in \cite{logic}, $C$ and $P$ build the signature of the language we are going to construct. We note that this fragment of first-order logic does not use function terms.
@@ -20,61 +20,61 @@ The following definitions are adapted from logic for the signature above.
 
 A \textit{term} is either a variable or a constant. In order to differentiate meaningfully between them, we require that $C \cap V = \emptyset$ so that no symbol is both a variable and a constant. As long as both $C$ and $V$ are finite, we will only have a finite number of terms. This is in contrast to general first-order logic or logic programming where function symbols can lead to an infinite amount of terms even if the signature is finite.
 
-\begin{contexample}
-    Examples of terms in our language are $?z$, $2$, $5$ or $?x$.
+\begin{example}
+    Examples of terms in our language from \cref{ex:basicSets} are $?z$, $2$, $5$ or $?x$.
 
     A counterexample would be $word$ or $A$ as those elements do not occur in either $C$ or $V$.
-\end{contexample}
+\end{example}
 
-An \textit{atom} is an expression of the form $A(t_1,...,t_n)$ for $n \in \mathbb{N}$ where $A$ is a predicate symbol ($A \in P$) and $t_1,..,t_n$ are terms. Additionally, we require that $n$ is the arity of $A$, i.e. $ar(A) = n$.
+An \textit{atom} is an expression of the form $A(t_1,...,t_n)$ for $n \in \mathbb{N}$ where $A$ is a relation symbol ($A \in P$) and $t_1,..,t_n$ are terms. Additionally, we require that $n$ is the arity of $A$, i.e. $ar(A) = n$.
 
-\begin{contexample}
-    Examples for atoms are here: $Q(), R(?x,?y), E(2,3)$ or $E(?x, 7)$. In every atom, the number of terms matches the arity of the predicate symbol. We note that it is allowed to mix variables and constants in the terms of an atom.
+\begin{example}
+    Examples for atoms using the sets from \cref{ex:basicSets} are here: $Q(), S(?x,?y), E(2,3)$ or $E(?x, 7)$. In every atom, the number of terms matches the arity of the predicate symbol. Note that it is allowed to mix variables and constants in the terms of an atom.
 
-    A first counterexample would be $Q(a)$ because the arity does not match. 
-    Another counterexample would be $R(E(2,3),4)$ because $ E(2,3)$ is not a term.
-\end{contexample}
+    A first counterexample would be $Q(a)$ because the arity of the symbol $Q$ does not match the number of terms. 
+    Another counterexample would be $S(E(2,3),4)$ because $ E(2,3)$ is not a term.
+\end{example}
 
-In the example, some atoms used only constants in their terms, while others included variables. We call an atom a \textit{ground atom} if its variable-free. The variables used in an atom $A(t_1 \dots t_n)$ are formally the following set: $Vars(A(t_1,...,t_n)) = \{t_i \mid t_i \in V\}$.
+In the example, some atoms used only constants in their terms, while others included variables. We call an atom a \textit{ground atom} if it is variable-free. The variables used in an atom $A(t_1 \dots t_n)$ are formally the following set: \[Vars(A(t_1,...,t_n)) = \{t_i \mid t_i \in V\}\].
 
-\begin{contexample}
+\begin{example}
     In the previous example $Q()$ and $E(2,3)$ are ground atoms. The first does not have any terms at all, whereas the other only uses constants.
 
     The other atoms all contain at least the variable $?x$ and are thus no ground atoms.
-\end{contexample}
+\end{example}
 
-A \textit{rule} is an expression of the form $H \leftarrow B_1 , ... , B_n$ for atoms $H$ and $B_i$ for $n \in \mathbb{N}$. We call $H$ the \textit{head} of the rule and $B_1,..., B_n$ the \textit{body} of the rule and define the functions $head(r) = H$ and $body(r) = \{B_i \mid i \in \{1,\dots n\}\}$. We allow rules with an empty body. These rules are called \textit{facts}.
+A \textit{rule} is an expression of the form $H \leftarrow B_1 , ... , B_n$ for atoms $H$ and $B_i$ for $n \in \mathbb{N}$. We call $H$ the \textit{head} of the rule and $B_1,..., B_n$ the \textit{body} of the rule and define the functions $head(r) = H$ and $body(r) = \{B_i \mid i \in \{1,\dots n\}\}$. \textit{Facts} are rules where $n$ is zero.
 
 We can generalize the $Vars$ function to rules and use this to define \textit{ground rules}. For a rule $r = H \leftarrow B_1 , ... ,B_n$, we define $Vars(r)$ to be the union of the variables occuring in the head and the body: \[Vars(r) = Vars(H) \cup \bigcup_{i \in \{1,..., n\}} Vars(B_i)\] and call $r$ a ground rule if $Vars(r) = \emptyset$. This means that a rule is a ground rule if the head and every atom in the body is a ground atom.
 
-\begin{contexample}
+\begin{example}
     Examples for rules are $E(1,2) \leftarrow $, $Q() \leftarrow E(?x,?y)$ or $T(?x,?z) \leftarrow E(?x, ?y), T(?y,?z)$.
 
     $E(1,2) \leftarrow $ is both a fact and a ground rule, but not every fact is a ground rule as for example $E(?x, ?x) \leftarrow$
-\end{contexample}
+\end{example}
 
 A \textit{program} $P$ is a finite set of rules. 
 
-\begin{contexample}
-    We consider the program $P = \{$
+\begin{example}\label{prelim:Program}
+    We consider the program $P $ with the following rules:
 
-    \begin{align}\label{prelim:Program}
+    \begin{align*}
     \begin{split}
     E(1,2) &\leftarrow \\ E(1,3) &\leftarrow \\ E(3,5) &\leftarrow \\ E(4,6) &\leftarrow \\E(4,7) &\leftarrow\\\end{split} 
     &&
     \begin{split}
         Q() &\leftarrow \\ T(?x,?y) &\leftarrow E(?x,?y) \\ T(?x,?x) &\leftarrow \\ T(?x, ?z) &\leftarrow T(?x,?y) \and T(?y, ?z)
     \end{split}
-    \end{align}
-    $\}$, which contains both facts and other rules.
-\end{contexample}
+    \end{align*}
+    $P$ contains both facts and other rules.
+\end{example}
 
-With this, we have introduced all the needed elements for the syntax of datalog, but we have not yet spoken of the semantics of datalog. What is the program $P$ supposed to express?
+With this, we have introduced all the needed elements for the syntax of datalog, but we have not yet considered the semantics of datalog. What is the program $P$ supposed to express?
 
 We have noted the similarities between datalog and first-order logic when defining the syntax of datalog. Semantically, we can view rules as elements of the universally quantified Horn-fragment of first-order logic. In the logic programming style the universal quantifiers are usually omitted and the implications are written from right to left. As a theory is a set of formulae we can view the program as a theory consisting of its rules.
 
 
-\begin{contexample}
+\begin{example}
     The equivalent sentence for the fact $E(1,2) \leftarrow$ is 
     
     \[E(1,2)\]
@@ -83,12 +83,12 @@ We have noted the similarities between datalog and first-order logic when defini
     and for the rule $T(?x, ?z) \leftarrow T(?x,?y), T(?y, ?z)$ is 
     
     \[\forall ?x,?y,?z. T(?x,?y) \land T(?y, ?z) \rightarrow T(?x, ?z)\]
-\end{contexample}
+\end{example}
 
 The semantics of a first-order theory or sentence are its models. Unfortunately, a program may have multiple models as the following example shows for the theory for $P$.
 
 
-\begin{contexample}\label{prelim:models}
+\begin{example}\label{prelim:models}
     Any fact must be true in a model, but the implications allow us more freedom. As both $E$ and $T$ are binary predicates, we can represent them as a graph. We use dashed edges, when both $E$ and $T$ are present, solid edges for only $T$ and dotted edges when only $E$ is present.
 
     \begin{figure}
@@ -120,7 +120,7 @@ The semantics of a first-order theory or sentence are its models. Unfortunately,
             \draw[->,dashed] (4) -- (7);
             \draw[->] (1) -- (5);
         \end{tikzpicture}
-        \caption{First model}
+        \caption{First model describing the reflexive-transitive closure}
     \end{subfigure}
     \begin{subfigure}{0.45\linewidth}
         \begin{tikzpicture}[, every node/.style={circle, draw, minimum size=8mm}]
@@ -153,14 +153,14 @@ The semantics of a first-order theory or sentence are its models. Unfortunately,
             \draw[->, dotted] (7) -- (1);
             \draw[->,dashed] (4) -- (1);
         \end{tikzpicture}
-        \caption{Second model}
+        \caption{Second model: Extension of (a)}
     \end{subfigure}
-    \caption{Models for the program depicted in \cref{prelim:Program}. The encoding is explained in \cref{prelim:models}}
+    \caption{Models for the program from \cref{prelim:Program}. The encoding is explained in \cref{prelim:models}}
     \label{prelim:modelsPict}
     \end{figure}
     
     The first model expresses $T$ as the reflexive transitive closure of the input $E$, whereas the second model expands the first model and adds more additional atoms to the previous model.
-\end{contexample}
+\end{example}
 
 There are multiple models but we already see in the example there one model is a subset of the other. Such a model always exists in datalog and is called the least model. This model is of interest as the atoms that a true in this model are true in every model
 
@@ -182,14 +182,14 @@ Therefore the intersection of all models is a model as well and due to the prope
 
 In total, we call \[\bigcap_{\text{$M$ is model of $P$}} M\] the \textit{least model} of $P$ and refer to this characterization as the \textit{model-theoretic semantics} of $P$.
 
-\begin{contexample}
-    In this example, the first model of \cref{prelim:modelsPict} is actually the least model and the second model is just some other model.
+\begin{example}
+    In this example, the first model in of \cref{prelim:modelsPict} is actually the least model and the second model is just some other model.
 
     Therefore the semantic of this program is the reflexive-transitive closure of $E$ if $Q()$ is given.
     If $Q()$ is not given then it is only the reflexive closure.
 
     Additionally, we see that the rules for $T$ encode general rules whereas the other rules only encode a specific input. We might want to reuse these rules for many different instances of $E$, but so far we also need to write a new program.
-\end{contexample}
+\end{example}
 
 The example raises questions about the reusability of a program. Additionally, we talked in the introduction about database queries but never talked about databases. 
 
@@ -198,7 +198,7 @@ An alternative model definition for a pair of $P$ and $d$ is therefore: An inter
 
 Both views are equivalent. We have shown how we can simulate a database by a program. We can simulate the program case with the program and database case by simply using an empty database.
 
-We have now defined the semantics and shown a connection with databases. But this definition is not exactly ideal. In order to find the semantics of a program we would need to check all interpretations and then intersect them all. This is computationally expensive. Is there a simpler way?
+We have now defined the semantics of datalog and shown a connection with databases. But this definition is not ideal. In order to find the semantics of a program we would need to check all interpretations and then intersect them all. This is computationally expensive. Is there a simpler way?
 
 We can define a function that computes the least model in a more direct way. For this, we consider the case where only the program $P$ is present.
 
@@ -210,7 +210,7 @@ The immediate consequence operator $T_P$ computes all immediate consequences of 
 
 A fixed point of a function $f$ is an element $k$ such that $f(k) = k$. The repeated application of $T_P$ starting from $\emptyset$ yields a fixed point that is equal to the model-theoretic semantics of a program $P$. 
 
-\begin{contexample}
+\begin{example}
     We consider again the program $P$ from \cref{prelim:Program}. 
 
     Due to the fact $E(1,3) \leftarrow$, $E(1,3)$ is an immediate consequence of $\emptyset$. Applying $T_P$ again, we have that $T(1,3)$ is an immediate consequence of $\{E(1,3)\}$ due to the rule $T(?x,?y) \leftarrow E(?x, ?y)$ with the grounding 
@@ -235,7 +235,7 @@ A fixed point of a function $f$ is an element $k$ such that $f(k) = k$. The repe
     \]
 
     We can continue this process until we find the fixed point.
-\end{contexample}
+\end{example}
 
 The least fixed-point of $T_P$ is called the \textit{fixed-point semantics} of $P$ and is the basis for most implementations of datalog reasoners. 
 
@@ -282,11 +282,11 @@ A tree $t$ of whose vertices are labeled with ground atoms is a valid proof tree
     \end{subfigure}
     \end{figure}
 
-\begin{contexample}
+\begin{example}
     The tree in \cref{prelim:validTree} is valid. The leaves of this tree are facts and all other nodes represent ground rules from $ground(P)$ in the previous step.
 
     The tree in \cref{prelim:invalidTree} is not valid. $E(6,7)$ is neither a fact nor in the database. Additionally there is no rule in $P$ where applying some grounding yields $T(1,7) \leftarrow T(1,3), T(3,6), E(6,7)$.
-\end{contexample}
+\end{example}
 
 The proof-theoretic semantics of a program $P$ and database $d$ is the set of ground atoms that have a valid proof tree for $P$ and $d$. Again this can be shown to be equal to the other definitions of semantics. We will formally prove the equality of the proof-theoretic and the model-theoretic semantics of datalog in this work.
 
@@ -295,24 +295,24 @@ We call a rule $H \leftarrow B_1, \dots , B_n$ \textit{safe}, if every variable 
 
 We call a program safe if every rule in the program is safe. Most works only consider safe programs as their ground program does not depend on the set of constants $C$ which may not be given in practice.
 
-\begin{contexample}
+\begin{example}
     We can transform $P$ into the safe program $P'$ by adding a new unary predicate $N$ to the predicate symbols. $P'$ is then the union of $P \setminus \{T(?x, ?x) \leftarrow \}$ and the following rules:
-    \begin{equation}
+    \begin{equation*}
         \begin{split}
             N(?x) &\leftarrow E(?x, ?y) \\
             N(?y) &\leftarrow E(?x, ?y) \\
             T(?x,?x) &\leftarrow N(?x) \\
         \end{split}
-    \end{equation}
+    \end{equation*}
 
     The new predicate $N$ (for nodes) represents any elements that occur in the $E$ relation and is used in the body for the reflexive rule.
 
     If some constants $c$ are desired that do not occur in any $E$ relation, one can also directly encode that into the database by adding $N(c)$.
-\end{contexample}
+\end{example}
 
 What are the semantics of this newly created safe program $P'$? It turns out, that it is equal to the semantics for $P$ for all original predicates, i.e. if we remove all ground atoms that use $N$ we gain the same result. Therefore we state that any program can be transformed into an equivalent safe program.
 
-\subsection{Certifying algorithms}
+\section{Certifying algorithms}
 
 \begin{figure}
     \centering
@@ -366,9 +366,9 @@ Recall a definition of the class NP from complexity theory:
 \begin{definition}[\cite{complexityBook}]
     A language $L \subseteq \{0,1\}^\star$ is in NP if there exists a polynomial $p: \mathbb{N} \to \mathbb{N}$ and a polynomial-time Turing machine $M$ such that forall $x \in \{0,1\}^\star$:
 
-    \[ x \in L  \Leftrightarrow \exists u \in \{0,1\}^{p(|x|)}\text{ s.t. } M(x,u) = 1\]
+    \[ x \in L  \Leftrightarrow \exists u \in \{0,1\}^{p(|x|)}\text{ s.t. $M$ accepts $(x,u)$} \]
 
-    If $x \in L$ and $u \in \{0,1\}^{p(|x|)}$ satisfy $M(x,u) = 1$, then we call $u$ a certificate for $x$
+    If $x$ is in $L$, $u \in \{0,1\}^{p(|x|)}$ and $(x,u)$ is accepted by $M$, then we call $u$ a certificate for $x$
 \end{definition}
 
 We can generalize this and require an algorithm not only to give us an output $x$ but also a certificate $u$ as a reason why $x$ is the correct output. Then we can either check by ourselves that $x$ is a correct solution according to $u$ or use another program that checks this. As verifying a solution is never harder than computing it, the checker is usually simpler so that we either see directly that the checker is correct or we can formally verify it.
@@ -429,12 +429,12 @@ In this workflow, we have to trust the correctness of the hardware, the C compil
 In this work, we modify this workflow a bit. We use a different proof assistant, Lean, instead of Isabelle. Lean is not only a proof assistant but also a functional programming language. Therefore we can implement the checker directly in Lean and do not have to export a model of our code into the proof assistant. Our trust base is therefore smaller, as we no longer need an additional compiler for the language the checker is written in nor a tool to export this into the proof assistant. 
 
 
-\subsection{Lean}
-We introduce in this section Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. A more in-depth introduction can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
+\section{Lean}
+In this section we introduce Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. A more in-depth introduction can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
 
 Lean's core is a small trusted kernel\cite{LeanSysDescr}, that captures the most important functionalities and can be extended by the user. Since version 4 Lean is implemented in Lean itself\cite{Lean4}. The most important libraries for Lean that we will use are the standard library Std4\cite{stdLean} which contains important data structures and tactics and mathlib4\cite{mathlib}, which contains definitions, tactics and theorem from diverse areas of mathematics and computer science.
 
-As we have just heard, Lean can encode many mathematical results. The foundations of mathematics are often built on top of set theory (e.g. \cite{logic}) but most proof assistants instead use \textit{type theory}. Type theory was introduced by Bertrand Russel as an alternative foundation during the foundational crisis of mathematics.
+Lean can encode many mathematical results. The foundations of mathematics are often built on top of set theory (e.g. \cite{logic}) but most proof assistants instead use \textit{type theory}. Type theory was introduced by Bertrand Russel as an alternative foundation during the foundational crisis of mathematics.
 
 Any element, a \textit{term}, has a \textit{type} in type theory. This is denoted by \lstinline|term:type|. 
 
@@ -470,12 +470,12 @@ The id function we defined above is correct but only works for natural numbers. 
 This id function has now two arguments. The first argument is the type we want to use it on, the second argument is an element of this type. \lstinline| id $\mathbb{N}$| works as previously and has the type \lstinline|$\mathbb{N} \to \mathbb{N}$|. It seems less clear which type id itself has because this depends on the first argument.
 Such types are called \textit{dependent types} and we would denote this specific type as \lstinline|$\Pi$ (A:Type) A $\to$ A|, known as a \textit{Pi type}. Intuitively, a Pi type is a function that returns a type for any input value.
 
-In practice, we often do not want to write down too much. We can write the function instead also as:
+In practice, we this is often written in the following way:
 \begin{lstlisting}
     def id {A: Type}(a: A): A:= a
 \end{lstlisting}
 
-Now the type $A$ is an implicit argument, which is denoted by the braces, and Lean can fill it in for the user based on the input $a$. Therefore the user can write just \lstinline|id 42| instead of \lstinline|id $\mathbb{N}$ 42|.
+Here the type $A$ is an implicit argument, which is denoted by the braces, and Lean can fill it in for the user based on the input $a$. Therefore the user can write just \lstinline|id 42| instead of \lstinline|id $\mathbb{N}$ 42|.
 
 So far we have discussed what types are and how we can define functions that are important for the programming aspect of Lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence a proof of a statement can be equivalently seen as a function that has the type of the statement. This type of statements is known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:\mathbb{N}$), 0 $\le$ x | or \lstinline|$\exists$ (x y: Bool), x = y $\lor$ $\neg$ x = y|.
 
@@ -523,7 +523,7 @@ We apply tactics to change the goal or a hypothesis in the context. These may in
 
 Other important tactics not seen here are \lstinline|by_contra| which allows a proof by contradiction, \lstinline|by_cases| which allows a case distinction or \lstinline|constructor| that splits an and statement into two goals. Lean offers also methods that try to prove goals themselves like \lstinline|simp| that uses lemmas marked with \lstinline|@simp| or \lstinline|tauto|, that can recognize some tautologies. The set of tactics is however not fixed and the user can introduce new tactics to simplify the reasoning process.
 
-The majority of formal proofs in this work are done in tactics mode, but we see above that describing them in natural language is quite verbose. Therefore we will only describe the idea we followed outside of this section. Any result is also linked to the code in the later sections and can be directly accessed via the hyperlink to see the formalization instead.
+The majority of formal proofs in this work are done in tactics mode, but we see above that describing them in natural language is quite verbose. Therefore we will only describe the idea we followed in the following sections. Any result is also linked to the code in the later sections and can be directly accessed via the hyperlink to see the formalization instead.
 
 These proofs are done backwards, i.e. starting from the goal towards the assumptions. There are also forward proofs that start from the assumptions by building hypotheses until we reach the goal or by composing theorems like functions. While this is possible, it was not done in this work. A good source for this is either \cite{theoremProvingLean} or \cite{HitchhikerLogicVer}.
 
@@ -598,7 +598,7 @@ While this works, we see no relation between the elements of myNat and evenNat. 
 
 This approach works but is a bit cumbersome. We always need to type this ourselves and if we forget it Lean raise a type error. There exists however the \lstinline|class Coe|. A class describes an abstract property e.g. of a type and can be implemented by a specific type via \lstinline|instance|.
 
-The class \lstinline|Coe| looks (in a simplified version) like this. It takes two types and a function that maps from one type to the other. We implement \lstinline|COe| for \lstinline|evenNat| and \lstinline|myNat| with \lstinline|evenNatToMyNat|. Then we can use elements of \lstinline|evenNat| in functions defined for \lstinline|myNat| and Lean will automatically convert them using \lstinline|evenNatToMyNat|.
+The class \lstinline|Coe| is defined (in a simplified version) as follows. It takes two types and a function that maps from one type to the other. We implement \lstinline|COe| for \lstinline|evenNat| and \lstinline|myNat| with \lstinline|evenNatToMyNat|. Then we can use elements of \lstinline|evenNat| in functions defined for \lstinline|myNat| and Lean will automatically convert them using \lstinline|evenNatToMyNat|.
 
 \begin{lstlisting}
 class Coe (α : Type) (β : Type) where
@@ -677,7 +677,7 @@ We want to take a look at another example of an inductive type, that we will oft
     | cons : A → List' A → List' A
     deriving DecidableEq
 
-    def getElement (A: Type) [Inhabited A] (l: List' A): A :=
+    def getFirstElementOrDefault (A: Type) [Inhabited A] (l: List' A): A :=
     match l with
     | nil => Inhabited.default
     | cons hd _ => hd
@@ -692,7 +692,7 @@ This may not always be the desired behaviour and maybe we want to return nothing
     | none : Option α
     | some (val : α) : Option α
 
-    def getElement (A: Type) (l: List' A): Option A :=
+    def getFirstElement (A: Type) (l: List' A): Option A :=
     match l with
     | nil => Option.none
     | cons hd _ => Option.some hd
@@ -706,14 +706,14 @@ We will also often use the Exception type. This uses two types $\epsilon$ and $\
   | error : ε → Except ε α
   | ok    : α → Except ε α
 
-  def getElement (A: Type) (l: List' A): Except String A :=
+  def getFirstElement (A: Type) (l: List' A): Except String A :=
     match l with
-    | nil => Except.error "Called getElement on emptyList"
+    | nil => Except.error "Called getFirstElement on emptyList"
     | cons hd _ => Except.ok hd
 \end{lstlisting}
 
-\begin{figure}
+\begin{figure}[H]
     \centering
-    \includegraphics[scale=0.25]{Lean_example.png}
+    \includegraphics[width=\textwidth]{Lean_example2.png}
     \caption{An example of Lean in practice. On the left side is the code seen and on the right side the context in a proof with the current goal}
 \end{figure}

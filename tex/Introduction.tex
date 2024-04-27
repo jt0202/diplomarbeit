@@ -1,4 +1,4 @@
-\section{Introduction}
+\chapter{Introduction}
 
 One of the most important challenges in software engineering is writing bug-free software.  Bugs in software may endanger the well-being of humans and property.
 
@@ -9,7 +9,7 @@ Firstly, we can prove the correctness of a program, which is done in the field o
 
 In practice, software developers mostly employ a test-driven approach to software correctness. They design specific use cases and specify what the program is supposed to do in this case. Designing such cases is difficult and cannot cover every scenario so we can only see that some scenarios are bug-free.
 
-An interesting development in algorithms research are certifying algorithms \cite{CertAlg}. These algorithms do not only return a solution but also a certificate as an explanation why the returned value is the correct answer. In the case of SAT-solving, they would return a possible model as well as stating that a formula is satisfiable. The user can then verify on their own that the result is correct without inspecting the code's inner workings. This can also be done by programs called checkers. These are usually smaller and simpler so that they can be formally verified. 
+An interesting development in algorithms research are certifying algorithms \cite{CertAlg}. These algorithms do not only return a solution but also a certificate as an explanation why the returned value is the correct answer. In the case of SAT-solving, they would not only state that a formula is satisfiable but also return a model. The user can then verify on their own that the result is correct without inspecting the code's inner workings. This can also be done by programs that are called checkers. These programs are usually smaller and simpler compared to the program that calculates the solution so that they can be formally verified. 
 
 Our interest concerns computing the results of datalog programs. Datalog is a logic programming and query language that allows to write rules in the following way
 
@@ -20,7 +20,7 @@ Our interest concerns computing the results of datalog programs. Datalog is a lo
     \end{split}
 \end{equation}
 
-The rules can be interpreted as formulas from first-order logic that are universally quantified and use the implication. There are multiple equivalent semantics of datalog that deal with the question of what follows from a datalog program and a given set of facts often known as the database.
+The rules can be interpreted as formulas from first-order logic that are universally quantified and use implication. There are multiple equivalent semantics of datalog that deal with the question of what follows from a datalog program and a given set of facts also known as a database.
 
 This task can be solved in polynomial time which allows using datalog in multiple interesting applications from data analysis to data integration.
 
@@ -28,12 +28,12 @@ Modern datalog engines like Nemo\cite{Nemo} or Souffle\cite{Souffle} can work wi
 
 With the goal of improving the confidence in the correctness of our checker, we will formally verify it using the proof assistant Lean\cite{Lean4}. A proof assistant allows users to define functions and objects and prove results about the objects in machine-readable style. Therefore the proof assistant can verify that the proof is indeed correct or if not raise errors.
 
-After introducing the basics about datalog, certifying algorithms and Lean in \cref{sec:prelim}, we will formalize datalog in Lean in \cref{sec:formDatalog}. After that, we provide two methods to verify a datalog reasoning result: a classical result based on proof trees in \cref{sec:valTree} and another result based on graphs we see as more promising in practice in \cref{sec:valGraph}. 
-These methods however can only tell us that all atoms present in the result are correctly derived, i.e. soundness. They do not tell us whether more could be derived. A method to solve this question is presented in \cref{sec:completeness}.
+After introducing the basics about datalog, certifying algorithms and Lean in \cref{sec:prelim}, we will formalize datalog in Lean in \cref{sec:formDatalog}. After that, we provide two methods to verify a datalog reasoning result: a first method based on proof trees in \cref{sec:valTree} and another method based on graphs we see as more promising in practice in \cref{sec:valGraph}. 
+These methods however can only tell us that all atoms present in the result are correctly derived, i.e. soundness. They do not tell us whether more facts could be derived. A method to solve this question is presented in \cref{sec:completeness}.
 
-Finally, we show in \cref{sec:eval} that our results are not only formally correct but can also be used in practice.
+Finally, we show in \cref{sec:eval} a practical evaluation on multiple programs and databases.
 
-\subsection{Related Work}
+\section{Related Work}
 
 The approach to use certified algorithms is well documented in the literature. Multiple examples from graph theory, linear algebra or geometry are mentioned in \cite{CertAlg}. Practical implementations can be found in the Library of Efficient Data types and algorithms(LEDA)\cite{Leda}. These checkers are often verified in a proof assistant\cite{CertCheckerWorkflow}.
 

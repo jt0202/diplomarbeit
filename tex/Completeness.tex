@@ -1,10 +1,10 @@
-\section{Completeness}\label{sec:completeness}
+\chapter{Completeness}\label{sec:completeness}
 
-    In the previous chapter, we described a method why an atom is in the datalog semantics. This criteria is however not sufficient to recognize a solution. The empty list passes this test for any program while not being the semantics in most cases. Proof trees were a method to recognize why a ground atom is part of the semantics, but we are not aware of any simple way to describe why a ground atom is not in the semantics. Instead, we want to show that the set of elements in the proof trees, $S$ is complete in the sense that nothing else can derived from it anymore. This is the case when the $T_P$ operator has a fixed point for $S$ or when $S$ is a model. In this chapter, we are going to create a certified model checker to show the completeness. If $S$ passes the tree validation algorithm and is a model the following statements hold:
+    In the previous chapter, we describe a method why an atom is in the datalog semantics. This criteria is however not sufficient to recognize a solution. The empty list passes this test for any program while not being the semantics in most cases. Proof trees were a method to recognize why a ground atom is part of the semantics, but we are not aware of any simple way to describe why a ground atom is not in the semantics. Instead, we want to show that the set of elements in the proof trees, $S$ is complete in the sense that nothing else can derived from it anymore. This is the case when the $T_P$ operator has a fixed point for $S$ or when $S$ is a model. In this chapter, we are going to create a certified model checker to show the completeness. If $S$ passes the tree validation algorithm and is a model the following statements hold:
 
     \[ S \subseteq \mathtt{proofTheoreticSemantics\ P\ d} = \mathtt{modelTheoreticSemantics\ P\ d} \subseteq S \]
 
-    We only accept safe rules for the model checker which we define using \atomVariables. A rule is safe if every variable in the head occurs already in the body. Safe rules allows us to ground a rule using only the atoms in the given interpretation we want to test. Unsafe rules would require us to replace a variable that does not occur in the body with every constant symbol which is depending on the constant type not possible. As many practical datalog reasoners also only accept safe rules, this restriction seems acceptable to us.
+    We only accept safe rules for the model checker which we define using \atomVariables. A rule is safe if every variable in the head occurs already in the body. Safe rules allows us to ground a rule using only the atoms in the given interpretation we want to test. Unsafe rules would require us to replace a variable that does not occur in the body with every constant symbol which is depending on the constant type might yield an infinite ground program. As many practical datalog reasoners also only accept safe rules, this restriction seems acceptable to us.
 
     \begin{lstlisting}
         def (.\ruleisSafe.) (r: rule τ): Prop := 
@@ -12,7 +12,7 @@
 
     \end{lstlisting}
 
-    \subsection{Partial ground rules}
+    \section{Partial ground rules}
     
         We defined the model property on the ground program $ground(P)$. In order to check if a set of ground atoms is a model for a program we therefore have to ground the program. We want to avoid simply grounding all the rules at once and instead do it more intelligently because the number of groundings is very large or even infinite.  For this, we introduce a new data structure, the partial ground rule. This bears some similarities to the rules we defined in \cref{sec:formDatalog}. It has a head that is an atom. The body is split into two lists. The first list contains the ground atoms and represents the atoms in the rule we already grounded, whereas the second list consists of the so far ungrounded atoms in the rule body. We want to move the ungrounded atoms one by one into the grounded list by applying substitutions, which map all variables of this atom to constants so that we can transform this atom into a ground atom.
 
@@ -83,7 +83,7 @@
         \begin{example}
             The application of \texttt{partialGroundRule.toRule} on $pgr_1$ yields $r$ as predicted by the lemma.
 
-            If we swap both functions and first apply \texttt{partialGroundRule.toRule} to a partial ground rule and then convert the resulting rule back to a partial ground rule, we will not receive the original partial ground rule in most cases. Applying {partialGroundRule.toRule} to $pgr_2$ results in the rule $ q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . $. Converting this back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
+            If we swap both functions and first apply \texttt{partialGroundRule.toRule} to a partial ground rule and then convert the resulting rule back to a partial ground rule, we will not receive the original partial ground rule in most cases. Applying {partialGroundRule.toRule} to $pgr_2$ results in the rule $r'$ \[q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . \] Converting $r'$ back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
 
             \begin{lstlisting}
                 {
@@ -124,7 +124,7 @@
         
         (\partialGroundRulefromRuleIsActive).
 
-    \subsection{Explore grounding}
+    \section{Explore grounding}
 
     Now we want to present an algorithm that checks whether a list of rules is true in an interpretation that is given as a list of ground atoms using partial ground rules.
     

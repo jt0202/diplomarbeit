@@ -1,8 +1,8 @@
-\section{Evaluation}\label{sec:eval}
+\chapter{Evaluation}\label{sec:eval}
 
 In the previous sections we proved the correctness the algorithms to check the soundness and completeness of datalog reasoning results. Now, we are interested in the practicability of these algorithms on actual data. We combined these algorithms into a command line tool that takes a file consisting of the problem and the certificates and tells us whether the result is correct according to the certificate. 
 
-\subsection{Input format}
+\section{Input format}
 
 The input format is JSON-based because Lean offers already direct support for JSON. Similarly, as we were able to derive decidable equality or inhabitedness, we can also derive functions that convert Lean objects to JSON objects or try to create a Lean object from a JSON object.
 
@@ -79,11 +79,11 @@ Mock atoms form mock rules similarly as atoms form rules and a program is simply
     \end{lstlisting}
 \end{example}
 
-Afterwards we go twice through the program. In the first run, we collect all the predicate symbols and their arities (\parsingArityHelper) into a list and report an error if a predicate symbol is used in multiple atoms with different amounts of terms. Using such the list we can construct a signature (\parsingSignature). We use for constants and variables simply the set of string as types and for predicate symbols the subset of strings that occured as symbols. This choices allows us to directly inherit the requirements for the signature elements such as decidable equality or hashability. 
+Afterwards we go through the program twice. In the first run, we collect all the predicate symbols and their arities (\parsingArityHelper) into a list and report an error if a predicate symbol is used in multiple atoms with different amounts of terms. Using such the list we can construct a signature (\parsingSignature). We use for constants and variables simply the set of string as types and for predicate symbols the subset of strings that occured as symbols. These choices allow us to directly inherit the requirements for the signature elements such as decidable equality or hashability. 
 
 In the second run, we then transform every mock object into the corresponding datalog object of the previously created signature. 
 
-The second part is the input file is either a list of trees or a graph. For these we define again mock objects and transform them after we transformed the program.
+The second part is the input file is either a list of trees or a graph. For these we define mock objects again and transform them into the real objects after we transformed the program.
 
 \begin{lstlisting}
 inductive jsonTree (A: Type)
@@ -103,10 +103,10 @@ deriving Lean.FromJson, Lean.ToJson
 
 Additionally, there are two command line options that can be set. Firstly, the option \textit{-g} specifies that the input file as a graph instead of a list of trees which is the default option. Secondly, we tell the program with \textit{-c} to also use the \modelChecker to check for completeness.
 
-The file does not include a database yet because these databases are often very large in practice which requires more work to replicate in Lean. All evaluations are done with a mock database which assumes that any leaf of a tree is in the database and that the database is always contained in the model during the model checking. 
+The file does not include a database yet because these databases are often very large in practice which requires more work to replicate in Lean. All evaluations are done with a mock database which assumes that any leaf of a tree or graph is in the database and that the database is always contained in the model during the model checking. 
 
 
-\subsection{Results}
+\section{Results}
 
 In this section we want to evaluate the program in practice. We are interested in the feasibility of our approach to verify proof trees and to check a complete result. Additionally, we want to compare the tree verification with the graph-based verification.
 
@@ -128,7 +128,7 @@ We will use three kinds of datalog programs to test our approach:
     \item Finally, we will use a large example from practice. The problem deals with reasoning in the OWL EL profile of the web ontology language OWL whose transformation to datalog is described in \cite{ELK}. As the database we reuse the medical ontology GALEN which is also used in the original paper. The ontology is preprocessed to csv files and leads to around 1.8 million derived atoms.
 \end{enumerate}
 
-We will use the datalog engine Nemo\cite{Nemo} to evaluate these examples. Nemo allows us to specify multiple facts as a file and ask for their derivations. This is returned in a machine-readable json format which allows us to transform this and the program into the input file format described in the previous section.
+We use the datalog engine Nemo\cite{Nemo} to evaluate these examples. Nemo allows us to specify multiple facts as a file and ask for their derivations. This is returned in a machine-readable json format which allows us to transform this and the program into the input file format described in the previous section.
 
 Any other datalog engine that returns proof trees or graphs can also be used as long as such a program exists to convert it into the input format. This would also be possible with Soufflé\cite{Souffle} but the proof trees there are only given in an ASCII art style which complicates the parsing.
 
