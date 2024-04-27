@@ -3,7 +3,7 @@
 In the previous section, we described an algorithm to verify proof trees. Proofs trees are a very natural way to encode certificates for datalog results but have some drawbacks. 
 
 \begin{example}\label{ex:treeGraph}
-    Consider the following program that computes the transitive closure in a different way.
+    Consider the following program that computes the transitive closure. We double an atom in the body which does not change the semantics of the rule. 
 
     \begin{align}
             T(?x,?y) &\leftarrow E(?x,?y). \label{ex:treeGraph:ruleBase}\\

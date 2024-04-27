@@ -1,18 +1,29 @@
 \section{Conclusion and further work}
 
-In this thesis, we developed and formally verified a certificate checker for datalog. For this, we formalized the syntax and semantics of datalog and formally proved that the proof-theoretic and the model-theoretic semantics are equal. The checker can check both the soundness and the completeness of a reasoning result. The soundness certificate may take two forms: a list of proof trees or a directed acyclic graph as this allows a more compact representation with the cost of a more complicated checking algorithm. During the development of the soundness algorithms, we formalized a simple unification algorithm for datalog rules and a variant of depth-first search for directed graphs. Completeness can be checked using a certified model checker. 
+In this thesis, we developed and formally verified a certificate checker for datalog. For this, we formalized the syntax and semantics of datalog and formally proved that the proof-theoretic and the model-theoretic semantics are equal. The checker can check both the soundness and the completeness of a reasoning result. The soundness certificate may take two forms: a list of proof trees or a directed acyclic graph as this allows a more compact representation with the cost of a more complicated checking algorithm. We formalized a simple unification algorithm for datalog rules and a variant of depth-first search for directed graphs. Completeness of the datalog reasoning result can be checked using a certified model checker. 
 
 These algorithms are not only formally verified but can also be used in practice. The soundness checks are very fast even for larger instances and can be used in practice whereas the completeness check is only possible for small examples. This is to be expected as it is very similar to the actual reasoning done by a datalog engine. The checker is independent of any tool as long as the tool offers some sort of trace which can be transformed into proof trees or graphs.
 
-The choice of using Lean proved to be good as the checker was practical and we did not have to worry about the conversion into the proof assistant. Lean's standard library currently lacks some proofs for the correctness of practical data structures such as hash maps which either requires the developer of a formally verified implementation to verify these as well or accept these as axioms for the correctness.
+The choice of using Lean proved to be good as the checker was practical and we did not have to worry about the conversion into the proof assistant. Lean's standard library currently lacks some proofs for the properties of operations on practical data structures such as hash maps which either requires the developer of a formally verified implementation to verify these as well or accept these as axioms for the correctness.
 
 This is an avenue for further work as we still have some results about the correctness of hash maps as axioms. Further possible improvements for this work are an integration of the database into the verification process so that we no longer have to trust the leaves to be correct and an improved model checker.
 
-We currently can only check a subset of the programs a modern datalog reasoner accepts. Extending the checker to more features like
-\begin{enumerate}
-    \item Negation
-    \item Datatypes and functions like integers or sets and addition or aggregate functions
-    \item existentially quantified rule heads like in dependencies
-\end{enumerate}
+We currently can only check a subset of the programs a modern datalog reasoner such as Nemo or Soufflé accepts. Extending the checker to more features will allow more usages in practice. 
 
-will allow more usages in practice but this may require finding first appropriate proof trees/certificates for these extensions.
+A first extension would be numbers and function terms. In many practical we may want to count the number of witnesses or use mathematical operations such as addition or multiplication. This is currently not supported by our terms and we would need to formalize datalog with function symbols and numbers starting from terms. Additionally, we would need a different unification algorithm to recognize that $R(12, 13)$ is an instance of $R(?x, ?x + 1)$. We could however reuse the validation of proof trees for the most part except that we might have leaves expressing the equality of operations. A related extension are aggregate functions such as the sum or mean operators. Here it is more difficult because this is in a sense a global property that depends on all atoms in the interpretation. It is unclear how to express that we have used all available atoms to compute the aggregate without rerunning the complete derivation.
+
+
+Datalog is a monotone language so that adding more facts to a program will still derive all the previous elements as well. This is usually not a desired behaviour in many applications. Adding a negation operator to the language will lead to non-monotone behaviour. There are multiple times of negation possible. One of them is stratified negation where all variables of a rule must occur in some non-negated atom in the rule's body. Here we can reuse the unification algorithm we defined in our work. Suppose we want to match the following stratified rules: 
+    \[ R(?x,?y) \leftarrow S(?x, ?y, ?z), \neg T(?x, ?z). \]
+    \[ R(a,b) \leftarrow S(a, b, c), \neg T(a, c) \]
+As both rules have the same number of negated atoms we can transform them into the following rules of pure datalog:
+    \[ R(?x,?y) \leftarrow S(?x, ?y, ?z), T(?x, ?z). \]
+    \[ R(a,b) \leftarrow S(a, b, c), T(a, c) \]
+If a substitution exists that matches these rules then there exists also a substitution that matches the original rules. In contrast to pure datalog there stratified datalog is not defined using a proof-theoretic semantics\cite{alice}. In order to verify reasoning results of stratified datalog we need to first find an appropiate proof tree format. We need a proof that an atom in the body was not derived which is again a global property. For this require again all at Here we used a completeness check but noted that it is expensive in practice. 
+
+Another extensions are existential rules. There we require the existence of elements in our model if the the body is true. If no elements exists new elements often known as nulls are added instead.
+\[ \exists y. Line(x,y) \leftarrow reachableByBus(x,y)\]
+
+Such a rule is rather close to the pure datalog rules and we could reuse the unification algorithm and check if a derivation using existential rules is correct. Unfortunately, it is not that simple as in datalog. Calculating the derivations of existential rules is done with the chase algorithm. This may require to only create new arguments if no other witness for the existential quantifier exists or to first apply rules without an existential quantifier if possible. This is again a global property and one needs to think about how to represent this information in a proof tree.
+
+
