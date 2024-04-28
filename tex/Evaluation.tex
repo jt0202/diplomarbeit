@@ -125,43 +125,82 @@ We will use three kinds of datalog programs to test our approach:
 
     \item We will reuse the program from \cref{ex:treeGraph} on chains of different lengths. We have theoretically analyzed that the proof trees are exponentially larger than the corresponding proof graphs and want to see if the algorithms also respect that in practice.
     
-    \item Finally, we will use a large example from practice. The problem deals with reasoning in the OWL EL profile of the web ontology language OWL whose transformation to datalog is described in \cite{ELK}. As the database we reuse the medical ontology GALEN which is also used in the original paper. The ontology is preprocessed to csv files and leads to around 1.8 million derived atoms.
+    \item Finally, we will use a large example from practice. The problem deals with reasoning in the OWL EL profile of the web ontology language OWL whose transformation to datalog is described in \cite{ELK}. As the database we reuse the medical ontology GALEN which is also used in the original paper. The ontology is preprocessed to csv files and leads to around 2.4 million derived atoms.
 \end{enumerate}
 
 We use the datalog engine Nemo\cite{Nemo} to evaluate these examples. Nemo allows us to specify multiple facts as a file and ask for their derivations. This is returned in a machine-readable json format which allows us to transform this and the program into the input file format described in the previous section.
 
 Any other datalog engine that returns proof trees or graphs can also be used as long as such a program exists to convert it into the input format. This would also be possible with Soufflé\cite{Souffle} but the proof trees there are only given in an ASCII art style which complicates the parsing.
 
-The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RAM using Ubuntu in the Windows subsystem for Linux. We will also display the time used by Nemo for each tasks as a comparision. We believe that it is fine if the verification takes a bit longer than the computation but it should not takes hours for a task that Nemo can solve in seconds. As there is currently no alternative program capable of verifying datalog reasoning results this is the only other time available for comparision.
+The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RAM using Ubuntu in the Windows subsystem for Linux.
+We will measure the processor time using python's time module in three categories. Firstly, we measure the time our tool takes to verify the solution. Secondly, we measure the time Nemo takes to calculate the solution in our scenario. As there is to the best of our knowledge currently no alternative program capable of verifying datalog reasoning results this is the only other time available for comparision. We believe that the verification can take a bit longer than the computation but it should not takes hours for a task that Nemo can solve in seconds. 
+These two times ignore however an important aspect. We need to create first the input file that contains the program and the proof trees or proof graph. This is the third time we measure. This consists of the time that Nemo takes to create the trace which takes longer than just calculating the solution and the time we take to transform the trace into our JSON format which is done by a python script.
+
+We repeat each measurement five times and display in each table the arithmetic mean and standard derivation in seconds for each time calculated by python pandas library.
+
 
 \begin{figure}
     \begin{tabular}{lllrrrrrr}
         &  &  & \multicolumn{2}{r}{Number of nodes} & \multicolumn{2}{r}{Preparation time} & \multicolumn{2}{r}{Validation time} \\
         &  &  & mean & std & mean & std & mean & std \\
        Type & Completeness & Density &  &  &  &  &  &  \\
-       \multirow[c]{8}{*}{graph} & \multirow[c]{4}{*}{False} & 0.010000 & 749.10 & 234.33 & 0.25 & 0.12 & 0.03 & 0.00 \\
+       \multirow[c]{10}{*}{graph} & \multirow[c]{5}{*}{False} & 0.010000 & 749.10 & 234.33 & 0.25 & 0.12 & 0.03 & 0.00 \\
         &  & 0.050000 & 10395.20 & 81.38 & 17.63 & 0.38 & 0.17 & 0.01 \\
         &  & 0.100000 & 10990.00 & 0.00 & 16.91 & 0.25 & 0.17 & 0.02 \\
         &  & 0.300000 & 12970.00 & 0.00 & 18.37 & 0.26 & 0.18 & 0.01 \\
-        & \multirow[c]{4}{*}{True} & 0.010000 & 749.10 & 234.33 & 0.25 & 0.12 & 0.05 & 0.01 \\
+        &  & 0.500000 & 14950.00 & 0.00 & 20.64 & 0.81 & 0.18 & 0.01 \\
+        & \multirow[c]{5}{*}{True} & 0.010000 & 749.10 & 234.33 & 0.25 & 0.12 & 0.05 & 0.01 \\
         &  & 0.050000 & 10395.20 & 81.38 & 17.63 & 0.38 & 15.65 & 0.67 \\
         &  & 0.100000 & 10990.00 & 0.00 & 16.91 & 0.25 & 33.04 & 0.82 \\
         &  & 0.300000 & 12970.00 & 0.00 & 18.37 & 0.26 & 114.65 & 6.41 \\
-       \multirow[c]{8}{*}{tree} & \multirow[c]{4}{*}{False} & 0.010000 & 5996.80 & 3568.63 & 1.46 & 1.03 & 0.04 & 0.01 \\
+        &  & 0.500000 & 14950.00 & 0.00 & 20.64 & 0.81 & 238.86 & 9.60 \\
+       \multirow[c]{10}{*}{tree} & \multirow[c]{5}{*}{False} & 0.010000 & 5996.80 & 3568.63 & 1.46 & 1.03 & 0.04 & 0.01 \\
         &  & 0.050000 & 59709.40 & 714.58 & 235.27 & 4.16 & 0.37 & 0.01 \\
         &  & 0.100000 & 44814.57 & 92.01 & 179.52 & 1.47 & 0.32 & 0.01 \\
         &  & 0.300000 & 34062.00 & 1.41 & 170.25 & 0.97 & 0.28 & 0.02 \\
-        & \multirow[c]{4}{*}{True} & 0.010000 & 5996.80 & 3568.63 & 1.46 & 1.03 & 0.14 & 0.10 \\
+        &  & 0.500000 & 30100.00 & 0.00 & 195.84 & 1.79 & 0.27 & 0.00 \\
+        & \multirow[c]{5}{*}{True} & 0.010000 & 5996.80 & 3568.63 & 1.46 & 1.03 & 0.14 & 0.10 \\
         &  & 0.050000 & 59709.40 & 714.58 & 235.27 & 4.16 & 26.58 & 0.80 \\
         &  & 0.100000 & 44814.57 & 92.01 & 179.52 & 1.47 & 39.17 & 2.03 \\
         &  & 0.300000 & 34062.00 & 1.41 & 170.25 & 0.97 & 105.80 & 1.97 \\
+        &  & 0.500000 & 30100.00 & 0.00 & 195.84 & 1.79 & 206.02 & 6.61 \\
        \end{tabular}
+       
 \caption{Results for scenario 1}       
 \end{figure}
 
 \begin{figure}
+    \begin{tabular}{lllrrrrrr}
+        &  &  & \multicolumn{2}{r}{Number of nodes} & \multicolumn{2}{r}{Preparation time} & \multicolumn{2}{r}{Validation time} \\
+        &  &  & mean & std & mean & std & mean & std \\
+       Type & Program type & Density &  &  &  &  &  &  \\
+       \multirow[c]{10}{*}{graph} & \multirow[c]{5}{*}{A} & 0.010000 & 688.20 & 198.16 & 0.21 & 0.08 & 0.03 & 0.00 \\
+        &  & 0.050000 & 10316.00 & 129.43 & 17.22 & 0.45 & 0.16 & 0.00 \\
+        &  & 0.100000 & 10990.00 & 0.00 & 17.12 & 0.33 & 0.17 & 0.00 \\
+        &  & 0.300000 & 12970.00 & 0.00 & 18.07 & 0.13 & 0.18 & 0.01 \\
+        &  & 0.500000 & 14950.00 & 0.00 & 20.92 & 0.83 & 0.18 & 0.00 \\
+        & \multirow[c]{5}{*}{B} & 0.010000 & 671.00 & 164.49 & 0.21 & 0.08 & 0.03 & 0.00 \\
+        &  & 0.050000 & 10435.00 & 54.77 & 21.26 & 0.30 & 0.16 & 0.00 \\
+        &  & 0.100000 & 10990.00 & 0.00 & 19.99 & 0.07 & 0.18 & 0.02 \\
+        &  & 0.300000 & 12970.00 & 0.00 & 21.82 & 0.42 & 0.18 & 0.02 \\
+        &  & 0.500000 & 14950.00 & 0.00 & 23.15 & 0.74 & 0.19 & 0.01 \\
+       \multirow[c]{10}{*}{tree} & \multirow[c]{5}{*}{A} & 0.010000 & 4840.40 & 2512.74 & 1.19 & 0.70 & 0.07 & 0.06 \\
+        &  & 0.050000 & 59052.80 & 1135.38 & 237.41 & 21.58 & 0.37 & 0.01 \\
+        &  & 0.100000 & 44902.80 & 63.32 & 205.97 & 14.41 & 0.32 & 0.01 \\
+        &  & 0.300000 & 34060.80 & 1.10 & 169.79 & 0.45 & 0.27 & 0.00 \\
+        &  & 0.500000 & 30100.00 & 0.00 & 195.52 & 1.77 & 0.26 & 0.00 \\
+        & \multirow[c]{5}{*}{B} & 0.010000 & 6337.60 & 3684.41 & 1.04 & 0.63 & 0.05 & 0.01 \\
+        &  & 0.050000 & 90019.40 & 845.71 & 180.30 & 4.94 & 0.54 & 0.06 \\
+        &  & 0.100000 & 64789.40 & 332.12 & 150.39 & 1.28 & 0.40 & 0.01 \\
+        &  & 0.300000 & 41093.00 & 3.00 & 135.48 & 0.77 & 0.31 & 0.01 \\
+        &  & 0.500000 & 35150.00 & 0.00 & 154.64 & 2.54 & 0.29 & 0.02 \\
+       \end{tabular}
+    \caption{Result for different programs for TC}       
+\end{figure}
+
+\begin{figure}
 \begin{tabular}{llrrrrrrr}
-    &  & Number of nodes & \multicolumn{2}{r}{Nemo time} & \multicolumn{2}{r}{Preparation time} & \multicolumn{2}{r}{Validation time} \\
+    &  & Number of nodes & \multicolumn{2}{r}{Nemo time in s} & \multicolumn{2}{r}{Preparation time in s} & \multicolumn{2}{r}{Validation time in s} \\
     &  & mean & mean & std & mean & std & mean & std \\
    Type & Size &  &  &  &  &  &  &  \\
    \multirow[c]{3}{*}{graph} & 10 & 18.00 & 0.03 & 0.01 & 0.03 & 0.01 & 0.05 & 0.06 \\
@@ -177,5 +216,28 @@ The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RA
 In scenario (2) the advantage of graphs over trees is seen clearly. For chains of the length 15 and 20 the tree based validation takes significantly more time while the graph-based validation is still comparable to Nemo in speed. Additionally, the preparation for graphs is much faster. This is because Nemo's trace looks graph-like so that we only have to transform the atoms into the JSON-format. Creating a tree requires us to first build the graph and then explore all paths. When trying to evaluate the scenario for chains of the length 25 the preparation failed on the hardware whereas it was still possible using graphs with a comparable time.
 
 
+\begin{figure}
+    \centering
+    \begin{tabular}{llrrrrrr}
+        &  & \multicolumn{2}{r}{Number of nodes} & \multicolumn{2}{r}{Preparation time in s} & \multicolumn{2}{r}{Validation time in s} \\
+        &  & mean & std & mean & std & mean & std \\
+       Type & Number of atoms &  &  &  &  &  &  \\
+       \multirow[c]{5}{*}{graph} & 1 & 18.60 & 7.20 & 8.90 & 0.06 & 0.02 & 0.00 \\
+        & 10 & 230.80 & 39.33 & 9.10 & 0.11 & 0.03 & 0.00 \\
+        & 100 & 1876.00 & 148.04 & 11.04 & 0.44 & 0.05 & 0.00 \\
+        & 1000 & 12813.40 & 187.66 & 38.88 & 1.18 & 0.20 & 0.01 \\
+        & 10000 & 85851.20 & 484.08 & 1301.97 & 210.82 & 1.60 & 0.16 \\
+       \multirow[c]{5}{*}{tree} & 1 & 19.00 & 7.94 & 8.93 & 0.02 & 0.03 & 0.00 \\
+        & 10 & 286.00 & 46.03 & 9.13 & 0.09 & 0.03 & 0.00 \\
+        & 100 & 2835.40 & 373.87 & 11.46 & 0.49 & 0.04 & 0.00 \\
+        & 1000 & 28159.80 & 399.11 & 68.04 & 3.03 & 0.18 & 0.00 \\
+        & 10000 & 286027.60 & 2172.81 & 4101.78 & 319.53 & 1.91 & 0.17 \\
+       \end{tabular}
+       
+       \caption{Results for scenario 3}
+       \label{res:scenario3}
+\end{figure}
+In scenario (3) we test the verification on another data set. This data set is a fixed ontology GALEN. The results of the program are computed by Nemo in around 10s on the setup used in this section. We group the results by the input and the number of atoms we asked we to provide explanations for. We see again that in both cases the verification is very fast. The difference in times between the graph and tree input is not as significant as in scenario (2). We see that in the case of one fact that the number of nodes in the tree and graph are almost equal so that atoms are not so often reused in this scenario. The difference in node numbers is larger in the case of multiple facts as multiple proof trees will use the same fact. The preparation time is here for larger instances of at least 1000 atoms much faster than for trees. We also see that a completeness check is futile here as we need a certificate for every atom while creating certificates for 10000 atoms in the graph format already takes around 20 minutes. Creating a certificate for all 2.4 million facts was not possible in this setup. 
 
-As a summary, we see that validating a proof tree or proof graph is possible in practice in most cases. The graph approach is faster in the worst-case but in most user defined cases they are similar. The input is however faster created for graphs due to Nemo's trace output. If the output is more tree-like then this might change. We also see that completeness is possible to check but this takes much more than validating the trees and calculating the result using Nemo.
+
+As a summary, we see that validating a proof tree or proof graph is possible in practice in most cases. The graph approach is faster in the worst-case but in most user defined cases they are similar. The input is however faster created for graphs due to Nemo's trace output. If the output is more tree-like then this might change. Therefore we believe that the graph input is better to use with Nemo. We also see that completeness is possible to check for small instances but takes much longer than just verifying the soundness or calculating the 

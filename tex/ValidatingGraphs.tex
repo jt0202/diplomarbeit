@@ -13,7 +13,7 @@ In the previous section, we described an algorithm to verify proof trees. Proofs
     The database shall encode the elements of a chain $E(i, i+1)$ for $i \in \{0, n\}$. In the proof tree representation we need the same proof tree twice for $T(?y, ?z)$ in the second rule and will need copies for it later, which results in large trees. The proof tree for $T(0, i+1)$ needs a vertex representing the head of \cref{ex:treeGraph:ruleTrans}, one vertex for the $E$ fact $E(i, i+1)$ and two proof trees for $T(0, i)$. Therefore the size of $T(0, i+1)$ in the number of nodes is more than double the size of $T(0, i)$ which leads to an exponential growth.
 \end{example}
 
-Proof trees offer no reusability of atoms as they need to stay in the tree shape. If an atom is used multiple times in the derivation we need for each usage a new vertex that is labeled by this atom. Formally we can view the proof tree as a directed tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices can have the same label in a proof tree as in the example above. We need this as a ground atom $a$ can be used in multiple ground rules used in the derivation but cannot have connections from multiple vertices to the vertex representing $a$ if we are in a directed tree.
+Proof trees offer no reusability of atoms as they need to stay in the tree shape. If an atom is used multiple times in the derivation we need for each usage a new vertex that is labeled by this atom. Formally we can view the proof tree as a directed tree $T= (V_T;E_T)$ with a label function $label: V_T \to groundAtom$ because different vertices can have the same label in a proof tree as in the example above. We need this as a ground atom $a$ can be used in multiple ground rules in the derivation but cannot have connections from multiple vertices to the vertex representing $a$ if we are in a directed tree.
 
 A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  with $V_G = \{a \mid \exists v \in V_T, label(v)=a\}$ and $E_G = \{ (a_1, a_2) \mid \exists v_1, v_2 \in V_T,  label(v_i) = a_i \land (v_1, v_2) \in E_T\}$. Then a vertice can be considered equal to its label as no label occurs multiple times anymore. Examples for a proof tree and the corresponding graph are in \cref{fig:treeGraph}.
 
@@ -85,7 +85,7 @@ A more compact representation would be a directed graph $G=(V_G, E_G)$ of $T$  w
 
 Another advantage occurs when we want to validate multiple trees or even a complete result. Multiple trees will often share labels as well and combining them into a graph, i.e. the union of $G_{T_i}$ for trees $T_i$ will again include every label just once. In the previous section, we introduced the possibility of not having to check every proof tree as they occur in other proof trees as well. Selecting a minimal amount of proof trees to check a complete result is however still an instance of the NP-hard subset cover problem.
 
-We require for this that the successors of a ground atom are the same elements in every tree if the ground atom occured in this tree. If not an atom would have more successors then previously in the trees and there will probably exists no matching ground rule. In practice, this requirement was always fulfilled.
+We require for this that the successors of a ground atom are the same elements in every tree if the ground atom occured in this tree. If not an atom would have more successors in the graph then previously in the trees and there will probably exists no matching ground rule. In practice, this requirement was always fulfilled.
 
 Another requirement is acyclicity. We cannot use an atom to explain itself. Either we could have used it directly before or it cannot be explained by a proof tree at all. 
 \section{Graph model}
@@ -100,7 +100,7 @@ structure SimpleGraph (V : Type u) where
   loopless : Irreflexive Adj
 \end{lstlisting}
 
-This graph representation is unfortunately not what we need in an algorithm. Firstly, the adjacency relation of this graph is always symmetric so that it does not encode the directed graphs we need. The direction of the edges allows us to differentiate between the ground atoms that were used to derive a ground atom and the ground atoms that were derived from a ground atom. Secondly, the adjacency relation is a function to \lstinline|Prop| and thus in general not computable but we want to use it in an algorithm. Finally, we need for the validation the successors of a vertex as they are supposed to represent the body of a ground rule. When we want to get them in this model we would have to query the adjacency relation for every vertex assuming it would be computable.
+This graph representation is unfortunately not what we need in an algorithm. Firstly, the adjacency relation of this graph is always symmetric so that it does not encode the directed graphs we need. The direction of the edges allows us to differentiate between the ground atoms that were used to derive a ground atom and the ground atoms that were derived from a ground atom. Secondly, the adjacency relation is a function to \lstinline|Prop| and thus in general not computable but we want to use it in an algorithm. Finally, we need for the validation the successors of a vertex as they are supposed to represent the body of a ground rule. When we want to obtain the successors in this graph model we would have to query the adjacency relation for every vertex assuming it would be computable.
 
 Therefore we design our own implementation of a graph. We use an adjacency list approach so that we can quickly get all the successors of a vertex. The graph is represented by a hash map whose keys are the vertices. Each vertex is mapped via the hash map towards its successors.
 
@@ -146,7 +146,7 @@ This approach contains all important elements in a graph, but there is a small t
     
 \end{example}
 
-We define a pregraph to be complete, if every successor of a vertex is a vertex itself and can then avoid the problem.
+We define a pregraph to be complete, if every successor of a vertex is a vertex itself and thus can avoid the problem.
 
 \begin{lstlisting}
     def (.\PreGraphcomplete.) (pg: PreGraph A) := 
@@ -159,9 +159,7 @@ abbrev (.\Graph.) (A: Type) [DecidableEq A] [Hashable A] :=
     { pg : PreGraph A // pg.complete }
 \end{lstlisting}
 
-\todo{rewrite}
-The completeness predicate was necessary, because . We do not expect every ground atom to be in the graph. An alternative would be to create a subtype of those ground atoms that occur in the list of vertices but this may require many types conversions when adding vertices to a graph in the parsing. Here we can add vertices to the graph and only have to prove that the completeness property still holds at the end.
-
+The completeness predicate was necessary, because not all elements of the type $A$ are vertices but the successors of a vertex can be any element of the type $A$.
 We start by formalizing walks in a graph. Walks allow the repitition of vertices in itself in contrast to paths which suffices our needs. 
 
 A walk $w$ in a graph $G$ is a list of vertices that are all vertices of $G$ and are connected via the successor relation of $G$, i.e. for every $i$ with $0 < i < i.length$ we have that $w[i-1] \in G.successors\ w[i]$. The starting vertex of the walk is consequently at the back.
@@ -198,7 +196,7 @@ def (.\isAcyclic.) (G: Graph A) := ∀ (l: List A), ¬ isCycle l G
 
 \section{Validation of a graph}
 
-After defining the graph model, we want to specify how the graph validation takes place. For these we defined the recursive predicate \isValid and implemented it using \treeValidator. As the graph we receive may not even be acyclic we cannot simply define a recursive predicate as this will then not terminate. Instead we define a local predicate for each vertex and its successor. Then we can check every vertex individually.
+After defining the graph model, we want to specify how the graph validation takes place. For trees we defined the recursive predicate \isValid and implemented it using \treeValidator. As the graph we receive may not even be acyclic we cannot simply define a recursive predicate as this will then not terminate. Instead we define a local predicate for each vertex and its successor. Then we can check every vertex individually.
 
 \begin{lstlisting}
 def (.\locallyValid.) (P: program τ) (d: database τ) (v: groundAtom τ) (G: Graph (groundAtom τ)): Prop :=
@@ -207,7 +205,7 @@ def (.\locallyValid.) (P: program τ) (d: database τ) (v: groundAtom τ) (G: Gr
  ∨ ((G.successors v) = [] ∧ d.contains v)
 \end{lstlisting}
 
-Except for the recursive case this is very similar to \isValid. Therefore we can reuse earlier concepts and build a checker for this. We expect the program again parsed into a look-up structure $m$, a database $d$, the vertex $a$ and its successors passed as a list $l$.
+Except for the rule case this is very similar to \isValid. Therefore we can reuse earlier concepts and build a checker for this. We expect the program again parsed into a look-up structure $m$, a database $d$, the vertex $a$ and its successors passed as a list $l$.
 
 \begin{lstlisting}
 def (.\localValidityCheck.) (m: List τ.predicateSymbols → List (rule τ)) (d: database τ) (l: List (groundAtom τ)) (a: groundAtom τ) : Except String Unit :=
@@ -235,7 +233,7 @@ def (.\extractTree.) (a: A) (G: Graph A) (mem: a ∈ G.vertices) (acyclic: isAcy
   tree.node a (List.map (fun ⟨x, _h⟩ => extractTree x G (G.complete a mem x _h) acyclic) (G.successors a).attach)
 \end{lstlisting}
 
-This function only terminates because the graph is acyclic. Therefore we require the fact as an explicit argument in the function above. We will show the termination by using the number of vertices that are reachable from the current vertex vertex. These decrease the further we walk in the graph or else we would be able to reach a previous node and have a cycle which is not allowed. We start by formalizing the notion of reachability. We say that a vertex $a$ \canReach a vertex $b$ if there exists a walk $w$ from $a$ to $b$. (The start of the walk is the last element in the list).
+This function only terminates because the graph is acyclic. Therefore we require the acyclicity as an explicit argument in the function. We will show the termination by using the number of vertices that are reachable from the current vertex. These decrease the further we walk in the graph or else we would be able to reach a previous node and have a cycle which is not allowed. We start by formalizing the notion of reachability. We say that a vertex $a$ \canReach a vertex $b$ if there exists a walk $w$ from $a$ to $b$. (The start of the walk is the last element in the list).
 
 \begin{lstlisting}
     def (.\canReach.) (a b: A) (G: Graph A):= 
@@ -246,7 +244,7 @@ This function only terminates because the graph is acyclic. Therefore we require
 
 Any vertex $a$ can reach it self via the walk $[a]$(\canReachrefl).
 
-We want to use the finite set of the vertices that are reachable from the current node so that we can argue that the cardinality decreases and by this the function terminates. This set will be a subset of the vertices of the graph $G$ since any element reachable by a walk in $G$ must be in the vertices of $G$. Ideally, we want to filter this finite set to only keep those vertices reachable from the current node. Unfortunately, \lstinline|Finset.filter| requires a decidable predicate. This predicate is in principle decidable for example by Dijkstra's algorithm. Instead of implementing and validating it, we instead use classical logic to obtain that any predicate is decidable and reuse the previous filter version. This is now no longer computable but we only want to use it in the termination proof anyway.
+We want to use the finite set of the vertices that are reachable from the current node so that we can argue that the cardinality of this set decreases and by this the function terminates. This set will be a subset of the vertices of the graph $G$ since any element reachable by a walk in $G$ must be in the vertices of $G$. Ideally, we want to filter this finite set to only keep those vertices reachable from the current node. Unfortunately, \lstinline|Finset.filter| requires a decidable predicate. This predicate is in principle decidable for example by Dijkstra's algorithm. Instead of implementing and validating it, we instead use classical logic to obtain that any predicate is decidable and reuse the previous filter version. This is now no longer computable but we only want to use it in the termination proof anyway.
 
 \begin{lstlisting}
 noncomputable def (.\Finsetfilternc.) (p: A → Prop) (S: Finset A):= @Finset.filter A p (Classical.decPred p) S
@@ -289,12 +287,12 @@ The global successors in a graph $G$ of a vertex $a$ are then all the vertices $
       \label{fig:globalSuccessors}
 \end{figure}
 
-We already see in \cref{fig:globalSuccessors} that we have that the global successors of $2$ are a strict subset of the global successors of $4$ and $4$ is the successor of $2$. We will generalize this. In any graph we have that for every vertex $a$ and successor $b$ of $a$ we have that $globalSuccessors(b) \subseteq globalSuccessors(a)$, because any element $c$ that $b$ can reach can also be reached from $a$ by first going to $b$ and then following the walk from $b$ to $c$
+We already see in \cref{fig:globalSuccessors} that the global successors of $2$ are a strict subset of the global successors of $4$ and $4$ is the successor of $2$. We can generalize this. In any graph we have that for every vertex $a$ and successor $b$ of $a$ we have that $globalSuccessors(b) \subseteq globalSuccessors(a)$, because any element $c$ that $b$ can reach can also be reached from $a$ by first going to $b$ and then following the walk from $b$ to $c$
 
 (\globalSuccessorsSubsetWhenSuccessor).
 
 
-If the graph is additionally acyclic, we get that $globalSuccessors(b) \subset globalSuccessors(a)$, because $a$ can reach $a$ and $b$ via the successor edge. If $b$ could reach $a$, then this would lead to cycle which is not allowed.
+If the graph is additionally acyclic, we get that $globalSuccessors(b) \subset globalSuccessors(a)$, because $a$ can reach $b$ via the successor edge. If $b$ could reach $a$, then this would lead to cycle which is not allowed.
 
 (\globalSuccessorsSSubsetWhenAcyclicAndSuccessor)
 
@@ -323,24 +321,24 @@ It remains to be shown this leads to a valid proof tree.
 \begin{proof}
     We prove this by strong induction on the cardinality of the global successors of $a$.
 
-    Since $a$ is a vertex of $g$, $a$ is locally valid. There are two cases for this. If $a$ is locally valid because it has no successors and is in the database, then the map operation creates no subtrees so that the resulting proof tree is valid as well.
+    Since $a$ is a vertex of $G$, $a$ is locally valid. There are two cases for this. If $a$ is locally valid because it has no successors and is in the database, then the map operation creates no subtrees so that the resulting proof tree is valid as well.
 
-    If $a$ is locally valid because $a$ and its successors form a ground rule from the ground program of $P$, then we create the subtrees with extractTree. By the previous observation the roots of the subtrees equal the successors of $a$, so that we have again a ground rule from the ground program. The height of the subtrees ist smaller than the height of the tree itself. By the induction hypothesis all these trees are then valid as well, so that the proof tree for $a$ is valid.
+    If $a$ is locally valid because $a$ and its successors form a ground rule from the ground program of $P$, then we create the subtrees with extractTree. By the previous observation the roots of the subtrees equal the successors of $a$, so that we have again a ground rule from the ground program. The global successors of any successor of $a$ are a subset of the global successors of $a$ and thus their cardinalities are smaller. Therefore we can apply the induction hypothesis and see that all these trees are then valid as well, so that the proof tree for $a$ is valid.
 \end{proof}
 
 Using this result the vertices of an acyclic graph whose vertices are all locally valid with respect to $P$ and $d$ are a subset of the proof-theoretic semantics of $P$ and $d$.
 
 \section{Depth-first search}
 
-By the results of the previous result we know that in order to verify a graph we have to call the \localValidityCheck on every vertex and its successors and determine whether the graph is acyclic. A typical solution to answer the second question is depth-first search, which we will implement and verify in this section. During depth-first search the algorithm has to visit every vertex. With the aim of reducing the iterations of the vertex list, we combine this with executing \localValidityCheck on every vertex and its successors.
+By the results of the previous result we know that in order to verify a graph we have to call the \localValidityCheck on every vertex and its successors and determine whether the graph is acyclic. A typical solution to answer the second question is depth-first search, which we will implement and verify in this section. During depth-first search the algorithm has to visit every vertex. With the aim of reducing the number of iterations over the vertex list, we combine this with executing \localValidityCheck on every vertex and its successors.
 
-We generalize this by considering a function \lstinline|f: A → List A → Except String Unit| for a \lstinline|Graph A|. The except type is again chosen to return an error message to the user in the negative case.
+We generalize this by considering a function \lstinline|f: A → List A → Except String Unit| for a \lstinline|Graph A|. The Except type is again chosen to return an error message to the user in the negative case.
 
 We follow \cite{AlgorithmsBook} when implementing depth-first search and use several helper functions that simplify the proofs. A first function \dfs starts the process on every vertex and the actual exploration of the graph is done in \dfsstep. So that we do not explore vertices multiple times, we store already explored vertices in a finite set. For performance reasons this is a hash set instead of the finite set from mathlib.
 
 The function \isOkOrMessage takes an arbitrary exception whose error type is a string and transform it into an \lstinline|Except String Unit| object to have a similar output type as the \treeValidator. This returns ok iff the original exception was also an ok element(\isOkOrMessageOkIffExceptionIsOk).
 
-We use \foldlexceptset as a variant as the common \textit{foldl} or \textit{reduce} function. It stops and returns the first found exception. If no exception is found it execute the function on the first element with the input then and then calls itself recursively with the resulting set. We use this to use the set of already explored vertices in the further explorations using depth first-search.
+We use \foldlexceptset as a variant as the common \textit{foldl} or \textit{reduce} function. It stops and returns the first found exception. If no exception is found it executse the function on the first element with the input set and then calls itself recursively with the resulting sets. We use this to share the set of already explored vertices in the further explorations using depth first-search.
 
 \begin{lstlisting}
 def (.\isOkOrMessage.) (e: Except String A): Except String Unit :=
@@ -373,7 +371,7 @@ The main work is done in \dfsstep which we define next. This function takes a va
     \item a hash set $visited$ of already explored vertices to allow ealier termination.
 \end{enumerate}
 
-We start the algorithm by checking if $a$ is already in $visited$. If that is the case, then we have no further exploration to do and return $visited$. If not we check if $f$ raises an error on $a$ and its successors and return it. If $f$ returns ok, we check for a cycle by intersecting $a$'s successors with the current walk. If any successor of $a$ occurs in the current walk, we have found a cycle and return this as an error. If we find no cycle, then we recursively call \dfsstep using \foldlexceptset to update the set of visited vertices on every successor. If no error is found during this exploration, we add $a$ using \addElementIfOk to the return set and return this set.
+We start the algorithm by checking if $a$ is already in $visited$. If that is the case, then we have no further exploration to do and return $visited$. If not we check if $f$ raises an error on $a$ and its successors and return any found error. If $f$ returns ok, we check for a cycle by intersecting $a$'s successors with the current walk. If any successor of $a$ occurs in the current walk, we have found a cycle and return this as an error. If we find no cycle, then we recursively call \dfsstep using \foldlexceptset to update the set of visited vertices on every successor. If no error is found during this exploration, we add $a$ using \addElementIfOk to the return set and return this set.
 
 \begin{lstlisting}
 def (.\addElementIfOk.) [Hashable A] (e: Except B (HashSet A)) (a:A): Except B (HashSet A) :=
@@ -403,7 +401,7 @@ def (.\dfsstep.) [Hashable A] (a: A) (G: Graph A)
         Except.error "Cycle detected"
 \end{lstlisting}
 
-This procedure terminates because we call \dfsstep only on elements that do not occur on the current walk. Formally, we show that the cardinality of the finite set \lstinline|(List.toFinset G.vertices \ List.toFinset currWalk)| decreases. In the recursive call we use $a::currWalk$ as the current walk. Since any element of a walk is a vertex, the cardinality of \lstinline|List.toFinset currWalk| is smaller then the cardinality of the set of vertices. In the recursive calls, the walk is instead $a::currWalk$ and since $a$ is not in $currWalk$ the cardinality of \lstinline|List.toFinset a::currWalk| is larger than the cardinality of \lstinline|List.toFinset currWalk| and hence the overall cardinality decreases.
+This procedure terminates because we call \dfsstep only on elements that do not occur on the current walk. Formally, we show that the cardinality of the finite set \lstinline|(List.toFinset G.vertices \ List.toFinset currWalk)| decreases. Since any element of a walk is a vertex, the cardinality of \lstinline|List.toFinset currWalk| is smaller then the cardinality of the set of vertices. In the recursive calls, the walk is instead $a::currWalk$ and since $a$ is not in $currWalk$ the cardinality of \lstinline|List.toFinset a::currWalk| is larger than the cardinality of \lstinline|List.toFinset currWalk| and hence the overall cardinality decreases.
 
 The desired theorem describing the behavior of depth-first search is the following:
 
@@ -448,7 +446,7 @@ We defined acyclicity by stating that no list of elements of type $A$ is a cycle
   Suppose that we start \dfsstep on the vertex $D$ on the graph depicted in \cref{fig:propagatingAcyclicityResultinDFS}. We will start exploring $D$, then $C$, $B$ and $A$. During the exploration of $A$ we notice that its successor $C$ already occurs in the current walk. Hence, we found a cycle. If we use membership in a cycle, then this information is not propagated back to $D$. \dfsstep returned an error for $D$ while $D$ is not a member in a cycle. Instead we desire an iff relation between our criteria and the output of \dfsstep. An alternative is the ability to reach a cycle. This is propagated back and a criteria for when \dfsstep returns ok, which we will formalize now.
 \end{example}
 
-We reuse the \canReach predicate for the new \reachesCycle predicate. A vertex $a$ reaches a cycle, if there exists a cycle $c$ with a member $b$ that $a$ reaches.
+We reuse the \canReach predicate for the new \reachesCycle predicate. A vertex $a$ reaches a cycle, if there exists a cycle $c$ with a member $b$ that $a$ can reach.
 
 \begin{lstlisting}
   def (.\reachesCycle.) (a:A) (G: Graph A):= 
@@ -473,13 +471,13 @@ This property is propagated back from the successors.
   A vertex $a$ does not reach a cycle iff every successor of $a$ does not reach a cycle.
 \end{lemma}
 \begin{proof}
-  Both directions are proven via the contraposition. For the first direction, we have that there is a successor $b$ of $a$ that reaches a cycle. Then we can simply extend the walk by adding $a$ at the back and then $a$ can reach a cycle.
+  Both directions are proven via the contraposition. For the forward direction, we have that there is a successor $b$ of $a$ that reaches a cycle. Then we can simply extend the walk by adding $a$ at the back and then $a$ can reach a cycle.
 
-  For the backdirection we assume that $a$ reaches a cycle and try to show then one of its successors must also be reach a cycle. 
+  For the backwards direction we assume that $a$ reaches a cycle by a walk $w$ and try to show then one of its successors must also be reach a cycle. 
   If $a$ reaches a cycle $c$ with an element $b$ we consider two cases. 
   If $b$ would be a successor of $a$, we have shown our goal.
   
-  Now we assume that $b$ is not a successor of $a$. Again we can consider two cases. If the walk is of length one then $a$ and $b$ must be equal and $a$ is a member in a cycle itself. As long as $a$ is not the first element in the cycle, we can simply pick the preceeding element in the cycle due to the connectness property of the walk. This does not work if $a$ is the first element, but since it is a cycle $a$ must also be the last element and we can pick the predecessor of the last element, which is a successor of $a$ and in a cycle.
+  Now we assume that $b$ is not a successor of $a$. Again we can consider two cases. If the walk $w$ is of length one then $a$ and $b$ must be equal and $a$ is a member in a cycle itself. As long as $a$ is not the first element in the cycle, we can simply pick the preceeding element in the cycle due to the connectness property of the walk. This does not work if $a$ is the first element, but since it is a cycle $a$ must also be the last element and we can pick the predecessor of the last element, which is a successor of $a$ and in a cycle.
 
   If $a$ is reaches $b$ with walk longer than length 1, then the walk also must have at least three elements since $b$ is not a successor of $a$. Therefore the walk which must have the form $b \dots p\ a$ for a successor $p$ of $a$. Then also $p$ reaches a cycle.
 \end{proof}
