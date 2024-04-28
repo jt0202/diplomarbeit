@@ -247,13 +247,13 @@
         }
     \end{lstlisting}
 
-    Since applying substitutions to ground atoms does not change a ground atom, we can first convert the partial ground rule to a rule and then apply the substitution (\swapPgrApplySubstitution) to gain the equivalent rule. We then only have to show that for any substitution $s$ from \getSubstitutions $i$ $hd$ \applySubstitutionRule $s$ $pgr.toRule$ is true iff $pgr$ is true, which follows from the following lemma. In this lemma we call a rule $r$ true in an interpretation $i$ if grounding $r$ with any $g$ yields a ground rule that is true in $i$. Recall the definition of minimal solutions in \cref{sec:valTree}. We call a substitution 
+    Since applying substitutions to ground atoms does not change a ground atom, we can first convert the partial ground rule to a rule and then apply the substitution (\swapPgrApplySubstitution) to gain the equivalent rule. We then only have to show that for any substitution $s$ from \getSubstitutions $i$ $hd$ \applySubstitutionRule $s$ $pgr.toRule$ is true iff $pgr$ is true, which follows from the following lemma. In this lemma we call a rule $r$ true in an interpretation $i$ if grounding $r$ with any $g$ yields a ground rule that is true in $i$. We additionally call a substitution minimal for an atom $a$ and an interpretation $i$ if $s$ is the minimal substitution according to $\subseteq$ that matches $a$ to some ground atom in $i$.
 
     \begin{lemma}[\replaceGroundingWithSubstitutionAndGrounding]
-        Let $r$ be a rule, $a$ an atom from the body of $r$ and $i$ an interpretation. Then applying any grounding $g$ to $r$ is true in $i$ iff applying any minimal substitution $s$ that maps $a$ to a ground atom in $i$ yields a rule that is true in $i$. 
+        Let $r$ be a rule, $a$ an atom from the body of $r$ and $i$ an interpretation. Then $r$ is true in $i$ iff for all minimal substitutions $s$ for $a$ and $i$ applying $s$ to $r$ yields a rule $r'$ that is true in $i$. 
     \end{lemma}
     \begin{proof}
-        For the forward direction, we know that grounding $r$ with any grounding $g$ results in a true ground rule in $i$. Let $s$ be some minimal substitution that maps $a$ to some atom in $i$ and $r'$ be the rule that is the result of applying $s$ to $r$. We want to show that $r'$ is true in $i$ by showing that grounding $r'$ by any grounding $g$ yields a true ground rule $gr$ in $i$. We obtained $gr$ from $r$ by first applying $s$ and then $g$. We can combine $s$ and $g$ into a grounding by using the result of $s$ for a variable when defined and else the result of $g$.
+        For the forward direction, we know that grounding $r$ with any grounding $g$ results in a true ground rule in $i$. Let $s$ be some minimal substitution for $a$ and $i$ and $r'$ be the rule that is the result of applying $s$ to $r$. We want to show that $r'$ is true in $i$. That is the case if grounding $r'$ by any grounding $g$ yields a true ground rule $gr$ in $i$. We obtained $gr$ from $r$ by first applying $s$ and then $g$. We can combine $s$ and $g$ into a grounding by using the result of $s$ for a variable when defined and else the result of $g$.
 
         \begin{lstlisting}
             def (.\combineSubstitutionGrounding.) (s: substitution τ) (g: grounding τ): grounding τ := fun x => if h: Option.isSome (s x) then Option.get (s x) h else g x
@@ -261,15 +261,15 @@
 
         Grounding a rule with \combineSubstitutionGrounding $s$ $g$ is equivalent to first applying $s$ and then grounding with $g$ for terms, atoms and rules (\combineSubstitutionGroundingEquivRule). Hence we can combine $g$ and $s$ into the grounding \combineSubstitutionGrounding and use the assumption to conclude the forward direction.
 
-        For the back direction, we know that the claim holds for any minimal substitution $s$ that maps $a$ to some atom in $i$ and grounding $g$ and have to show that then we can also apply any grounding $g'$ to $r$ and get a true rule in $i$. If $g'$ grounds $a$ to an atom that is not in $i$, then the rule is true since the antecedent is false.
+        For the back direction, we know that for any minimal substitution $s$ for $a$ and $i$ applying $s$ to $r$ yields a true rule in $i$. We have to show that then we can also apply any grounding $g'$ to $r$ and obtain a true ground rule in $i$. If $g'$ grounds $a$ to an atom that is not in $i$, then the rule is true since the antecedent is false.
 
-        If $g'$ grounds $a$ to an atom in $i$, we can convert $g'$ into a minimal substitution for $g'(a)$ using \atomSubOfGrounding by only mapping the variables of $a$ to $g'(a)$.
+        If $g'$ grounds $a$ to an atom in $i$, we can convert $g'$ into a minimal substitution for $a$ and $i$ using \atomSubOfGrounding by only mapping the variables of $a$ to $g'(a)$.
 
         \begin{lstlisting}
             def (.\atomSubOfGrounding.) (a: atom τ) (g: grounding τ): substitution τ := fun x => if x ∈ atomVariables a then some (g x) else none
         \end{lstlisting}
 
         Applying first \atomSubOfGrounding $a$ $g'$ and then grounding using $g'$ is equivalent to just grounding with $g'$, because any variable $v$ is mapped to the result of $g(v)$
-        (\atomSubOfGroundingGroundingEqGroundingOnRule). Hence we can use the assumption and have proven also the back direction.
+        (\atomSubOfGroundingGroundingEqGroundingOnRule). By the assumption we therefore know that grounding $r$ by $g'$ yields a true ground rule in $i$ which concludes the back direction.
     \end{proof}
 

@@ -317,16 +317,12 @@ After proving that it is a solution, we prove that the solution is minimal.
 \begin{proof}
     We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is empty then $l_2$ is empty as well and we return $s$. The substitution $s$ is the minimal solution as any solution $s^\ast$ must fulfill $s \subseteq s^\ast$.
 
-    In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ because a substitution was returned. Let $s'$ be the result of $matchTermList\ l_1\ l_2\ s$. We have to show that for any solution $s^\ast$ for $l_1$, $l_2$ and $s$, we have that $s' \subseteq s^\ast$.
-    Let $s^\ast$ be a solution for $l_1$, $l_2$ and $s$. Then it also must be a solution for $hd$, $hd'$ and $s$ and due to \cref{lem:matchTermMin} we have that $matchTerm\ hd\ hd'\ s\ \subseteq s^\ast$. 
-
-    We additionally know that $s^\ast$ is a solution for $tl$, $tl'$ and $s$. Since \matchTerm returns a minimal solution, we also know that it is a solution for $tl$, $tl'$ and $matchTerm\ hd\ hd'\ s$. 
-
-    The result of $matchTermList\ tl\ tl'\ (matchTerm\ hd\ hd'\ s)$ is $s'$. The induction hypothesis tells us that $s'$ is the minimal solution for these input values. Therefore we know that $s' \subseteq s^\ast$ and the claim is proven. 
-    
+    In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ because a substitution was returned. Let $s'$ be the result of $matchTermList\ s\ l_1\ l_2\ $. We have to show that for any solution $s^\ast$ for $l_1$, $l_2$ and $s$, we have that $s' \subseteq s^\ast$.
+    Let $s^\ast$ be a solution for $l_1$, $l_2$ and $s$.
+    We obtain $s'$ from $matchTermList\ matchTerm\ hd\ hd'\ s\ tl\ tl'$. By the induction hypothesis we have that $s'$ is the minimal solution for any substitution $\bar{s}$ that maps $tl$ to $tl'$ and $matchTerm\ hd\ hd'\ s \subseteq \bar{s}$. As $s^\ast$ is a solution for $hd::tl$, $hd'::tl'$ and $s$ it must map $tl$ to $tl'$. Additionally, must be a solution for $hd$, $hd'$ and $s$ and due to \cref{lem:matchTermMin} we have that $matchTerm\ hd\ hd'\ s\ \subseteq s^\ast$ because matchTerm returns the minimal solution. Therefore we have that $s'$ is a subset of $s^\ast$ and finish the proof.
 \end{proof}
 
-Finally, the negative case that confirms that the return value of none does indeed state that there is no solution.
+Finally, the negative case confirms that the return value of none does indeed state that there is no solution.
 
 \begin{lemma}[\matchTermListNoneImplNoSolution]
     Let $s$ be a substitution, $l_1$ a list of terms and $l_2$ a list of constants. If matchTermList $s$ $l_1$ $l_2$ returns none, then there exists no solution $s'$.
@@ -334,7 +330,7 @@ Finally, the negative case that confirms that the return value of none does inde
 \begin{proof}
     We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is the empty list then $l_2$ must be non-empty and then no solution exists.
 
-    In the induction step we have that $l_1$ has the form $hd::tl$. If $l_1$ is empty, the claim is proven as no substitution can be applied that yields to equal lists, so we assume that $l_2$ has the form $hd'::tl'$. There are two cases where matchTermList can return none. The first case is when matchTerm $hd$ $hd'$ $s$ returns none. If that is the case there is no $s'$ with $s\subseteq s'$ and applying $s$ to $hd$ will make it equal to $hd'$. Therefore the two lists cannot be equal either and the proof is finished.
+    In the induction step we have that $l_1$ has the form $hd::tl$. If $l_2$ is empty, the claim is proven as no substitution can be applied that yields to equal lists, so we assume that $l_2$ has the form $hd'::tl'$. There are two cases where matchTermList can return none. The first case is when matchTerm $hd$ $hd'$ $s$ returns none. If that is the case there is no $s'$ with $s\subseteq s'$ and applying $s$ to $hd$ will make it equal to $hd'$. Therefore the two lists cannot be equal either and the proof is finished.
 
     If matchTerm $hd$ $hd'$ $s$ returns a substitution $s^\ast$, then matchTermList $s^\ast$ $tl$ $tl'$ must return none. From the induction hypothesis, we know that there is no substitution $s'$ with $s^\ast \subseteq s'$ and applying $s'$ to $tl$ bringing it equal to $tl'$. Since $s^\ast$ is already the minimal solution to match $hd$ with $hd'$ there cannot exist a solution whose application will lead to $hd$ and $hd'$ being equal and $tl$ and $tl'$ being equal.
 \end{proof}
@@ -378,10 +374,10 @@ We now have a method to replace this quantifier with a computable function and c
 \section{Tree validation}
 
 We have so far introduced substitutions and have shown a way to decide whether a substitution exists that maps a rule to a ground rule. Now we want to finally show a way to validate trees. As the first step, we want to find whether a ground rule $gr$ we gain from the tree is in the ground program, i.e. that there exists a grounding $g$ (or by \cref{trm:groundingSubstitutionEquivalence} a substitution $s$) and a rule $r$ from the program $P$ so that applying $g$ to $r$ yields $gr$. We want to use the \matchRule function defined earlier for this. 
-We can simply pass each rule of the program given as a list of rules into this function and stop when \matchRule returns a some object. This works but requires in the worst case to match every rule in the program with a given ground rule. Suppose that the predicate symbol of the head of the given ground rule is $T$. We can safely discard any rule whose head is not an atom with the predicate symbol $T$. This can be generalized into the symbol sequence which is a list of predicate symbols that starts with the predicate symbol of the head and then the predicate symbols of the body atoms in the order the atoms occur in the body.
+We can simply pass each rule of the program given as a list of rules into this function and stop when \matchRule returns a some object. This works but requires in the worst case to match every rule in the program with a given ground rule. Suppose that the relation symbol of the head of the given ground rule is $T$. We can safely discard any rule whose head is not an atom with the relation symbol $T$. This can be generalized into the symbol sequence which is a list of relation symbols that starts with the relation symbol of the head and then the relation symbols of the body atoms in the order the atoms occur in the body.
 
 \begin{lstlisting}
-    def (.\symbolSequence.) (r: rule τ): List τ.predicateSymbols := 
+    def (.\symbolSequence.) (r: rule τ): List τ.relationSymbols := 
         r.head.symbol::(List.map atom.symbol r.body)
 
 \end{lstlisting}
@@ -390,7 +386,7 @@ The equality of symbol sequences is a necessary condition for the existence of s
 
 Now we could iterate over the whole program and calculate the symbol sequence for every rule and only start the matchRule process for those whose symbol sequences are equal to the given ground rule. In the worst case, we still have to iterate over the whole program. It would be even better to preprocess the program into a look-up structure that returns a list of rules for a given symbol sequence.
 
-We use a function of the type \lstinline|List τ.predicateSymbols → List (rule τ)| as the look-up structure and build it iteratively by adding the first rule of the given program to the right symbol sequence element.
+We use a function of the type \lstinline|List τ.relationSymbols → List (rule τ)| as the look-up structure and build it iteratively by adding the first rule of the given program to the right symbol sequence element.
 
 \begin{lstlisting}
     def (.\parseProgramToSymbolSequenceMap.) (P: List (rule τ)) 
@@ -407,7 +403,7 @@ We use a function of the type \lstinline|List τ.predicateSymbols → List (rule
 If we start this with a function that maps any symbol sequence to the empty list and gain a function $m'$ then for any list of predicate symbols $l$, $m'(l)$ returns exactly those rules in $P$ whose symbol sequence matches $l$. This follows from the following lemma.
 
 \begin{lemma}[\parseProgramToSymbolSequenceMapmem]\label{lem:parseProgramToSymbolSequenceMap}
-    Let $P$ be a program and $m$ be a function that maps a list of predicate symbols to the list of rules. Let $m'$ be the result of \lstinline|parseProgramToSymbolSequenceMap P m|. Then for any list of predicate symbols $l$ and rule $r$, we have $r$ is in $m'(l)$ iff $r$ was in $m(l)$ or $r$ is in $P$ and the symbol sequence of $r$ equals $l$.
+    Let $P$ be a program and $m$ be a function that maps a list of predicate symbols to the list of rules. Let $m'$ be the result of \lstinline|parseProgramToSymbolSequenceMap P m|. Then for any list of predicate symbols $l$ and rule $r$, we have $r$ is in $m'(l)$ iff $r$ is in $m(l)$ or $r$ is in $P$ and the symbol sequence of $r$ equals $l$.
 \end{lemma}
 \begin{proof}
     We prove this by induction on the structure of $P$ for arbitrary $m$.
@@ -441,9 +437,9 @@ def (.\checkRuleMatch.) (m: List τ.predicateSymbols → List (rule τ)) (gr: gr
 \begin{proof}
     Let $l$ be the symbol sequence of $gr$. If checkRuleMatch returns ok, then there exists a rule $r$ in $m(l)$ there exists a grounding $g$ such that grounding $r$ by $g$ yields $gr$. By \cref{lem:parseProgramToSymbolSequenceMap} this rule $r$ is a member of $P$ so the claim is proven.
 
-    If checkRuleMatch returns an error, then we have to show that for rule $r \in P$ and grounding $g$ grounding $r$ by $g$ yields a different ground rule compared to $gr$. If $r$ has the same symbol sequence as $gr$, then it occurred in $m(l)$ and since checkRuleMatch returned an error matchRule r gr must return none so that the property holds.
+    If checkRuleMatch returns an error, then we have to show that for rule $r \in P$ and grounding $g$ grounding $r$ by $g$ yields a different ground rule compared to $gr$. If $r$ has the same symbol sequence as $gr$, then it occurred in $m(l)$ and since checkRuleMatch returned an error matchRule r gr must return none so that the property holds by the correctness of matchRule.
 
-    If $r$ has a different symbol sequence to $gr$ then this property holds as well due to \symbolSequenceNotEq and \cref{trm:groundingSubstitutionEquivalence}.
+    If $r$ has a different symbol sequence to $gr$ then this property holds as well due to \symbolSequenceNotEq and \cref{trm:groundingSubstitutionEquivalence} because the grounding does not change the symbol sequence so that $r$ can never be grounded to be equal to $gr$.
 \end{proof}
 
 This function is almost enough to complete the rule case. We just need to also verify all subtrees. For this we introduce the \lstinline|List.map_except_unit| function that applies a function of the type \lstinline|A → Except B Unit| to a list $l$ until the first error occurs. If no error occurs, then we return Unit which is a type that has only one element $()$ and is the placeholder because we have to return something.
@@ -482,7 +478,7 @@ def treeValidator (m: List τ.predicateSymbols → List (rule τ)) (d: database 
       | Except.error msg => Except.error msg
 \end{lstlisting}
 
-Using the previous lemmas and induction over the height of the tree for the recursive calls, we prove the correctness of the treeValidator.
+Using the previous lemmas and induction over the height of the tree for the recursive calls, we can prove the correctness of the treeValidator.
 
 \begin{theorem}[\treeValidatorOkIffIsValid]\label{trm:treeValidator}
     Let P be a program, $m$ be the result of \lstinline|parseProgramToSymbolSequenceMap P (fun _  => [])| and $d$ be a database. For any proof tree $t$, \lstinline|treeValidator m d t| returns ok iff $t$ is valid for $P$ and $d$.

@@ -135,21 +135,6 @@ Any other datalog engine that returns proof trees or graphs can also be used as 
 The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RAM using Ubuntu in the Windows subsystem for Linux. We will also display the time used by Nemo for each tasks as a comparision. We believe that it is fine if the verification takes a bit longer than the computation but it should not takes hours for a task that Nemo can solve in seconds. As there is currently no alternative program capable of verifying datalog reasoning results this is the only other time available for comparision.
 
 \begin{figure}
-\begin{tabular}{llrrrrrrr}
-    &  & Number of nodes & \multicolumn{2}{r}{Nemo time} & \multicolumn{2}{r}{Preparation time} & \multicolumn{2}{r}{Validation time} \\
-    &  & mean & mean & std & mean & std & mean & std \\
-   Type & Size &  &  &  &  &  &  &  \\
-   \multirow[c]{3}{*}{graph} & 10 & 18.00 & 0.03 & 0.01 & 0.03 & 0.01 & 0.05 & 0.06 \\
-    & 15 & 28.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.02 & 0.00 \\
-    & 20 & 38.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.03 & 0.00 \\
-   \multirow[c]{3}{*}{tree} & 10 & 1022.00 & 0.03 & 0.01 & 0.07 & 0.01 & 0.03 & 0.00 \\
-    & 15 & 32766.00 & 0.02 & 0.00 & 2.71 & 0.09 & 0.16 & 0.00 \\
-    & 20 & 1048574.00 & 0.02 & 0.00 & 207.66 & 3.98 & 4.38 & 0.20 \\
-\end{tabular}
-\caption{Results for scenario 2}
-\end{figure}
-
-\begin{figure}
     \begin{tabular}{lllrrrrrr}
         &  &  & \multicolumn{2}{r}{Number of nodes} & \multicolumn{2}{r}{Preparation time} & \multicolumn{2}{r}{Validation time} \\
         &  &  & mean & std & mean & std & mean & std \\
@@ -173,3 +158,24 @@ The experiments run on a modern laptop with an AMD Ryzen 7 processor, 8 GB of RA
        \end{tabular}
 \caption{Results for scenario 1}       
 \end{figure}
+
+\begin{figure}
+\begin{tabular}{llrrrrrrr}
+    &  & Number of nodes & \multicolumn{2}{r}{Nemo time} & \multicolumn{2}{r}{Preparation time} & \multicolumn{2}{r}{Validation time} \\
+    &  & mean & mean & std & mean & std & mean & std \\
+   Type & Size &  &  &  &  &  &  &  \\
+   \multirow[c]{3}{*}{graph} & 10 & 18.00 & 0.03 & 0.01 & 0.03 & 0.01 & 0.05 & 0.06 \\
+    & 15 & 28.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.02 & 0.00 \\
+    & 20 & 38.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.03 & 0.00 \\
+   \multirow[c]{3}{*}{tree} & 10 & 1022.00 & 0.03 & 0.01 & 0.07 & 0.01 & 0.03 & 0.00 \\
+    & 15 & 32766.00 & 0.02 & 0.00 & 2.71 & 0.09 & 0.16 & 0.00 \\
+    & 20 & 1048574.00 & 0.02 & 0.00 & 207.66 & 3.98 & 4.38 & 0.20 \\
+\end{tabular}
+\caption{Results for scenario 2}
+\end{figure}
+
+In scenario (2) the advantage of graphs over trees is seen clearly. For chains of the length 15 and 20 the tree based validation takes significantly more time while the graph-based validation is still comparable to Nemo in speed. Additionally, the preparation for graphs is much faster. This is because Nemo's trace looks graph-like so that we only have to transform the atoms into the JSON-format. Creating a tree requires us to first build the graph and then explore all paths. When trying to evaluate the scenario for chains of the length 25 the preparation failed on the hardware whereas it was still possible using graphs with a comparable time.
+
+
+
+As a summary, we see that validating a proof tree or proof graph is possible in practice in most cases. The graph approach is faster in the worst-case but in most user defined cases they are similar. The input is however faster created for graphs due to Nemo's trace output. If the output is more tree-like then this might change. We also see that completeness is possible to check but this takes much more than validating the trees and calculating the result using Nemo.

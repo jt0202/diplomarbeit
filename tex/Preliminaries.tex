@@ -481,7 +481,7 @@ So far we have discussed what types are and how we can define functions that are
 
 Every statement defines its own type, whose elements are the proofs for it. In contrast to other types, all elements of these types are equivalent which is known as \textit{proof irrelevance}, so that elements of these types only serve as a witness for their truth.
 
-Proofs can be constructed in Lean in two ways.  We start by writing \lstinline|theorem| (or lemma, proposition etc. in mathlib) and denote it as we did for a function. The main difference is that the type is what we want to prove and that the function can not be executed. An example for a statement and its proof in Lean is shown below:
+Proofs can be constructed in Lean in two ways.  We start by writing \lstinline|theorem| (or lemma, proposition etc. in mathlib) and denote the statement as we did for a function. The main difference is that the type is what we want to prove and that the function can not be executed. An example for a statement and its proof in Lean is shown below:
 
 \begin{lstlisting}
 theorem testTheorem {A: Type}: ∀ (x y z: A), x = y → id y = z → z = x := by
@@ -551,7 +551,7 @@ An inductive type may have many constructors of both types or even none as the e
 
 Our definition states that an element of \lstinline|myNat| is either \lstinline|zero| or the result of applying \lstinline|succ| to some other element of \lstinline|myNat|. Any element of \lstinline|myNat| is only the result of one of these constructors and all elements of \lstinline|myNat| are distinct.
 
-A typical mathematical definition for this would be: myNat is the smallest set $S$ of elements such that it contains $zero$ and whenever an element $a$ is in $S$, then also $succ\ a$ is in $S$.
+A typical mathematical definition for this would be: myNat is the smallest set $S$ of elements that contains $zero$ and whenever an element $a$ is in $S$, then also $succ\ a$ is in $S$.
 
 We can define for inductive types functions recursively like the add function. Here we reuse the inductive schema. If $m$ is zero, then $n+m$ is simply n. If $m$ instead is the successor of some other myNat $m'$, then we return the successor of \lstinline|add n m'|.
 
@@ -625,7 +625,7 @@ def player1: player := {
     def player1Goals: $\mathbb{N}$ := player1.numGoals
 \end{lstlisting}
 
-Returning to our example of myNat, we can define some more functions. In the previous section, we talked about the Euclidean algorithm. We can try to implement it ourselves in Lean. Firstly, we would require the modulo function for that. We will only declare it for now to not lose focus and use the keyword \lstinline|sorry| in the value. This closes in proofs any goal or can be used for incomplete functions, but will throw an error if executed.
+Returning to our example of myNat, we can define some more functions. In the previous section, we talked about the Euclidean algorithm. We can try to implement it ourselves in Lean. Firstly, we would require the modulo function for that. We will only declare the function for now to not lose focus and use the keyword \lstinline|sorry| in the value. This closes in proofs any goal or can be used for incomplete functions, but will throw an error if executed.
 
 \begin{lstlisting}
     def myNat.mod (n m: myNat): myNat := sorry
