@@ -15,9 +15,9 @@ After introducing the problem and modeling datalog in Lean, we now describe the 
 \end{lstlisting}
 
 This is a disjunction so we need procedures to decide for both disjuncts if they are true.
-The second disjunct consists of a database check and a check of list emptiness. Both can be done in a straightforward way.
+The second disjunct consists of a database check and a check of list emptiness. Both can be done straightforwardly.
 
-The first part is more interesting. Since we use there existential quantifiers, this is not computable and we have to implement a function for this. While we can simply iterate over the program to check for the existence of a rule $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use substitutions that we introduce in the next section.
+The first part is more interesting. Since we use in the rule case existential quantifiers, this is not computable and we have to implement a function checking whether the rule case holds. While we can simply iterate over the program to check for the existence of a rule $r$, the number of groundings might be exponential or even infinite. Instead of using groundings, we want to use substitutions that we introduce in the next section.
 
 
 \section{Substitutions}
@@ -69,7 +69,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
     This allows us to replace the grounding check with a substitution check when trying to validate trees and by this, we can bypass the problems that were illustrated in the example above. 
 
-    For the forward direction, we want to find an equivalent substitution for every grounding. We can do this by mapping every variable to the same value of the grounding and place this in the some constructor to obtain an element of the Option type.
+    For the forward direction, we want to find an equivalent substitution for every grounding. We can do this by mapping every variable to the same value of the grounding and placing this in the some constructor to obtain an element of the Option type.
 
     \begin{lstlisting}
     def (.\groundingToSubstitution.) (g: grounding τ): substitution τ
@@ -89,7 +89,7 @@ The first part is more interesting. Since we use there existential quantifiers, 
         If $t$ is a variable $v$, then the term grounding by $g$ will return $g(v)$. By the definition of \lstinline|groundingToSubstitution| all variables $v'$ return a some type which contains $g(v')$. Therefore the application replaces $v$ by $g(v)$ and both results are equal. 
     \end{proof}
 
-    Using this result we can extend this equality to the atom level, because in both cases only the terms change by the application of the functions of the previous lemma. Finally, we can extend this to the rule level.
+    Using this result we can extend this equality to the atom level because in both cases only the terms change by the application of the functions of the previous lemma. Finally, we can extend this to the rule level.
     
     \noindent(\groundingToSubsitutionEquivAtom, \groundingToSubsitutionEquivRule)
 
@@ -146,14 +146,14 @@ The first part is more interesting. Since we use there existential quantifiers, 
 
     When introducing substitutions, we had the goal to only add what is needed to a substitution and usually, we want the smallest possible substitution. In order to formalize this, we want to define a partial order on substitutions, that is denoted by $\subseteq$.
     
-    A substitution $s_1$ is a subset of a substitution $s_2$, if both substitutions agree on the substitution domain of $s_1$. Outside of this $s_1$ is never defined, whereas $s_2$ might be, so we view $s_1$ as smaller.
+    A substitution $s_1$ is a subset of a substitution $s_2$ if both substitutions agree on the substitution domain of $s_1$. Outside of this $s_1$ is never defined, whereas $s_2$ might be, so we view $s_1$ as smaller.
 
     \begin{lstlisting}
     def (.\substitutionsubs.) (s1 s2: substitution τ): Prop :=
     ∀ (v: τ.vars), v ∈ substitution_domain s1 → s1 v = s2 v
     \end{lstlisting}
 
-    This relation is by defintion reflexive (\substitutionsubsrefl). It is also anti-symmetric (\substitutionsubsantisymm): Let $s_1$ and $s_2$ be two substitutions with $s_1 \subseteq s_2$ and $s_2 \subseteq s_1$. In order to show that $s_1$ equals $s_2$ it suffices to show that they have the same result for every variables $v$ due to the principle of function extensionality. We can do a case distinction on whether $s_1(v)$ is defined. If $s_1(v)$ is defined then $v$ is in the substitution domain of $s_1$ and since $s_1 \subseteq s_2$ $s_2(v)$ must be the same value. If $s_1(v)$ is not defined, i.e. it maps to none, then also $s_2(v)$ must be not defined. If $s_2(v)$ would be defined, then also $s_1(v)$ would have to be defined as we know that $s_2 \subseteq s_1$ holds. In any case the functions return the same value so that they are equal.
+    This relation is by defintion reflexive (\substitutionsubsrefl). It is also anti-symmetric (\substitutionsubsantisymm): Let $s_1$ and $s_2$ be two substitutions with $s_1 \subseteq s_2$ and $s_2 \subseteq s_1$. In order to show that $s_1$ equals $s_2$ it suffices to show that they have the same result for every variable $v$ due to the principle of function extensionality. We can do a case distinction on whether $s_1(v)$ is defined. If $s_1(v)$ is defined then $v$ is in the substitution domain of $s_1$ and since $s_1 \subseteq s_2$ $s_2(v)$ must be the same value. If $s_1(v)$ is not defined, i.e. it maps to none, then also $s_2(v)$ must be not defined. If $s_2(v)$ would be defined, then also $s_1(v)$ would have to be defined as we know that $s_2 \subseteq s_1$ holds. In any case, the functions return the same value so that they are equal.
 
     Lastly, it is also transitive (\substitutionsubstrans), so it is an instance of a partial order.
 
@@ -319,7 +319,7 @@ After proving that it is a solution, we prove that the solution is minimal.
 
     In the induction step we have that $l_1$ has the form $hd::tl$ and we can assume that $l_2$ has the form $hd'::tl'$ because a substitution was returned. Let $s'$ be the result of $matchTermList\ s\ l_1\ l_2\ $. We have to show that for any solution $s^\ast$ for $l_1$, $l_2$ and $s$, we have that $s' \subseteq s^\ast$.
     Let $s^\ast$ be a solution for $l_1$, $l_2$ and $s$.
-    We obtain $s'$ from $matchTermList\ matchTerm\ hd\ hd'\ s\ tl\ tl'$. By the induction hypothesis we have that $s'$ is the minimal solution for any substitution $\bar{s}$ that maps $tl$ to $tl'$ and $matchTerm\ hd\ hd'\ s \subseteq \bar{s}$. As $s^\ast$ is a solution for $hd::tl$, $hd'::tl'$ and $s$ it must map $tl$ to $tl'$. Additionally, must be a solution for $hd$, $hd'$ and $s$ and due to \cref{lem:matchTermMin} we have that $matchTerm\ hd\ hd'\ s\ \subseteq s^\ast$ because matchTerm returns the minimal solution. Therefore we have that $s'$ is a subset of $s^\ast$ and finish the proof.
+    We obtain $s'$ from $matchTermList\ matchTerm\ hd\ hd'\ s\ tl\ tl'$. By the induction hypothesis we have that $s'$ is the minimal solution for any substitution $\bar{s}$ that maps $tl$ to $tl'$ and $matchTerm\ hd\ hd'\ s \subseteq \bar{s}$. As $s^\ast$ is a solution for $hd::tl$, $hd'::tl'$ and $s$ it must map $tl$ to $tl'$. Additionally, must be a solution for $hd$, $hd'$ and $s$ and due to \cref{lem:matchTermMin} we have that $matchTerm\ hd\ hd'\ s\ \subseteq s^\ast$ because matchTerm returns the minimal solution. Therefore we have proven that $s'$ is a subset of $s^\ast$ and finish the proof.
 \end{proof}
 
 Finally, the negative case confirms that the return value of none does indeed state that there is no solution.
@@ -330,7 +330,7 @@ Finally, the negative case confirms that the return value of none does indeed st
 \begin{proof}
     We prove this again via induction on $l_1$ for arbitrary $l_2$ and $s$. If $l_1$ is the empty list then $l_2$ must be non-empty and then no solution exists.
 
-    In the induction step we have that $l_1$ has the form $hd::tl$. If $l_2$ is empty, the claim is proven as no substitution can be applied that yields to equal lists, so we assume that $l_2$ has the form $hd'::tl'$. There are two cases where matchTermList can return none. The first case is when matchTerm $hd$ $hd'$ $s$ returns none. If that is the case there is no $s'$ with $s\subseteq s'$ and applying $s$ to $hd$ will make it equal to $hd'$. Therefore the two lists cannot be equal either and the proof is finished.
+    In the induction step we have that $l_1$ has the form $hd::tl$. If $l_2$ is empty, the claim is proven as no substitution can be applied that yields two equal lists, so we assume that $l_2$ has the form $hd'::tl'$. There are two cases where matchTermList can return none. The first case is when matchTerm $hd$ $hd'$ $s$ returns none. If that is the case there is no $s'$ with $s\subseteq s'$ and applying $s$ to $hd$ will make it equal to $hd'$. Therefore the two lists cannot be equal either and the proof is finished.
 
     If matchTerm $hd$ $hd'$ $s$ returns a substitution $s^\ast$, then matchTermList $s^\ast$ $tl$ $tl'$ must return none. From the induction hypothesis, we know that there is no substitution $s'$ with $s^\ast \subseteq s'$ and applying $s'$ to $tl$ bringing it equal to $tl'$. Since $s^\ast$ is already the minimal solution to match $hd$ with $hd'$ there cannot exist a solution whose application will lead to $hd$ and $hd'$ being equal and $tl$ and $tl'$ being equal.
 \end{proof}
@@ -400,10 +400,10 @@ We use a function of the type \lstinline|List τ.relationSymbols → List (rule 
             (fun x => if x = seq then hd::(m x) else m x)
 \end{lstlisting}
 
-If we start this with a function that maps any symbol sequence to the empty list and gain a function $m'$ then for any list of predicate symbols $l$, $m'(l)$ returns exactly those rules in $P$ whose symbol sequence matches $l$. This follows from the following lemma.
+If we start this with a function that maps any symbol sequence to the empty list and gain a function $m'$ then for any list of relation symbols $l$, $m'(l)$ returns exactly those rules in $P$ whose symbol sequence matches $l$. This follows from the following lemma.
 
 \begin{lemma}[\parseProgramToSymbolSequenceMapmem]\label{lem:parseProgramToSymbolSequenceMap}
-    Let $P$ be a program and $m$ be a function that maps a list of predicate symbols to the list of rules. Let $m'$ be the result of \lstinline|parseProgramToSymbolSequenceMap P m|. Then for any list of predicate symbols $l$ and rule $r$, we have $r$ is in $m'(l)$ iff $r$ is in $m(l)$ or $r$ is in $P$ and the symbol sequence of $r$ equals $l$.
+    Let $P$ be a program and $m$ be a function that maps a list of relation symbols to the list of rules. Let $m'$ be the result of \lstinline|parseProgramToSymbolSequenceMap P m|. Then for any list of relation symbols $l$ and rule $r$, we have $r$ is in $m'(l)$ iff $r$ is in $m(l)$ or $r$ is in $P$ and the symbol sequence of $r$ equals $l$.
 \end{lemma}
 \begin{proof}
     We prove this by induction on the structure of $P$ for arbitrary $m$.
@@ -424,7 +424,7 @@ If we start this with a function that maps any symbol sequence to the empty list
 Since at the start $m(l)$ has no member for any $l$, the desired property holds. Now we can use this to check whether a substitution exists. \lstinline|List.any| checks whether any element in $m(symbolSequence gr.toRule)$ matches the ground rule. If that is the case, we simply return unit as a matching rule in $P$ was found. If that is not the case, we return an error message. The Except type allows us to combine these two return types.
 
 \begin{lstlisting}
-def (.\checkRuleMatch.) (m: List τ.predicateSymbols → List (rule τ)) (gr: groundRule τ): Except String Unit :=
+def (.\checkRuleMatch.) (m: List τ.relationSymbols → List (rule τ)) (gr: groundRule τ): Except String Unit :=
   if List.any (m (symbolSequence gr.toRule)) 
     (fun x => Option.isSome (matchRule x gr)) = true
   then Except.ok ()
@@ -462,7 +462,7 @@ Now we have the necessary tools to check whether a given proof tree is valid whi
 If not we can only be in the rule case and first use checkRuleMatch and if this returns ok, then we check all subtrees using the treeValidator again called via \Listmapexceptunit.
 
 \begin{lstlisting}
-def treeValidator (m: List τ.predicateSymbols → List (rule τ)) (d: database τ) (t: proofTree τ) : Except String Unit :=
+def treeValidator (m: List τ.relationSymbols → List (rule τ)) (d: database τ) (t: proofTree τ) : Except String Unit :=
   match t with
   | tree.node a l =>
     if l.isEmpty
@@ -506,7 +506,7 @@ It turns out however that we can do a bit better and prove a stronger statement 
         & D(c,d).
         \end{align*}
 
-    The result of this program over an empty database is \[\{A(a,c), B(a,b,d,c), C(a,b), D(c,d)\}\] and a proof tree is depicted below for each of them.
+    The result of this program over an empty database is \[\{A(b,c), B(a,b,d,c), C(a,b), D(c,d)\}\] and a proof tree is depicted below for each of them.
 
 
     \begin{tikzpicture}
@@ -520,7 +520,7 @@ It turns out however that we can do a bit better and prove a stronger statement 
         \draw (B1) -- (B2);
         \draw (B1) -- (B3);
 
-        \node (A1) at (9,0) {A(a,c)};
+        \node (A1) at (9,0) {A(b,c)};
         \node (A2) at (9,-1) {B(a,b,d,c)};
         \node (A3) at (8, -2) {C(a,b)};
         \node (A4) at (10, -2) {D(c,d)};
@@ -541,11 +541,11 @@ def (.\elementMember.) (a: A) (t: tree A): Bool  :=
         List.any l.attach (fun ⟨x, _h⟩ => elementMember a x)
 \end{lstlisting}
 
-A tree is valid if all subtrees are valid. In the rule case, we explicitly required this, whereas there are no subtrees in the database case. Any element member is the root of some subtree and therefore any element member of a valid proof tree is in the proof-theoretic semantics 
+A tree is valid if all of its subtrees are valid. In the rule case, we explicitly required this, whereas there are no subtrees in the database case. Any element member is the root of some subtree and therefore any element member of a valid proof tree is in the proof-theoretic semantics 
 
 (\allTreeElementsOfValidTreeInSemantics).
 
-This allows us to establish the alternative property of validateTreeList. We added the requirement of all proofs being valid to prove the back direction. As the validity of a proof tree is in general not preserved under permutation, it is not sufficient to just require every element member to be in the proof-theoretic semantics.
+This allows us to establish the alternative property of validateTreeList. We added the requirement of all proofs being valid to prove the back direction. As the validity of a proof tree is in general not preserved under permutation, it is not sufficient to just require every element member of the trees to be in the proof-theoretic semantics.
 
 \begin{lemma}[\validateTreeListUnitIffSubsetSemanticsAndAllValid]
     Let $P$ be a program, $d$ be a database and $l$ a list of proof trees. Then validateTreeList returns ok iff all element members of the trees in $l$ are in the proof-theoretic semantics and all trees in $l$ are valid.

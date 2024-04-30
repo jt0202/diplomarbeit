@@ -52,7 +52,7 @@ Two structures of the same type are equal iff all their fields are equal. Due to
     For all $\tau$-atoms $a_1, a_2$, we have $a_1 = a_2$ iff their \lstinline|symbol|s and \lstinline|atom_term|s are equal.
 \end{lemma}
 
-Rules and programs can be modelled in a straightforward way. Here we use lists to have the body in a fixed order because this simplifies later algorithms.
+Rules and programs can be modeled straightforwardly. Here we use lists to have the body in a fixed order because this simplifies later algorithms.
 
 \begin{lstlisting}
 structure (.\datalogrule.) where
@@ -89,7 +89,7 @@ structure groundAtom (τ: signature) where
 
 The second variant allows us an easy conversion from ground atoms to atoms by simply returning the atom element. Also, we can convert atoms easily to ground atoms as soon as we have the proof. These conversions have to be written by hand in the first variant.
 
-The first variant on the other hand allows us to define functions that create ground atoms more directly. We can take a grounding and just map the term list using the groudning without having to provide a proof that all terms of the atom are then equal to some constant. In the second variant, we have to first define the function on the atom level and then have to prove that this operation does not create any variables. This may sound like extra security in case we mess things up, but when defining the terms as a list of constants the type checker of the kernel does the check for us.
+The first variant on the other hand allows us to define functions that create ground atoms more directly. We can take a grounding and just map the term list using the grounding without having to provide a proof that all terms of the atom are then equal to some constant. In the second variant, we have to first define the function on the atom level and then have to prove that this operation does not create any variables. This may sound like extra security in case we mess things up, but when defining the terms as a list of constants the type checker of the kernel does the check for us.
 
 The number of conversions is rather limited whereas an easier way to define functions may be useful more often. Therefore we chose the first variant. 
 
@@ -104,7 +104,7 @@ We start by defining these conversions that we now have to do manually. We can c
 
 For later proofs, it is useful to know that this is an embedding of the ground atoms into the atoms, i.e. that if two ground atoms are different then the result of their toAtom functions is also different.
 
-For this, we need the following result (\listMapInjectiveEquality): If two lists $l_1, l_2$ are equal then mapping both lists by the same function $f$ results in the same list $l$. If the function is injective also the back direction holds, i.e. if mapping $l_1$ and $l_2$ using $f$ yields the same list $l$ then also $l_1$ and $l_2$ are equal,  which we can prove by induction.
+For this, we need the following result (\listMapInjectiveEquality): If two lists $l_1, l_2$ are equal then mapping both lists by the same function $f$ results in the same list $l$. If the function is injective the back direction holds as well, i.e. if mapping $l_1$ and $l_2$ using $f$ yields the same list $l$ then also $l_1$ and $l_2$ are equal,  which we can prove by induction.
 
 \begin{lemma}[\groundAtomToAtomEquality]
     Let $a_1, a_2$ be two ground atoms. Then $a_1$ is equal to $a_2$ iff the result of \lstinline|groundAtom.toAtom| of both is equal.
@@ -112,14 +112,14 @@ For this, we need the following result (\listMapInjectiveEquality): If two lists
 \begin{proof}
     If $a_1$ = $a_2$, then also the result of applying \lstinline|toAtom| to both of them is the same.
 
-    For the back direction, we know that the results of applying \lstinline|toAtom| to $a_1$ and $a_2$ are equal  and want to show that $a_1$ is equal to $a_2$. We use a similar lemma as \cref{lem:atomEquality} for ground atoms(\groundAtomEquality). Therefore we have to show that their symbols and terms are equal. As \lstinline|toAtom| does not change the symbol, the first part follows. For the second part we have to show the term lists of $a_1$ and $a_2$ are equal. We know that mapping every constant in the atom terms of $a_1$ and $a_2$  via the \lstinline|term.constant| function yields the same list. Any inductive constructor such as \lstinline|term.constant| is injective \footnote{This can be shown with the \lstinline|injection| tactic} and hence we can use \listMapInjectiveEquality to see that the term lists of $a_1$ and $a_2$ are equal.
+    For the back direction, we know that the results of applying \lstinline|toAtom| to $a_1$ and $a_2$ are equal and want to show that $a_1$ is equal to $a_2$. We use a similar lemma as \cref{lem:atomEquality} for ground atoms(\groundAtomEquality). Therefore we have to show that their symbols and terms are equal. As \lstinline|toAtom| does not change the symbol, the first part follows. For the second part, we have to show the term lists of $a_1$ and $a_2$ are equal. We know that mapping every constant in the atom terms of $a_1$ and $a_2$  via the \lstinline|term.constant| function yields the same list. Any inductive constructor such as \lstinline|term.constant| is injective \footnote{This can be shown with the \lstinline|injection| tactic} and hence we can use \listMapInjectiveEquality to see that the term lists of $a_1$ and $a_2$ are equal.
 \end{proof}
 
 We can therefore employ \lstinline|groundAtom.toAtom| safely as the type coercion from ground atom to atom.
 
 In order to convert atoms to ground atoms, it would be enough to use a proposition that says that all elements are constants. In later uses such as the definition of safety for rules, it will be beneficial to have a function that computes all variables that occur in an atom. If this returns the empty set, this is the required proof to convert an atom into a ground atom. 
 
-We can define the variables occuring in a term as a finite set.
+We can define the variables occurring in a term as a finite set.
 
 \begin{lstlisting}
 def (.\termVariables.): term τ → Finset τ.vars
@@ -127,7 +127,7 @@ def (.\termVariables.): term τ → Finset τ.vars
 | (term.variableDL v) => {v}
 \end{lstlisting}
 
-The variables occuring in some atom are then the union of the term variables of its terms. This can be recursively expressed using \lstinline|List.foldl|. We start with the empty set and return the union with this set and the term variables of every term occuring in the atom by recursively taking the union of the previous result and the term variables of the element at the start of the list.
+The variables occurring in an atom are then the union of the term variables of its terms. This can be recursively expressed using \lstinline|List.foldl|. We start with the empty set and return the union with this set and the term variables of every term occurring in the atom by recursively taking the union of the previous result and the term variables of the element at the start of the list.
 
 \begin{lstlisting}
 def (.\Listfoldlunion.) {A B: Type} [DecidableEq B]  
@@ -138,7 +138,7 @@ def (.\atomVariables.) (a: atom τ) : Finset τ.vars :=
 List.foldl_union termVariables ∅ a.atom_terms
 \end{lstlisting}
 
-If the term variables are empty, we know that the term must be a constant. We can convert a term to constant with a function that takes a term and a proof that its term variables are empty. In the variable case, which is impossible to occur given the arguments as we have a proof that there are no term variables, we use \lstinline|False.elim| which uses that anything follows from a false proposition to generate an object of the right type. This can never be returned and is only there for completeness.
+If the term variables are empty, we know that the term must be a constant. We can convert a term to a constant with a function that takes a term and a proof that its term variables are empty. In the variable case, which is impossible to occur given the arguments as we have a proof that there are no term variables, we use \lstinline|False.elim| which uses that anything follows from a false proposition to generate an object of the right type. This can never be returned and is only there for completeness.
 
 \begin{lstlisting}
 def (.\termWithoutVariablesToConstant.) (t: term τ) (h: termVariables t = ∅): τ.constants :=
@@ -223,7 +223,7 @@ We call a set of ground atoms an interpretation as in the preliminaries.
 
 We start by defining the proof-theoretic semantics as proof trees are our certificates in the checker so this is the most important semantic for us.
 
-We require the notion of a tree to formalize the proof-theoretic semantics. In mathlib exists a definition of a tree\footnote{see at \protect\url{https://leanprover-community.github.io/mathlib4_docs/Mathlib/Data/Tree.html}}, but this is in spite of its name only a binary tree. With mathlib's trees we could only represent rules in the proof tree whose body has at most length two. While any datalog program can be transformed into an equivalent program that only contains rules whose body has a length of at most two, this is not desirable as rules in practice are often longer. We could require the user to just transform the rules into this form, but this seems to hinder the acceptance of this tool and may mask errors that only occur in optimizations for longer rules.
+We require the notion of a tree to formalize the proof-theoretic semantics. In mathlib exists a definition of a tree\footnote{see at \protect\url{https://leanprover-community.github.io/mathlib4_docs/Mathlib/Data/Tree.html}}, but this is despite its name only a binary tree. With Mathlib's trees, we could only represent rules in the proof tree whose body has at most length two. While any datalog program can be transformed into an equivalent program that only contains rules whose body has a length of at most two, this is not desirable as rules in practice are often longer. We could require the user to just transform the rules into this form, but this seems to hinder the acceptance of this tool and may mask errors that only occur in optimizations for longer rules.
 
 Therefore we start by defining a tree as an element $t$ with as a vertex $a$ and a list of subtrees $l$. We call $a$ the root of $t$ and the root of the trees in $l$ the children of $t$. A leaf is an element whose subtree list is empty.
 
@@ -256,7 +256,7 @@ decreasing_by
     simp
 \end{lstlisting}
 
-Our implementation looks a bit different compared to the text. This is because we are required to prove the termination of this function. We call the height function recursively, but with a list function so that we no longer follow the inductive schema directly. The well-founded relation will be the less-than relation between the \lstinline|sizeOf| results of the trees. Therefore we have to prove that \lstinline|sizeOf x < 1 + sizeOf a + sizeOf l| holds in order show the termination. The term $x$ is one of the subtrees we called height on and by transitivity, it suffices to prove that \lstinline|sizeOf x < sizeOf l| holds. The size of any a member of a list must be smaller than the size of list itself by the implementation of the \lstinline|sizeOf| function.The \lstinline|List.attach| function that takes a list $l$ and maps any element $a$ from $l$ to an element of \lstinline|{ a // a  $\in$ l}|, so a pair of the original element and a proof that it is a member of $l$. This allows us to complete the proof.
+Our implementation looks a bit different compared to the text. This is because we are required to prove the termination of this function. We call the height function recursively, but with a list function so that we no longer follow the inductive schema directly. The well-founded relation will be the less-than relation between the \lstinline|sizeOf| results of the trees. Therefore we have to prove that \lstinline|sizeOf x < 1 + sizeOf a + sizeOf l| holds to show the termination. The term $x$ is one of the subtrees we call height on and by transitivity, it suffices to prove that \lstinline|sizeOf x < sizeOf l| holds. The size of any member of a list must be smaller than the size of the list itself by the implementation of the \lstinline|sizeOf| function. The \lstinline|List.attach| function that takes a list $l$ and maps any element $a$ from $l$ to an element of \lstinline|{ a // a  $\in$ l}|, so a pair of the original element and a proof that it is a member of $l$. This allows us to complete the proof.
 
 We call a tree $t_2$ a \member of a tree $t_1$ if it occurs in the subtrees of $t_1$ and can prove that any member has a smaller height than the original tree (\heightOfMemberIsSmaller) because the result of $f$ for some member $a$ of $l$ is less-equal to the value of \lstinline|listMax f l|(\listMaxlefmember).
 
@@ -266,7 +266,7 @@ With this, we finish the general results about trees and can return to formalizi
     abbrev (.\proofTree.) (τ: signature):= tree (groundAtom τ)
 \end{lstlisting}
 
-Some proof trees will not represent valid derivations by our definition. The next step is to define a predicate that shows the validness of a tree similar to our definition in the preliminaries.
+Some proof trees will not represent valid derivations by our definition. The next step is to define a predicate that shows the validity of a tree similar to our definition in the preliminaries.
 
 Again, we want to design our checker with the best compatibility in mind. In some papers (e.g. \cite{ComplexityProvDatalog}) the leaves of a valid proof tree have to be database elements. We leave this open to allow also facts from the program to serve as leaves for those programs that do not come with a database.
 
@@ -296,9 +296,9 @@ The proof-theoretic semantics with respect to a program $P$ and database $d$ is 
     {a: groundAtom τ | ∃ (t: proofTree τ),root t = a ∧ isValid P d t}
 \end{lstlisting}
 
-The proof-theoretic semantics provides us with proof trees a good explanation why an element is part of the solution. We only have to verify that the proof tree is correct. This however tells us only that we have found a subset of the solution. It tells us not whether there are more derivations possible. Passing an empty list of proof trees would always be accepted but this is in general not the complete solution. The other semantics better equipped to deal with this problem. They describe the solution as the least element of some set. If we verify that the result is in this set (i.e. the set of models or the set of fixed points), then our result is a superset of the solution. If both criteria hold, then we have exactly the solution.
+The proof-theoretic semantics provides us with proof trees a good explanation why an element is part of the solution. We only have to verify that the proof tree is correct. This however tells us only that we have found a subset of the solution. It tells us not whether there are more derivations possible. Passing an empty list of proof trees would always be accepted but this is in general not the complete solution. The other semantics are better equipped to deal with this problem. They describe the solution as the least element of some set. If we verify that the result is in this set (i.e. the set of models or the set of fixed points), then our result is a superset of the solution. If both criteria hold, then we have exactly the solution.
 
-Formalizing another semantics also strengthens our formalization because we might spot some wrong assumptions we did the definitions that way. If we did an error in the definition of one semantic we may spot it when trying to prove that both semantics are equal.
+Formalizing another semantics also strengthens our formalization because we might spot some wrong assumptions we made in the definitions that way. If we make an error in the definition of one semantic we may spot it when trying to prove that both semantics are equal.
 
 Both the model-theoretic and the fixed point semantics are defined to be the least object of something. We decided to formalize the model-theoretic semantics because we can directly give the model. For the fixed-point semantics, we would first need to prove that the fixed point even exists and may need some theorems about fixed points, but such a formalization (in Coq) can be found in \cite{datalogCoq}.
 
@@ -331,7 +331,7 @@ Now we are equipped with the necessary tools to formalize the model-theoretic se
 
 \[\bigcap_{\text{$M$ is model of $P$}} M\] 
 
-This operation is called \lstinline|Set.iInter| in Lean. We would need to transform the set of interpretations to an indexed family to use it. This would require us to define a type which serves as the index and a function mapping every indice to a model.
+This operation is called \lstinline|Set.iInter| in Lean. We would need to transform the set of interpretations to an indexed family to use it. This would require us to define a type that serves as the index and a function mapping every index to a model.
 
 \begin{lstlisting}
     def iInter (s : ι → Set α) : Set α
@@ -401,7 +401,7 @@ We expand a bit on the proof above. The lemma we use to get the valid proof tree
     Let $A$ and $B$ be types. Let $l$ be a list of type $A$ and $S$ be a finite set of type $A$. Let $f$ be a function from $B$ to $A$ and $valid$ a property of elements of type $B$. If all elements from $l$ are in $S$ and for any element $a$ in $S$ there exists an element $b$ such that $f(b) = a $ and $b$ is valid, then there exists a list $l'$ such that mapping $l'$ with $f$ yields $l$ and all elements of $l'$ fulfill the isValid predicate.
 \end{lemma}
 
-Before proving the statement, we explain how we want to use this. $A$ is supposed to be the ground atoms and $B$ is supposed to be the proof trees. The function $f: B \to A$ is the root function, $l$ is the body of the rule $r$ and $S$ is the finite set of the body elements. We use the set as we will use induction on $l$, so that $l$ will not always be the body of a rule in the proof. If we want to show that the head is in the proof-theoretic semantics, we already know that every atom $a$ in the body has a valid proof tree whose root is $a$. Then we get the list of proof trees we can use as the children for the rule creation.
+Before proving the statement, we explain how we want to use this. $A$ is supposed to be the ground atoms and $B$ is supposed to be the proof trees. The function $f: B \to A$ is the root function, $l$ is the body of the rule $r$ and $S$ is the finite set of the body elements. We use the set as we will use induction on $l$ so that $l$ will not always be the body of a rule in the proof. If we want to show that the head is in the proof-theoretic semantics, we already know that every atom $a$ in the body has a valid proof tree whose root is $a$. Then we get the list of proof trees we can use as the children for the rule creation.
 
 \begin{proof}[Proof of \cref{lem:getTreeHelper}]
     We prove this by structural induction on $l$. If $l$ is empty then we can simply use the empty list for $l'$ that fulfills the desired properties.

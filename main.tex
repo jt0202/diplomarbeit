@@ -15,7 +15,9 @@
 \usepackage{todonotes}
 \usepackage{url}
 \usepackage{booktabs}
+\usepackage{tabularx}
 \usepackage{multirow}
+\usepackage{pdfpages}
 \usetikzlibrary{automata, positioning, chains,fit,shapes}
 
 \tikzset{
@@ -75,30 +77,35 @@ reversed diagonal fill/.style 2 args={fill=#2, path picture={
 \definecolor{leansymbolcolor}{HTML}{2010A0} % mainly debugging; use black to hide
 \input{codeCommands.tex}
 
-% starts with noncomputable not currently created by algorithm
-
 
 
 \title{LEAN-aided verification of datalog reasoning results}
 \author{Johannes Tantow}
 
 \begin{document}
-   \maketitle
-
+   \input{tex/Titlepage.tex}
     \tableofcontents
 
+   %\includepdf[pages=-]{DeclarationAuthorshipDiplomarbeit.pdf}
     \chapter*{Acknowledgements}
-    I want to thank my advisors Lukas Gerlach and Dr. Stephan Mennicke for introducing Lean and the problem to me and their helpful comments during the creation of this thesis. Lukas also improved my previous graph model in \cref{sec:valGraph} by adding the hash map implementation.
+    I want to thank my advisors Lukas Gerlach and Dr. Stephan Mennicke for introducing Lean and the problem to me and for their helpful comments during the creation of this thesis. Lukas also improved my previous graph model in \cref{sec:valGraph} by adding the hash map implementation.
 
     I want to thank Prof. Markus Krötzsch for the formal supervision and his helpful comments during the writing. He proposed amongst other things \cref{ex:treeGraph}.
 
     I want to thank Dr. Stefan Borgwardt for being the second reviewer of my thesis.
 
+    I want to thank Samuel Krug for proofreading my thesis and finding aspects that were not understandable if one did not know Lean.
 
+    Lean's zulipchat\footnote{https://leanprover.zulipchat.com/} was very helpful during the development of this thesis. It contains many useful information and its members are quick to answer questions.
+
+    Finally, I want to thank my family and friends for always supporting me during my studies.
+
+   \input{tex/Abstract.tex}
     
     \input{tex/Introduction.tex}
 
-    \input{tex/Preliminaries.tex}
+   \input{tex/Preliminaries.tex}
+    
     \input{tex/FormalizedDatalog.tex}
 
     \input{tex/ValidatingTrees.tex}

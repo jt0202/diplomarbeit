@@ -63,7 +63,7 @@ A \textit{program} $P$ is a finite set of rules.
     E(1,2) &\leftarrow \\ E(1,3) &\leftarrow \\ E(3,5) &\leftarrow \\ E(4,6) &\leftarrow \\E(4,7) &\leftarrow\\\end{split} 
     &&
     \begin{split}
-        Q() &\leftarrow \\ T(?x,?y) &\leftarrow E(?x,?y) \\ T(?x,?x) &\leftarrow \\ T(?x, ?z) &\leftarrow T(?x,?y) \and T(?y, ?z)
+        Q() &\leftarrow \\ T(?x,?y) &\leftarrow E(?x,?y) \\ T(?x,?x) &\leftarrow \\ T(?x, ?z) &\leftarrow T(?x,?y), T(?y, ?z)
     \end{split}
     \end{align*}
     $P$ contains both facts and other rules.
@@ -280,6 +280,8 @@ A tree $t$ of whose vertices are labeled with ground atoms is a valid proof tree
         \caption{An invalid tree for $T(1,7)$ in the program in \cref{prelim:Program}}
         \label{prelim:invalidTree}
     \end{subfigure}
+
+    \caption{Examples of valid and not valid proof trees}
     \end{figure}
 
 \begin{example}
@@ -377,7 +379,7 @@ The formal framework of \cite{CertAlg} defines certifying algorithms in the foll
 The certificate or \textit{witness} from a set $W$ and its correctness is expressed by the predicate $\mathcal{W}: X \times Y^\bot \times W$ with the following properties:
 
 \begin{enumerate}
-    \item \textbf{Strong witness property}: Consider a triple $(x,y,w)$ that satisfies the witness predicate $\mathcal{W}$. If $y=\bot$, i.e. the input is not valid, we want $w$ to be a proof of this fact. Else we have that $y\in Y$ and we want $w$ to be a proof that the postcondition is satisfied. In total we have the following requirement:
+    \item \textbf{Strong witness property}: Consider a triple $(x,y,w)$ that satisfies the witness predicate $\mathcal{W}$. If $y=\bot$, i.e. the input is not valid, we want $w$ to be a proof of this fact. Otherwise, we have that $y\in Y$ and we want $w$ to be a proof that the postcondition is satisfied. In total, we have the following requirements:
     \[ \forall x,y,w.\ (y = \bot \land \mathcal{W}(x,y,z) \rightarrow \neg \phi(x)) \land (y \in Y \land \mathcal{W}(x,y,z) \rightarrow \psi(x,y)) \]
     \item \textbf{Simplicity}: The strong witness property has a simple proof
     \item \textbf{Checkability}: It is possible to check efficiently if $\mathcal{W}(x,y,w)$ holds for a triple $(x,y,w)$
@@ -409,11 +411,11 @@ This is illustrated in the following examples. We start with an example from gra
 The above example illustrates the concept well for a decision problem, but we want to verify whether a set of ground atoms is the semantics of a datalog program and database, i.e. a function problem. The next example illustrates a certifying algorithm for a function problem in number theory.
 
 \begin{example}[\cite{CertAlg}]
-    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not equal to zero, i.e. the largest $g \in \mathbb{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and the post-condition is that $\psi(\langle a, b\rangle, g)$ shall be true, if $g$ is the greatest common divisor of $a$ and $b$.
+    Let $X$ be the set of pairs of natural numbers and $Y$ the set of natural numbers. We want to compute the greatest common divisor, $gcd$, for two numbers $a$ and $b$ that are not equal to zero, i.e. the largest $g \in \mathbb{N}$ that is a divisor of both $a$ and $b$. The precondition $\phi(\langle a, b\rangle)$ is that both $a$ and $b$ are different from zero and the post-condition is that $\psi(\langle a, b\rangle, g)$ shall be true if $g$ is the greatest common divisor of $a$ and $b$.
 
     The normal way of computing this involves the Euclidean algorithm, but this is not a certifying algorithm. The extended Euclidean algorithm however returns in addition to the greatest common divisor $g$ two integers $s$ and $t$ such that $g = gcd(a,b) = a s + b t$. In \cite{CertAlg}, the back direction is proven, i.e. that if $g$ is a divisor of $a$ and $b$ and $g = a s + b  t$ holds for two integers $s$ and $t$, then $g$ is also the greatest common divisor of $a$ and $b$.
 
-    Therefore a certifying algorithm to compute the $gcd$ is the extended euclidean algorithm, that returns as $y$ $gcd(a,b)$ and as the certificate the pair $\langle s, t\rangle$.
+    Therefore a certifying algorithm to compute the $gcd$ is the extended Euclidean algorithm, that returns as $y$ $gcd(a,b)$ and as the certificate the pair $\langle s, t\rangle$.
 
     A checker then only has to check that $g=a s + b t$ holds and that $g$ divides both $a$ and $b$. 
 \end{example}
@@ -424,13 +426,13 @@ In the datalog case, many modern reasoners such as Nemo or Soufflé already offe
 
 In \cite{CertCheckerWorkflow} an approach to develop checkers for certifying algorithms is outlined. There the checker is implemented in C because already the certifying algorithm itself is written in C++, so that both versions are similar. In order to verify the correctness of the checker they employ the proof assistant Isabelle. The C-code is exported by a tool into Isabelle so that the verification can take place. In Isabelle then the problem is defined and it is proven that the export does fulfill the desired properties. 
 
-In this workflow, we have to trust the correctness of the hardware, the C compiler, the tool that exports C code to Isabelle and of Isabelle itself. Additionally, we have to trust that we have correctly defined and specified the problem in Isabelle.
+In this workflow, we have to trust the correctness of the hardware, the C compiler, the tool that exports C code to Isabelle and Isabelle itself. Additionally, we have to trust that we have correctly defined and specified the problem in Isabelle.
 
 In this work, we modify this workflow a bit. We use a different proof assistant, Lean, instead of Isabelle. Lean is not only a proof assistant but also a functional programming language. Therefore we can implement the checker directly in Lean and do not have to export a model of our code into the proof assistant. Our trust base is therefore smaller, as we no longer need an additional compiler for the language the checker is written in nor a tool to export this into the proof assistant. 
 
 
 \section{Lean}
-In this section we introduce Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. A more in-depth introduction can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
+In this section, we introduce Lean, a programming language and proof assistant. As of writing, the current version is Lean 4. A more in-depth introduction can be found in \cite{theoremProvingLean} or \cite{functionalProgrammingLean}.
 
 Lean's core is a small trusted kernel\cite{LeanSysDescr}, that captures the most important functionalities and can be extended by the user. Since version 4 Lean is implemented in Lean itself\cite{Lean4}. The most important libraries for Lean that we will use are the standard library Std4\cite{stdLean} which contains important data structures and tactics and mathlib4\cite{mathlib}, which contains definitions, tactics and theorem from diverse areas of mathematics and computer science.
 
@@ -470,18 +472,18 @@ The id function we defined above is correct but only works for natural numbers. 
 This id function has now two arguments. The first argument is the type we want to use it on, the second argument is an element of this type. \lstinline| id $\mathbb{N}$| works as previously and has the type \lstinline|$\mathbb{N} \to \mathbb{N}$|. It seems less clear which type id itself has because this depends on the first argument.
 Such types are called \textit{dependent types} and we would denote this specific type as \lstinline|$\Pi$ (A:Type) A $\to$ A|, known as a \textit{Pi type}. Intuitively, a Pi type is a function that returns a type for any input value.
 
-In practice, we this is often written in the following way:
+In practice, this is often written in the following way:
 \begin{lstlisting}
     def id {A: Type}(a: A): A:= a
 \end{lstlisting}
 
 Here the type $A$ is an implicit argument, which is denoted by the braces, and Lean can fill it in for the user based on the input $a$. Therefore the user can write just \lstinline|id 42| instead of \lstinline|id $\mathbb{N}$ 42|.
 
-So far we have discussed what types are and how we can define functions that are important for the programming aspect of Lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence a proof of a statement can be equivalently seen as a function that has the type of the statement. This type of statements is known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:\mathbb{N}$), 0 $\le$ x | or \lstinline|$\exists$ (x y: Bool), x = y $\lor$ $\neg$ x = y|.
+So far we have discussed what types are and how we can define functions that are important for the programming aspect of Lean, but this does not tell us much about the use as a proof assistant. Due to the Curry-Howard correspondence a proof of a statement can be equivalently seen as a function that has the type of the statement. The type of statements is known in Lean as \lstinline|Prop|. There exist functions like \lstinline|Or: Prop $\to$ Prop $\to$ Prop| and the dependent types form the quantifiers. We view the Pi-type $\Pi (a:A), \beta(a)$ as a function mapping $a$ to the true statements of $\beta(a)$, which is equivalent to the universal quantor. Prop therefore has elements such as \lstinline|$\forall (x:\mathbb{N}$), 0 $\le$ x | or \lstinline|$\exists$ (x y: Bool), x = y $\lor$ $\neg$ x = y|.
 
 Every statement defines its own type, whose elements are the proofs for it. In contrast to other types, all elements of these types are equivalent which is known as \textit{proof irrelevance}, so that elements of these types only serve as a witness for their truth.
 
-Proofs can be constructed in Lean in two ways.  We start by writing \lstinline|theorem| (or lemma, proposition etc. in mathlib) and denote the statement as we did for a function. The main difference is that the type is what we want to prove and that the function can not be executed. An example for a statement and its proof in Lean is shown below:
+Proofs can be constructed in Lean in two ways.  We start by writing \lstinline|theorem| (or lemma, proposition etc. in mathlib) and denote the statement as we did for a function. The main difference is that the type is what we want to prove and that the function can not be executed. An example of a statement and its proof in Lean is shown below:
 
 \begin{lstlisting}
 theorem testTheorem {A: Type}: ∀ (x y z: A), x = y → id y = z → z = x := by
@@ -596,7 +598,7 @@ While this works, we see no relation between the elements of myNat and evenNat. 
         | succ e' => myNat.succ (myNat.succ (evennatToMyNat e'))
 \end{lstlisting}
 
-This approach works but is a bit cumbersome. We always need to type this ourselves and if we forget it Lean raise a type error. There exists however the \lstinline|class Coe|. A class describes an abstract property e.g. of a type and can be implemented by a specific type via \lstinline|instance|.
+This approach works but is a bit cumbersome. We always need to type this ourselves and if we forget it Lean raises a type error. There exists however the \lstinline|class Coe|. A class describes an abstract property e.g. of a type and can be implemented by a specific type via \lstinline|instance|.
 
 The class \lstinline|Coe| is defined (in a simplified version) as follows. It takes two types and a function that maps from one type to the other. We implement \lstinline|COe| for \lstinline|evenNat| and \lstinline|myNat| with \lstinline|evenNatToMyNat|. Then we can use elements of \lstinline|evenNat| in functions defined for \lstinline|myNat| and Lean will automatically convert them using \lstinline|evenNatToMyNat|.
 
@@ -640,7 +642,7 @@ The Euclidean algorithm can then be implemented in the following way:
     else Euclid b (myNat.mod a b)
 \end{lstlisting}
 
-Lean will not accept this function and instead raise an error in the line of the if that it failed to synthesize an instance of \lstinline|DecidableEq| for myNat. DecidableEq allows us to use $=$ between elements of a type in a function. This is not a trivial requirement as for example the equality of real numbers is undecidable\cite{EqualityRealNumber}. We need to provide a function to Lean that can be used to decide whether two elements of myNat are equal. During the definition of inductive types, we already noted, that all elements of an inductive type are different, which allows us to do this. Luckily, Lean can even do this alone if we tell Lean to do this using the \lstinline|deriving| keyword. It can even derive instances for multiple classes. Another important class would be the Inhabited class that states that there exists some default element of this type.
+Lean will not accept this function and instead raise an error in the line of the if that it failed to synthesize an instance of \lstinline|DecidableEq| for myNat. DecidableEq allows us to use $=$ between elements of a type in a function. This is not a trivial requirement as the equality of real numbers is undecidable\cite{EqualityRealNumber}. We need to provide a function to Lean that can be used to decide whether two elements of myNat are equal. During the definition of inductive types, we already noted, that all elements of an inductive type are different, which allows us to do this. Luckily, Lean can even do this alone if we tell Lean to do this using the \lstinline|deriving| keyword. It can even derive instances for multiple classes. Another important class would be the Inhabited class which states that there exists some default element of this type.
 
 \begin{lstlisting}
     inductive myNat: Type
@@ -650,7 +652,7 @@ Lean will not accept this function and instead raise an error in the line of the
 
 \end{lstlisting}
 
-Now the error will disappear, but a new one will be introduced. Lean does not recognize the termination of \lstinline|myNat.Euclid|. We have already defined recursive functions  such as \lstinline|myNat.add| before and we did not encounter this problem. In \lstinline|myNat.add| we however used the inductive schema and only did the recursion on $n$ in the case of $succ\ n$. This allowed Lean to conclude that we only call the function on smaller elements so that the function will terminate.
+Now the error will disappear, but a new one will be introduced. Lean does not recognize the termination of \lstinline|myNat.Euclid|. We have already defined recursive functions such as \lstinline|myNat.add| before and we did not encounter this problem. In \lstinline|myNat.add| we however used the inductive schema and only did the recursion on $n$ in the case of $succ\ n$. This allowed Lean to conclude that we only call the function on smaller elements so that the function will terminate.
 
 To show termination, one is required to define some \textit{well-founded relation}, i.e. a relation that does not have any infinite descending chains. Such a relation would be the less-than relation of the natural numbers so it is often convenient to define some size measure of the elements of a type. Such a function exists automatically for any inductive type and is called \lstinline|sizeOf|. We can provide this and are only left to prove that \lstinline|sizeOf (mod a b) < sizeOf b|, which we will leave open here.
 
@@ -665,7 +667,7 @@ decreasing_by
   sorry
 \end{lstlisting}
 
-An alternative to this termination proof would be to mark this function using the \lstinline|partial| keyword, which denotes that this function does not always terminate. This is however often not beneficial as we no longer can no longer use the \lstinline|unfold| tactic to gain the definition of this function in a proof.
+An alternative to this termination proof would be to mark this function using the \lstinline|partial| keyword, which denotes that this function does not always terminate. This is however often not beneficial as we no longer can use the \lstinline|unfold| tactic to gain the definition of this function in a proof.
 
 
 
@@ -683,9 +685,9 @@ We want to take a look at another example of an inductive type, that we will oft
     | cons hd _ => hd
 \end{lstlisting}
 
-We see in this definition a new type of argument. We want to return an element of the list. If the list is empty, this proves to be difficult. In that case, we return the default element that exists because $A$ is an instance of \lstinline|Inhabited|. Such a type-class parameter is given in brackets and Lean will look for the instance that shows the implementation of the typeclass for this type when using this function.
+We see in this definition a new type of argument. We want to return an element of the list. If the list is empty, this proves to be difficult. In that case, we return the default element that exists because $A$ is an instance of \lstinline|Inhabited|. Such a type-class parameter is given in brackets and Lean will look for the instance that shows the implementation of the type class for this type when using this function.
 
-This may not always be the desired behaviour and maybe we want to return nothing if the list is empty. In this case, we can use the \lstinline|Option| Type. It has two constructors, one that contains the element and the other symbolizes that there is nothing. Here $\alpha$ has the type \lstinline|Type u| that symbolizes it works for types from any type universe. Then we can return none if the list is empty and else return the same value as before.
+This may not always be the desired behaviour and maybe we want to return nothing if the list is empty. In this case, we can use the \lstinline|Option| Type. It has two constructors, one contains the element and the other symbolizes that there is nothing. Here $\alpha$ has the type \lstinline|Type u| that symbolizes it works for types from any type universe. Then we can return none if the list is empty and else return the same value as before.
 
 \begin{lstlisting}
     inductive Option (α : Type u) where
@@ -715,5 +717,5 @@ We will also often use the Exception type. This uses two types $\epsilon$ and $\
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{Lean_example2.png}
-    \caption{An example of Lean in practice. On the left side is the code seen and on the right side the context in a proof with the current goal}
+    \caption{An example of Lean in practice. On the left side is the code seen and on the right side the context in a proof with the current goal is displayed}
 \end{figure}
