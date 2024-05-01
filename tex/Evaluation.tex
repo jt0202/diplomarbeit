@@ -4,7 +4,7 @@ In the previous sections, we proved the correctness of the algorithms to check t
 
 \section{Input format}
 
-The input format is JSON-based because Lean offers already direct support for JSON. Similarly, as we were able to derive decidable equality or the inhabited class, we can also derive functions that convert Lean objects to JSON objects or try to create a Lean object from a JSON object.
+The input format is JSON-based because Lean already offers direct support for JSON. Similarly, as we were able to derive decidable equality or the inhabited property, we can also derive functions that convert Lean objects to JSON objects or try to create a Lean object from a JSON object.
 
 We can define mock terms similar to \term but with the variables and constants as simple strings. Lean knows how to read and write strings into JSON hence we can derive the JSON methods.
 
@@ -101,7 +101,7 @@ structure mockGraph where
 deriving Lean.FromJson, Lean.ToJson
 \end{lstlisting}
 
-Additionally, there are two command line options that can be set. Firstly, the option \textit{-g} specifies that the input file uses a graph instead of a list of trees which is the default option. Secondly, we tell the program with \textit{-c} to also use the \modelChecker to check for completeness.
+Additionally, two command line options can be set. Firstly, the option \textit{-g} specifies that the input file uses a graph instead of a list of trees which is the default option. Secondly, we tell the program with \textit{-c} to also use the \modelChecker to check for completeness using all atoms that occur in the trees or graph as the potential model.
 
 The file does not include a database yet because these databases are often very large in practice which requires more work to replicate in Lean. Additionally, we would need to prove that the database is correctly read from the input. All evaluations are done with a mock database which assumes that any leaf of a tree or graph is in the database and that the database is always contained in the model during the model checking.
 
@@ -110,7 +110,7 @@ The file does not include a database yet because these databases are often very 
 
 In this section, we want to evaluate the program in practice. We are interested in the feasibility of our approach to verify proof trees and to check a complete result. Additionally, we want to compare the tree verification with the graph-based verification.
 
-We will use three kinds of datalog programs to test our approach:
+We will use three scenarios to test our approach:
 
 \begin{enumerate}
     \item We will use the transitive closure programs we considered in this work multiple times. The transitive closure is often used as a subroutine in recursive datalog programs and thus an important benchmark. The exact program uses the transitive predicate once in the body and is depicted below:
@@ -169,11 +169,11 @@ We repeat each measurement five times and display in each table the arithmetic m
     }
 \end{table}
 
-In scenario (1), depicted in \cref{table:complScen1}, we created a random graph with the given density and asked Nemo to explain all derivations. The number of derivations is up to 10000 facts in the case of a density of 0.3 or 0.5. We use the tree-based input and want to compare the time it takes to verify all proof trees with the time that we require to additionally perform a completeness check. We see that validating all trees is fast while being a bit larger than the computation times by Nemo. In contrast to that, a completeness check takes in most cases much more time than just verifying all trees. The time for a completeness check increases with the density of the graphs as the graph has more edges with increasing density which increases the number of edges we check for substitutions. In contrast to that the validation time without a completeness check does not increase with the density. We propose that with the increasing densities, there are more edges which lead to shallower trees which can be faster validated even if their number increases.
+In scenario (1), depicted in \cref{table:complScen1}, we created a random graph with the given density and asked Nemo to explain all derivations. The number of derivations is up to 10000 facts in the case of a density of 0.3 or 0.5. We use the tree-based input and want to compare the time it takes to verify all proof trees with the time that we require to additionally perform a completeness check. We see that validating all trees is fast while being a bit larger than the computation times by Nemo. In contrast to that, a completeness check takes in most cases much more time than just verifying all trees. The time for a completeness check increases with the density of the graphs as the graph has more edges with increasing density which increases the number of edges we check for substitutions. In contrast to that the validation time without a completeness check does not increase with the density. We propose that with the increasing densities, the increasing number of edges leads to shallower trees which can be faster validated even if their numbers increase.
 
 We see in this scenario that it is definitely feasible to validate all trees of the example as the time is roughly comparable to Nemo's time. We did not encounter an invalid tree or an invalid model. Next, we want to compare the performance of the tree-based input format with the graph-based input format. We do not use the completeness check this time as we have seen in the previous results that the completeness check takes the majority of the time while not depending on the particular input format.
 
-In \cref{table:graphTree1} see for each density the times we require for trees and the graph. We see that the validation of the graph is a bit faster than validating the trees in each case but still in the same area. Graphs are especially faster for the densities of 0.1 and 0.05 where the trees need the most nodes as there are many nodes connected while still needing long paths. If the paths are shorted with a higher density, the proof trees are smaller and the advantage diminishes. The main advantage of the graph-based input is however seen in the preparation times. Transforming Nemo's trace output into a directed graph is much faster than transforming the trace output into a list of trees because Nemo's trace output is graph-like. Therefore graphs seem preferable in this use-case as we cannot validate the results without preparing them.
+In \cref{table:graphTree1} see for each density the times the validation required for trees and the graph. We see that the validation of the graph is a bit faster than validating the trees in each case but still in the same order of magnitude. Graphs are especially faster for the densities of 0.1 and 0.05 where the trees need the most nodes as there are many nodes connected while still needing long paths. If the paths are shorted with a higher density, the proof trees are smaller and the advantage diminishes. The main advantage of the graph-based input is however seen in the preparation times. Transforming Nemo's trace output into a directed graph is much faster than transforming the trace output into a list of trees because Nemo's trace output is graph-like. Creating the trees requires us to first build the graph and then explore all paths. Therefore graphs seem preferable when using Nemo as we cannot validate the results without preparing them.
 
 \begin{table}
     \centering
@@ -209,22 +209,25 @@ In \cref{table:graphTree1} see for each density the times we require for trees a
 \caption{Results for scenario 2}
 \label{table:res2}
 \resizebox{\columnwidth}{!}{
-\begin{tabular}{l|l|r|rr|rr|rr}
-    &  & \textbf{Number of nodes} & \multicolumn{2}{r}{\textbf{Nemo time [s]}} & \multicolumn{2}{r}{\textbf{Preparation time [s]}} & \multicolumn{2}{r}{\textbf{Validation time [s]}} \\
-    &  & mean & mean & std & mean & std & mean & std \\
-    \textbf{Type} & \textbf{Size} &  &  &  &  &  &  &  \\
-    \hline
-   \multirow[c]{3}{*}{graph} & 10 & 18.00 & 0.03 & 0.01 & 0.03 & 0.01 & 0.05 & 0.06 \\
-    & 15 & 28.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.02 & 0.00 \\
-    & 20 & 38.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.03 & 0.00 \\
-   \multirow[c]{3}{*}{tree} & 10 & 1022.00 & 0.03 & 0.01 & 0.07 & 0.01 & 0.03 & 0.00 \\
-    & 15 & 32766.00 & 0.02 & 0.00 & 2.71 & 0.09 & 0.16 & 0.00 \\
-    & 20 & 1048574.00 & 0.02 & 0.00 & 207.66 & 3.98 & 4.38 & 0.20 \\
-\end{tabular}
+    \begin{tabular}{l|l|r|rr|rr|rr}
+        &  & \textbf{Number of nodes} & \multicolumn{2}{r}{\textbf{Nemo time [s]}} & \multicolumn{2}{r}{\textbf{Preparation time [s]}} & \multicolumn{2}{r}{\textbf{Validation time [s]}} \\
+        &  & mean & mean & std & mean & std & mean & std \\
+       \textbf{Size} & \textbf{Type} &  &  &  &  &  &  &  \\
+       \hline
+       \multirow[c]{2}{*}{10} & graph & 18.00 & 0.03 & 0.01 & 0.03 & 0.01 & 0.05 & 0.06 \\
+        & tree & 1022.00 & 0.03 & 0.01 & 0.07 & 0.01 & 0.03 & 0.00 \\
+        \hline
+        \multirow[c]{2}{*}{15} & graph & 28.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.02 & 0.00 \\
+        & tree & 32766.00 & 0.02 & 0.00 & 2.71 & 0.09 & 0.16 & 0.00 \\
+        \hline
+        \multirow[c]{2}{*}{20} & graph & 38.00 & 0.02 & 0.00 & 0.03 & 0.00 & 0.03 & 0.00 \\
+        & tree & 1048574.00 & 0.02 & 0.00 & 207.66 & 3.98 & 4.38 & 0.20 \\
+       \end{tabular}
+       
 }
 \end{table}
 
-In scenario (2), depicted in \cref{table:res2}, the advantage of graphs over trees is seen clearly even in the validation time. For chains of the length 15 and 20 the tree-based validation takes significantly more time while the graph-based validation is still comparable to Nemo's computation time. Additionally, the preparation for graphs is again much faster than the preparation time for the tree-based input format. This is because Nemo's trace looks graph-like so we only have to transform the atoms into the JSON format. Creating a tree requires us to first build the graph and then explore all paths. When trying to evaluate the scenario for chains of the length 25 the preparation failed on this setup whereas it was still possible to verify this using graphs with a comparable time in the previous graph experiments.
+In scenario (2), depicted in \cref{table:res2}, the advantage of graphs over trees is seen clearly even in the validation time. For chains of the length 15 and 20 the tree-based validation takes significantly more time while the graph-based validation is still comparable to Nemo's computation time. Additionally, the preparation for graphs is again much faster than the preparation time for the tree-based input format.  When trying to evaluate the scenario for chains of the length 25 the preparation failed on this setup whereas it was still possible to verify this using graphs with a comparable time in the previous graph experiments.
 
     \begin{table}
     \centering
@@ -262,5 +265,5 @@ In scenario (2), depicted in \cref{table:res2}, the advantage of graphs over tre
 In scenario (3), depicted in \cref{res:scenario3}, we test the verification on another data set. This data set is a fixed ontology GALEN. Thus we change the size by increasing the number of atoms we ask traces for proofs which is depicted in the left-most column. The results of the program are computed by Nemo in around 10s on the setup used in this section. We see again that verification is very fast for trees and graphs. The difference in times between the graph and tree input is not as significant as in scenario (2). We see in the case of asking for one fact the number of nodes in the tree and graph are almost equal so atoms are not as often reused in this scenario as in the previous scenario. The difference in node numbers is larger in the case of multiple facts as multiple proof trees will use the same fact. The preparation time for graphs is in this scenario for larger instances of at least 1000 atoms much faster than for trees. We also see that a completeness check is futile here as we need a certificate for every atom while creating certificates for 10000 atoms in the graph format already takes around 20 minutes. Creating certificates for all 2.4 million facts was not possible in this setup. 
 
 
-In summary, we see that validating a proof tree or proof graph is possible in practice in most cases. The graph approach is significantly faster in the worst case but in most user-defined cases they are similar. The input format for the validation is however faster created for graphs due to the shape of Nemo's trace output. If the output is more tree-like then this might change. Therefore we believe that the graph input is better to use with Nemo. We also see that completeness is possible to check for small instances but takes much longer than just verifying the soundness or calculating the result itself. Our completeness check is similar to the computation that is done by a datalog engine but without the typical explanation. Therefore this behaviour is expected in larger problems. 
+In summary, we see that validating a proof tree or proof graph is possible in practice in most cases. The graph approach is significantly faster in the worst case but in most user-defined cases they are similar. The input file for the validation is however faster created for graphs due to the shape of Nemo's trace output. If the output is more tree-like then this might change. Therefore we believe that the graph input is better to use with Nemo. We also see that completeness is possible to check for small instances but takes much longer than just verifying the soundness or calculating the result itself. Our completeness check is similar to the computation that is done by a datalog engine but without the typical explanation. Therefore this behaviour is expected in larger problems. 
 Additionally, we have never detected an error in any of Nemo's output. We note that on inputs that were built to provoke errors, these errors were found as aspected by our correctness proofs.

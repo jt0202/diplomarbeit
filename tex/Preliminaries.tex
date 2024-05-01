@@ -704,14 +704,14 @@ We will also often use the Exception type. This uses two types $\epsilon$ and $\
 
 
 \begin{lstlisting}
-    inductive Except (ε : Type u) (α : Type v) where
+inductive Except (ε : Type u) (α : Type v) where
   | error : ε → Except ε α
   | ok    : α → Except ε α
 
-  def getFirstElement (A: Type) (l: List' A): Except String A :=
-    match l with
-    | nil => Except.error "Called getFirstElement on emptyList"
-    | cons hd _ => Except.ok hd
+def getFirstElement (A: Type) (l: List' A): Except String A :=
+match l with
+| nil => Except.error "Called getFirstElement on emptyList"
+| cons hd _ => Except.ok hd
 \end{lstlisting}
 
 \begin{figure}[H]

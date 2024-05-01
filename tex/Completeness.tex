@@ -81,9 +81,9 @@
         This does not hold if we swap the operations as we do not explicitly move atoms without variables from the start of the body into the grounded body.
 
         \begin{example}
-            The application of \texttt{partialGroundRule.toRule} on $pgr_1$ yields $r$ as predicted by the lemma.
+            The application of \lstinline|partialGroundRule.toRule| on $pgr_1$ yields $r$ as predicted by the lemma.
 
-            If we swap both functions and first apply \texttt{partialGroundRule.toRule} to a partial ground rule and then convert the resulting rule back to a partial ground rule, we will not receive the original partial ground rule in most cases. Applying {partialGroundRule.toRule} to $pgr_2$ results in the rule $r'$ \[q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . \] Converting $r'$ back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
+            If we swap both functions and first apply \lstinline|partialGroundRule.toRule| to a partial ground rule and then convert the resulting rule back to a partial ground rule, we will not receive the original partial ground rule in most cases. Applying \lstinline|partialGroundRule.toRule| to $pgr_2$ results in the rule $r'$ \[q(X) :- r(a, b), s(c, d), t(X, c),  u(d, X) . \] Converting $r'$ back into a partial ground rule with \texttt{partialGroundRuleFromRule} we gain 
 
             \begin{lstlisting}
                 {
